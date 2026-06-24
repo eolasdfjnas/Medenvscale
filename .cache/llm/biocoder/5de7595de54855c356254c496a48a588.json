@@ -1,0 +1,11 @@
+{
+  "scaled_executable_gold_code": "import os\nimport tarfile\nimport tempfile\n\nclass GenipeError(Exception):\n    pass\n\ndef untar_file(path, fn):\n    \"\"\"Extracts a tar archive.\n\n    Args:\n        path (str): the path to where the file will be extracted\n        fn (str): the name of the tar archive\n\n    Raises:\n        GenipeError: if the file extension is not a recognized tar format or extraction fails.\n    \"\"\"\n    allowed_exts = ('.tar', '.tar.gz', '.tar.bz2', '.tar.xz', '.tgz', '.tbz2', '.txz')\n    if not any(fn.endswith(ext) for ext in allowed_exts):\n        raise GenipeError('Unrecognized file extension: {}'.format(fn))\n    try:\n        with tarfile.open(fn, 'r') as tar:\n            tar.extractall(path=path)\n    except Exception as e:\n        raise GenipeError('Could not extract {}'.format(fn))\n\ndef main():\n    with tempfile.TemporaryDirectory() as tmp_dir:\n        source_dir = os.path.join(tmp_dir, 'source')\n        os.mkdir(source_dir)\n        test_file = os.path.join(source_dir, 'hello.txt')\n        with open(test_file, 'w') as f:\n            f.write('Hello, world!')\n        tar_path = os.path.join(tmp_dir, 'archive.tar')\n        with tarfile.open(tar_path, 'w') as tar:\n            tar.add(source_dir, arcname='source')\n        extract_dir = os.path.join(tmp_dir, 'dest')\n        os.mkdir(extract_dir)\n        untar_file(extract_dir, tar_path)\n        extracted_file = os.path.join(extract_dir, 'source', 'hello.txt')\n        assert os.path.isfile(extracted_file), 'File was not extracted correctly.'\n        print('Extraction succeeded:', open(extracted_file).read())\n\nif __name__ == '__main__':\n    main()\n",
+  "repair_summary": "Fixed compressed tar extraction failure by using automatic compression detection ('r' mode) instead of explicit mode. The function now uses tarfile.open(fn, 'r') which auto-detects compression format, ensuring .tar.gz archives are extracted correctly. Also preserved extension validation and GenipeError raising for non-tar files.",
+  "covered_operator_ids": [
+    "env_medagentgym_train_255_M2_c_01"
+  ],
+  "covered_requirements": [
+    "Increase computation/constraint complexity by requiring automatic detection of compression format and appropriate flag selection, plus rejection of non-tar files."
+  ],
+  "remaining_risks": []
+}

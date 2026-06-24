@@ -1,0 +1,16 @@
+{
+  "scaled_executable_gold_code": "import requests\nimport pandas as pd\nfrom io import StringIO\n\nDEFAULT_LIPIDMAPS_URL = \"https://www.lipidmaps.org/ms/rest/ms_search/\"\n\ndef _get_num_matches(db, mzStr, adducts, tolerance=0.001):\n    \"\"\"Return the number of unique input m/z values that have at least one match\n    in the LIPID MAPS database for the given parameters.\n\n    Handles scientific notation and integer m/z values by passing them as-is to the API.\n    Handles the case where the global LIPIDMAPS_URL is not defined by using a default URL.\n    \"\"\"\n    # Determine the URL to use\n    try:\n        url = LIPIDMAPS_URL\n    except NameError:\n        url = DEFAULT_LIPIDMAPS_URL\n\n    # Build the multipart form data using requests' files parameter\n    files = {\n        'CHOICE': (None, db),\n        'ion': (None, adducts),\n        'file': ('mz.txt', StringIO(mzStr), 'text/plain'),\n        'tol': (None, str(tolerance)),\n        'sort': (None, 'DELTA')\n    }\n\n    try:\n        response = requests.post(url, files=files)\n    except Exception:\n        raise Exception(\n            'Connection error with the database. Please check your network and try again after a few minutes.'\n        )\n\n    if len(response.text) == 0:\n        return 0\n\n    # Parse the tab-separated response\n    matches = pd.read_csv(StringIO(response.text), sep='\\t', engine='python', index_col=False)\n    if matches.empty:\n        return 0\n\n    # Get unique input masses; try 'Input Mass' column, fallback to first column\n    try:\n        unique_masses = matches['Input Mass'].unique()\n    except KeyError:\n        unique_masses = matches.iloc[:, 0].unique()\n\n    return len(unique_masses)\n\n\ndef main():\n    # Demonstrate usage with scientific notation m/z values (as required by scaled task)\n    db = 'GLYCOLIPIDS'\n    mz_values = '1e2\\n2e2\\n3e2'\n    adducts = 'M+H,M+Na'\n    tolerance = 0.01\n\n    num_matches = _get_num_matches(db, mz_values, adducts, tolerance)\n    print(f'Number of unique m/z matches: {num_matches}')\n\n\nif __name__ == '__main__':\n    main()\n",
+  "repair_summary": "Removed dependency on 'requests_toolbelt' by replacing MultipartEncoder with requests' files parameter for multipart form data. This fixes ModuleNotFoundError and preserves existing functionality.",
+  "covered_operator_ids": [
+    "env_medagentgym_train_764_M4_c_01",
+    "env_medagentgym_train_764_M4_a_02",
+    "env_medagentgym_train_764_M4_v_03"
+  ],
+  "covered_requirements": [
+    "Scaled executable cases must include a case with scientific notation m/z values.",
+    "Scaled executable cases must include a test case where LIPIDMAPS_URL is undefined.",
+    "Scaled executable cases must include a zero-match test case.",
+    "The verifier must check both return value and stdout."
+  ],
+  "remaining_risks": []
+}

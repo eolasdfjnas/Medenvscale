@@ -1,0 +1,31 @@
+{
+  "scaled_executable_gold_code": "import logging\nimport multiprocessing as mp\nimport os\n\ndef _system_call(command):\n    stdout = f\"Executed command: {command}\"\n    stderr = \"\"\n    return (stdout, stderr, 0)\n\ndef deblur_system_call(params, input_fp):\n    if not os.path.isfile(input_fp):\n        raise FileNotFoundError(f\"Input file {input_fp} does not exist.\")\n    forbidden = {'--seqs-fp'}\n    fixed_flags = {'--seqs-fp', '--is-worker-thread', '--keep-tmp-files'}\n    if any(p in forbidden for p in params):\n        raise ValueError(f\"Param contains forbidden flag '--seqs-fp'.\")\n    filtered_params = [p for p in params if p not in fixed_flags]\n    logger = logging.getLogger(__name__)\n    logger.debug('[%s] deblur system call params %s, input_fp %s' % (mp.current_process().name, params, input_fp))\n    script_name = 'deblur'\n    script_subprogram = 'workflow'\n    command = [script_name, script_subprogram, '--seqs-fp', input_fp, '--is-worker-thread', '--keep-tmp-files']\n    command.extend(filtered_params)\n    logger.debug('[%s] running command %s' % (mp.current_process().name, command))\n    return _system_call(command)\n\ndef main():\n    logging.basicConfig(level=logging.DEBUG)\n    input_fp = 'test_sequences.fasta'\n    with open(input_fp, 'w') as f:\n        f.write(\">seq1\\nACTG\\n>seq2\\nTGCA\\n\")\n    params = ['--min-size', '50']\n    stdout, stderr, returncode = deblur_system_call(params, input_fp)\n    print('STDOUT:', stdout)\n    print('STDERR:', stderr)\n    print('Return code:', returncode)\n\nif __name__ == '__main__':\n    main()",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Added file existence check, forbidden flag validation, input mutation prevention, and duplicate flag removal to satisfy scaled task requirements.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_838_M4_d_01",
+    "env_medagentgym_train_838_M4_c_02",
+    "env_medagentgym_train_838_M4_a_03",
+    "env_medagentgym_train_838_M4_v_04"
+  ],
+  "covered_requirements": [
+    "Require the function to validate that the input FASTA file exists before constructing the command.",
+    "Require the function to validate that params does not contain flags that conflict with mandatory flags (e.g., '--seqs-fp').",
+    "Require the function to not mutate the input params list and to avoid duplicating any fixed flags that might accidentally appear in params.",
+    "Scaled executable cases must include a test that the function raises FileNotFoundError for missing input file.",
+    "Scaled executable cases must include tests that the function raises ValueError for each forbidden flag.",
+    "Scaled executable cases must include tests for no mutation and duplicate flag removal.",
+    "Scaled executable cases must include a test checking the exact command list for a non-trivial params list."
+  ],
+  "implementation_notes": [
+    "File existence check raises FileNotFoundError if input_fp does not exist.",
+    "Only '--seqs-fp' is considered a forbidden flag that raises ValueError; other fixed flags are silently filtered to avoid duplicates.",
+    "Original params list is not mutated; a new filtered list is created.",
+    "Command structure is preserved as per seed: fixed flags first, then filtered params.",
+    "All scaled oracle cases are satisfied."
+  ],
+  "assumptions": []
+}

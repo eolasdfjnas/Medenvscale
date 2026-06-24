@@ -1,0 +1,29 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Verify that the solution handles list inputs, uses bisection method and MBAR uncertainty, and prints with 5 decimal places.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_690_M3_d_01,env_medagentgym_train_690_M3_c_02",
+      "axis": "D,C",
+      "semantic_intent": "Verify that the solution correctly handles list inputs by converting to numpy arrays, uses method='bisection' and uncertainty_method='MBAR' in the bar call, and prints ΔF and dΔF with 5 decimal places.",
+      "target_constraint": "The solution must convert list inputs to numpy arrays, pass method='bisection' and uncertainty_method='MBAR' to bar, and format output with .5f.",
+      "expected_failure_mode": "If conversion is missing, bar will fail with TypeError; if wrong method or uncertainty method is used, output values will differ; if format precision is not .5f, output string will not match expected.",
+      "setup_code": "import numpy as np\nnp.random.seed(42)\nw_F = list(np.random.normal(loc=1.0, scale=1.0, size=5000))\nw_R = list(np.random.normal(loc=-1.0, scale=1.0, size=5000))",
+      "call_code": "w_F_arr = np.asarray(w_F)\nw_R_arr = np.asarray(w_R)\nresults = bar(w_F_arr, w_R_arr, method='bisection', uncertainty_method='MBAR')\nprint(f\"Free energy difference ΔF = {results['Delta_f']:.5f} ± {results['dDelta_f']:.5f} kT\")\nresult = results",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Code must convert list input to numpy arrays before passing to bar.",
+        "Use method='bisection' and uncertainty_method='MBAR' in bar call.",
+        "Print ΔF and dΔF with 5 decimal places using .5f format."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [
+          "Free energy difference ΔF = 1.00892 ± 0.00834 kT"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

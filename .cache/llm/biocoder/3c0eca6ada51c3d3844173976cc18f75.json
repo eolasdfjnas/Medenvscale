@@ -1,0 +1,85 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Verify that parse_reaction_file includes a 'compartment' key (None when not specified) in each reaction dict.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_436_M2_c_01",
+      "axis": "C",
+      "semantic_intent": "Verify that parse_reaction_file correctly attaches the default_compartment parameter to each reaction dict.",
+      "target_constraint": "Each reaction dict must have a 'compartment' key with value equal to the default_compartment argument (or None if not provided).",
+      "expected_failure_mode": "Seed code yields dicts without compartment key",
+      "setup_code": "",
+      "call_code": "print(\"Parsed TSV reactions:\")\nfor rxn in parsed_tsv:\n    print(rxn)\nprint(\"Parsed YAML reactions:\")\nfor rxn in parsed_yaml:\n    print(rxn)\nresult = {'parsed_tsv': parsed_tsv, 'parsed_yaml': parsed_yaml}",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Ensure parse_reaction_file uses the default_compartment parameter and includes a 'compartment' key in each reaction dict."
+      ],
+      "expected_output_signature": {
+        "return_value": {
+          "parsed_tsv": [
+            {
+              "id": "r1",
+              "equation": "A -> B",
+              "compartment": null
+            },
+            {
+              "id": "r2",
+              "equation": "B -> C",
+              "compartment": null
+            }
+          ],
+          "parsed_yaml": [
+            {
+              "id": "r3",
+              "equation": "C -> D",
+              "compartment": null
+            },
+            {
+              "id": "r4",
+              "equation": "D -> E",
+              "compartment": null
+            }
+          ]
+        },
+        "stdout_contains": [
+          "Parsed TSV reactions:",
+          "{'id': 'r1', 'equation': 'A -> B', 'compartment': None}",
+          "{'id': 'r2', 'equation': 'B -> C', 'compartment': None}",
+          "Parsed YAML reactions:",
+          "{'id': 'r3', 'equation': 'C -> D', 'compartment': None}",
+          "{'id': 'r4', 'equation': 'D -> E', 'compartment': None}"
+        ],
+        "file_artifacts": [
+          {
+            "path": "sample_reactions.tsv"
+          },
+          {
+            "path": "sample_reactions.yaml"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "scaled_duplicate_id_case",
+      "description": "Verify that parse_reaction_file raises ValueError when duplicate reaction IDs are encountered.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_436_M2_c_02",
+      "axis": "C",
+      "semantic_intent": "Verify that parse_reaction_file rejects duplicate reaction IDs with a ValueError.",
+      "target_constraint": "When a reaction file contains multiple entries with the same ID, the function must raise ValueError.",
+      "expected_failure_mode": "Seed code yields multiple dicts with same ID without error.",
+      "setup_code": "with open('dup_reactions.tsv', 'w') as f:\n    f.write('reaction_id\\tequation\\nr1\\tA -> B\\nr1\\tB -> C\\n')",
+      "call_code": "try:\n    list(parse_reaction_file('dup_reactions.tsv'))\n    result = None\nexcept ValueError as e:\n    result = str(e)",
+      "assertion_code": "assert result is not None and 'duplicate' in result",
+      "covered_requirements": [
+        "Ensure parse_reaction_file raises ValueError when duplicate reaction IDs are encountered."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

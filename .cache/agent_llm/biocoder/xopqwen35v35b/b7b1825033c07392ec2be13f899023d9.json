@@ -1,0 +1,17 @@
+{
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+    {
+      "index": 0,
+      "id": "call_f56f32775f754099adf42364",
+      "type": "function",
+      "function": {
+        "name": "validate_candidate_code",
+        "arguments": "{\"code\": \"import os\\n\\ndef parse_theta_results(fname):\\n    with open(fname, 'r') as f:\\n        lines = f.readlines()\\n    \\n    # Skip header line (first line)\\n    data_line = lines[1].strip()\\n    parts = data_line.split('\\\\t')\\n    \\n    nll = float(parts[0])\\n    \\n    # Parse mu: comma-separated, first is normal, rest are tumors\\n    mu_values = [float(x) for x in parts[1].split(',')]\\n    mu_normal = mu_values[0]\\n    mu_tumors = mu_values[1:]\\n    \\n    # Parse C: colon-separated list of copy number states\\n    # Each state can be \\\"a:b\\\" or just a single value\\n    c_strs = parts[2].split(',')\\n    C = []\\n    for c_str in c_strs:\\n        if ':' in c_str:\\n            sub_parts = c_str.split(':')\\n            row = []\\n            for sp in sub_parts:\\n                row.append(parse_value(sp))\\n            C.append(row)\\n        else:\\n            C.append([parse_value(c_str)])\\n    \\n    # Parse p*: comma-separated probabilities\\n    p_star_strs = parts[3].split(',')\\n    p_star = [parse_value(x) for x in p_star_strs]\\n    \\n    return {\\n        'NLL': nll,\\n        'mu_normal': mu_normal,\\n        'mu_tumors': mu_tumors,\\n        'C': C,\\n        'p*': p_star\\n    }\\n\\ndef parse_value(s):\\n    \\\"\\\"\\\"Parse a value, returning None if it's a placeholder.\\\"\\\"\\\"\\n    s = s.strip()\\n    try:\\n        # Try to convert to int first\\n        return int(s)\\n    except ValueError:\\n        try:\\n            # Try to convert to float\\n            return float(s)\\n        except ValueError:\\n            # It's a placeholder, return None\\n            return None\\n\\ndef main():\\n    # Create a temporary THetA output file with a single tumor example\\n    sample = (\\n        \\\"NLL\\\\tmu\\\\tC\\\\tp*\\\\n\\\"\\n        \\\"12.5\\\\t0.4,0.6\\\\t2:3\\\\t0.1,0.2\\\\n\\\"\\n    )\\n    fname = \\\"theta_test.txt\\\"\\n    with open(fname, \\\"w\\\") as f:\\n        f.write(sample)\\n\\n    # Parse the THetA results\\n    result = parse_theta_results(fname)\\n    print(result)\\n\\n    # Clean up\\n    os.remove(fname)\\n\\nif __name__ == \\\"__main__\\\":\\n    main()\"}"
+      }
+    }
+  ],
+  "reasoning_content": "",
+  "plugins_content": null
+}

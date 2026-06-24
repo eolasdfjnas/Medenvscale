@@ -1,0 +1,387 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "separator_in_fields",
+      "operator_intensity": 1,
+      "transformation_goal": "Require the function to correctly extract the last two fields even when the separator appears within those fields (e.g., UMI or cell barcode contains an underscore).",
+      "rationale": "In real scRNA-seq data, UMIs and cell barcodes may contain the separator character, so simple left-to-right split fails. Using rsplit with maxsplit=2 or equivalent ensures robustness. This increases Data/Input Complexity.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "string splitting",
+            "right-to-left parsing",
+            "maxsplit usage"
+          ],
+          "problem": "In the context of single-cell RNA sequencing, you have read identifiers where the last two fields (separated by a given separator) encode the cell barcode and UMI. Write a function called get_cell_umi_read_string that takes a read_id string and an optional separator (default '_') and returns a tuple of (UMI_bytes, cell_barcode_bytes). If the read_id does not contain at least two separators, the function should raise a ValueError. **Additionally, the function must correctly parse read IDs where the separator appears within the cell barcode or UMI fields. To guarantee correct extraction, use a right-to-left split approach (e.g., rsplit with maxsplit=2).**"
+        },
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "description": "Example read IDs with separator within fields",
+              "content": "read_id_sep_in_field = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB_10123_UMI_ACTGGA' (where cell barcode is 'CB_10123' and UMI is 'UMI_ACTGGA')"
+            }
+          ]
+        },
+        "visible_state_patch": {
+          "context_summary": "def main():\n    # Example read IDs from single-cell RNA-seq where the last two fields are Cell Barcode and UMI\n    read_id_good = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB10123_UMIACTGGA'\n    read_id_bad = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001'\n    sep = '_'\n    # New example: separator within field\n    read_id_sep_in_field = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB_10123_UMI_ACTGGA'\n    # <<insert solution here>>\n    # Test with a valid read ID\n    umi, cell_barcode = get_cell_umi_read_string(read_id_good, sep)\n    print(\"Good read -> UMI bytes:\", umi, \"Cell barcode bytes:\", cell_barcode)\n    # Test with separator in fields\n    umi2, cell_barcode2 = get_cell_umi_read_string(read_id_sep_in_field, sep)\n    print(\"Field with separator -> UMI bytes:\", umi2, \"Cell barcode bytes:\", cell_barcode2)\n    # Test with an invalid read ID to demonstrate error handling\n    try:\n        get_cell_umi_read_string(read_id_bad, sep)\n    except ValueError as e:\n        print(\"Expected error for bad read ID:\", e)"
+        },
+        "gold_state_patch": {
+          "gold_solution": "def get_cell_umi_read_string(read_id, sep='_'):\n    \"\"\" extract the umi and cell barcode from the read id (input as a\n    string) using the specified separator. Uses rsplit to handle separator within fields.\"\"\"\n    try:\n        parts = read_id.rsplit(sep, 2)\n        return parts[-1].encode('utf-8'), parts[-2].encode('utf-8')\n    except IndexError:\n        raise ValueError(\n            'Could not extract UMI or CB from the read ID, please check UMI and CB are encoded in the read name: %s'\n            % read_id)"
+        },
+        "verifier_state_patch": {
+          "verifier_type_hint": "unit_test"
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "case_id": "test_sep_in_field",
+            "description": "Test that function correctly extracts when separator appears within last two fields.",
+            "setup_code": "sep='_'\nread_id = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB_10123_UMI_ACTGGA'",
+            "call_code": "umi, cell_barcode = get_cell_umi_read_string(read_id, sep)",
+            "expected_output_signature": {
+              "return_value": {
+                "umi": "b'UMI_ACTGGA'",
+                "cell_barcode": "b'CB_10123'"
+              }
+            },
+            "extraction_method": "rule_based"
+          }
+        ],
+        "exception_tests": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_D_sep_in_field",
+          "semantic_intent": "Prove that the function correctly extracts the last two fields when the separator appears within those fields.",
+          "target_constraint": "The function must use rsplit or equivalent to parse from right, so that internal separators do not break extraction.",
+          "expected_failure_mode": "If the function uses split (without maxsplit), it will incorrectly split on internal separators and return wrong values.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "read_id with separator within UMI and cell barcode"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Provide a read ID where the cell barcode and UMI themselves contain underscores, e.g., 'CB_10123' and 'UMI_ACTGGA'. The function should return the correct last two fields as bytes."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include at least one test where separator appears within the last two fields."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "new_success_criteria": "Function must use rsplit with maxsplit=2."
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "D",
+      "operator_type": "byte_input_support",
+      "operator_intensity": 1,
+      "transformation_goal": "Extend the function to accept read_id as either a string or bytes object. If bytes, decode before processing using the separator (assumed to be a string).",
+      "rationale": "In bioinformatics pipelines, read IDs may be provided as bytes from binary files. The function should handle both types transparently, increasing Data/Input Complexity.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "type checking",
+            "bytes decode",
+            "string splitting"
+          ],
+          "problem": "In the context of single-cell RNA sequencing, you have read identifiers where the last two fields (separated by a given separator) encode the cell barcode and UMI. Write a function called get_cell_umi_read_string that takes a read_id (which may be a string or bytes) and an optional separator (default '_') and returns a tuple of (UMI_bytes, cell_barcode_bytes). If the read_id does not contain at least two separators, the function should raise a ValueError. If read_id is bytes, decode it using utf-8 before processing."
+        },
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "description": "Example bytes read ID",
+              "content": "read_id_bytes = b'NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB10123_UMIACTGGA'"
+            }
+          ]
+        },
+        "visible_state_patch": {
+          "context_summary": "def main():\n    # Example read IDs\n    read_id_str = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB10123_UMIACTGGA'\n    read_id_bytes = b'NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB10123_UMIACTGGA'\n    sep = '_'\n    # <<insert solution here>>\n    # Test with string\n    umi, cell_barcode = get_cell_umi_read_string(read_id_str, sep)\n    print(\"String -> UMI bytes:\", umi, \"Cell barcode bytes:\", cell_barcode)\n    # Test with bytes\n    umi2, cell_barcode2 = get_cell_umi_read_string(read_id_bytes, sep)\n    print(\"Bytes -> UMI bytes:\", umi2, \"Cell barcode bytes:\", cell_barcode2)"
+        },
+        "gold_state_patch": {
+          "gold_solution": "def get_cell_umi_read_string(read_id, sep='_'):\n    \"\"\" extract the umi and cell barcode from the read id (input as a string or bytes).\"\"\"\n    if isinstance(read_id, bytes):\n        read_id = read_id.decode('utf-8')\n    try:\n        parts = read_id.rsplit(sep, 2)\n        return parts[-1].encode('utf-8'), parts[-2].encode('utf-8')\n    except IndexError:\n        raise ValueError(\n            'Could not extract UMI or CB from the read ID, please check UMI and CB are encoded in the read name: %s'\n            % read_id)"
+        },
+        "verifier_state_patch": {
+          "verifier_type_hint": "unit_test"
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "case_id": "test_byte_input",
+            "description": "Test that function accepts bytes input and returns correct bytes.",
+            "setup_code": "sep='_'\nread_id = b'NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB10123_UMIACTGGA'",
+            "call_code": "umi, cell_barcode = get_cell_umi_read_string(read_id, sep)",
+            "expected_output_signature": {
+              "return_value": {
+                "umi": "b'UMIACTGGA'",
+                "cell_barcode": "b'CB10123'"
+              }
+            },
+            "extraction_method": "rule_based"
+          }
+        ],
+        "exception_tests": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_D_byte_input",
+          "semantic_intent": "Prove that the function correctly handles bytes input by decoding and returning bytes output.",
+          "target_constraint": "Function must check type and decode bytes to string using utf-8 before splitting.",
+          "expected_failure_mode": "If function does not handle bytes, it will raise TypeError or return unexpected output.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "read_id as bytes object"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Provide a read ID as bytes and verify the function returns the correct UMI and cell barcode bytes."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include at least one test with bytes input."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "new_success_criteria": "Function must accept both str and bytes."
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "validation_constraints",
+      "operator_intensity": 1,
+      "transformation_goal": "Add validation constraints on the extracted UMI and cell barcode: UMI must be a DNA sequence (A,C,G,T only) of length 8-12, cell barcode must be alphanumeric of length 6-16. Raise ValueError if invalid.",
+      "rationale": "Real scRNA-seq data has known formats for UMIs (random nucleotides) and cell barcodes (often alphanumeric). Enforcing these constraints increases Computation/Constraint Complexity.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "regex validation",
+            "string validation"
+          ],
+          "problem": "In the context of single-cell RNA sequencing, you have read identifiers where the last two fields (separated by a given separator) encode the cell barcode and UMI. Write a function called get_cell_umi_read_string that takes a read_id string and an optional separator (default '_') and returns a tuple of (UMI_bytes, cell_barcode_bytes). If the read_id does not contain at least two separators, the function should raise a ValueError. **Additionally, after extraction, validate that the UMI consists only of characters A, C, G, T (uppercase) and is between 8 and 12 characters long, and that the cell barcode is alphanumeric and between 6 and 16 characters long. If either fails validation, raise a ValueError with an appropriate message.**"
+        },
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "description": "Example invalid UMI (contains other letters)",
+              "content": "read_id_invalid_umi = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB10123_UMIACTGX'"
+            }
+          ]
+        },
+        "visible_state_patch": {
+          "context_summary": "def main():\n    # Example read IDs\n    read_id_good = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB10123_UMIACTGGA'\n    read_id_bad = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001'\n    read_id_invalid_umi = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB10123_UMIACTGX'   # X invalid\n    sep = '_'\n    # <<insert solution here>>\n    # Test with valid\n    umi, cell_barcode = get_cell_umi_read_string(read_id_good, sep)\n    print(\"Good read -> UMI bytes:\", umi, \"Cell barcode bytes:\", cell_barcode)\n    # Test with invalid UMI\n    try:\n        get_cell_umi_read_string(read_id_invalid_umi, sep)\n    except ValueError as e:\n        print(\"Expected error for invalid UMI:\", e)\n    # Test with too short UMI\n    # etc."
+        },
+        "gold_state_patch": {
+          "gold_solution": "def get_cell_umi_read_string(read_id, sep='_'):\n    \"\"\" extract the umi and cell barcode from the read id with validation.\"\"\"\n    if isinstance(read_id, bytes):\n        read_id = read_id.decode('utf-8')\n    try:\n        parts = read_id.rsplit(sep, 2)\n        umi_str = parts[-1]\n        cell_barcode_str = parts[-2]\n    except IndexError:\n        raise ValueError('...')\n    # Validate UMI: only A,C,G,T, length 8-12\n    import re\n    if not re.match(r'^[ACGT]{8,12}$', umi_str):\n        raise ValueError(f'Invalid UMI: {umi_str}')\n    # Validate cell barcode: alphanumeric, length 6-16\n    if not re.match(r'^[A-Za-z0-9]{6,16}$', cell_barcode_str):\n        raise ValueError(f'Invalid cell barcode: {cell_barcode_str}')\n    return umi_str.encode('utf-8'), cell_barcode_str.encode('utf-8')"
+        },
+        "verifier_state_patch": {
+          "verifier_type_hint": "unit_test"
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "case_id": "test_invalid_umi",
+            "description": "Test that function raises ValueError for UMI with invalid characters.",
+            "setup_code": "sep='_'\nread_id = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB10123_UMIACTGX'",
+            "call_code": "try:\n    get_cell_umi_read_string(read_id, sep)\nexcept ValueError as e:\n    result = str(e)",
+            "expected_output_signature": {
+              "return_value": {
+                "result": "Invalid UMI: UMIACTGX"
+              }
+            },
+            "extraction_method": "rule_based"
+          },
+          {
+            "case_id": "test_short_umi",
+            "description": "Test that function raises ValueError for UMI too short.",
+            "setup_code": "sep='_'\nread_id = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB10123_UMIAC'",
+            "call_code": "try:\n    get_cell_umi_read_string(read_id, sep)\nexcept ValueError as e:\n    result = str(e)",
+            "expected_output_signature": {
+              "return_value": {
+                "result": "Invalid UMI: UMIAC"
+              }
+            },
+            "extraction_method": "rule_based"
+          }
+        ],
+        "exception_tests": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_C_validation",
+          "semantic_intent": "Prove that the function validates UMI and cell barcode formats and raises ValueError on invalid input.",
+          "target_constraint": "Function must check UMI against regex ^[ACGT]{8,12}$ and cell barcode against ^[A-Za-z0-9]{6,16}$.",
+          "expected_failure_mode": "Seed solution without validation would accept invalid UMI (e.g., containing 'X')",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "read_id with invalid UMI or cell barcode"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Provide read IDs where UMI contains invalid characters or wrong length, and verify ValueError is raised."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include tests for invalid UMI and invalid cell barcode (e.g., too short, invalid characters)."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "new_success_criteria": "Function must perform format validation and raise ValueError if invalid."
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "output_order_specification",
+      "operator_intensity": 1,
+      "transformation_goal": "Strengthen the output contract: the function must return the tuple (UMI_bytes, cell_barcode_bytes) in that exact order. Add a test to ensure order is not swapped.",
+      "rationale": "The order of the tuple is crucial for downstream processing. This adds a constraint on the output, increasing Computation/Constraint Complexity.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "tuple ordering"
+          ],
+          "problem": "In the context of single-cell RNA sequencing, you have read identifiers where the last two fields (separated by a given separator) encode the cell barcode and UMI. Write a function called get_cell_umi_read_string that takes a read_id string and an optional separator (default '_') and returns a tuple of (UMI_bytes, cell_barcode_bytes). If the read_id does not contain at least two separators, the function should raise a ValueError. **The order of the return tuple must be (UMI_bytes, cell_barcode_bytes). Ensure that the UMI is the first element and cell barcode is the second.**"
+        },
+        "data_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "def main():\n    # Example read IDs\n    read_id_good = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB10123_UMIACTGGA'\n    sep = '_'\n    # <<insert solution here>>\n    # Test order\n    umi, cell_barcode = get_cell_umi_read_string(read_id_good, sep)\n    print(\"UMI bytes:\", umi, \"Cell barcode bytes:\", cell_barcode)\n    # Additional check: first should be UMI, second cell barcode\n    assert umi == b'UMIACTGGA' and cell_barcode == b'CB10123', \"Order is incorrect\""
+        },
+        "gold_state_patch": {
+          "gold_solution": "def get_cell_umi_read_string(read_id, sep='_'):\n    \"\"\" extract the umi and cell barcode from the read id. Return (UMI_bytes, cell_barcode_bytes).\"\"\"\n    if isinstance(read_id, bytes):\n        read_id = read_id.decode('utf-8')\n    try:\n        parts = read_id.rsplit(sep, 2)\n        umi_str = parts[-1]\n        cell_barcode_str = parts[-2]\n    except IndexError:\n        raise ValueError('...')\n    # Validation (optional, but for completeness)\n    import re\n    if not re.match(r'^[ACGT]{8,12}$', umi_str):\n        raise ValueError(f'Invalid UMI: {umi_str}')\n    if not re.match(r'^[A-Za-z0-9]{6,16}$', cell_barcode_str):\n        raise ValueError(f'Invalid cell barcode: {cell_barcode_str}')\n    return umi_str.encode('utf-8'), cell_barcode_str.encode('utf-8')\n# Note: order is (UMI, cell_barcode)"
+        },
+        "verifier_state_patch": {
+          "verifier_type_hint": "unit_test"
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "case_id": "test_order",
+            "description": "Ensure the function returns tuple in correct order (UMI first, cell barcode second).",
+            "setup_code": "sep='_'\nread_id = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB10123_UMIACTGGA'",
+            "call_code": "result = get_cell_umi_read_string(read_id, sep)\n# Check order\nassert result[0] == b'UMIACTGGA' and result[1] == b'CB10123', f'Order wrong: {result}'",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": []
+            },
+            "extraction_method": "none"
+          }
+        ],
+        "exception_tests": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_C_output_order",
+          "semantic_intent": "Prove that the function returns the tuple in the exact order (UMI_bytes, cell_barcode_bytes).",
+          "target_constraint": "The first element must be the UMI, the second the cell barcode.",
+          "expected_failure_mode": "If the order is swapped, downstream processing will fail.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "valid read ID"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Provide a valid read ID and verify that the returned tuple has UMI as first element and cell barcode as second."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a test that explicitly checks the order of the returned tuple."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "new_success_criteria": "Function must return (UMI_bytes, cell_barcode_bytes) in that order."
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

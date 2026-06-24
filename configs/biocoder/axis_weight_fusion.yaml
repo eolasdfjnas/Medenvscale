@@ -1,0 +1,8 @@
+axis_weight_fusion:
+  # 4-axis fusion remains task-type agnostic: D/C/A/V all use the same
+  # primary-plus-secondary relevance blend.
+  enabled: true
+  secondary_fusion_strength: 0.30
+  max_secondary_task_types: 3
+  mode: relevance_weighted_average
+  primary_hard_constraints: true

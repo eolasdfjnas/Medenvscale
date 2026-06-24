@@ -1,0 +1,150 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "D_robust_whitespace_parsing",
+      "operator_intensity": 1,
+      "transformation_goal": "Add extra whitespace and blank lines to the m/z input string to test robustness of parsing.",
+      "rationale": "The seed task uses simple newline-separated m/z values without extra whitespace. Real-world input may contain blank lines, trailing spaces, or leading/trailing newlines. This operator increases data complexity by making the input string less clean while still representing the same set of m/z values.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {
+          "mzStr": "100.0\n\n200.0 \n300.0\n"
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import requests\nimport pandas as pd\nfrom requests_toolbelt.multipart.encoder import MultipartEncoder\nfrom io import StringIO\n# Assume the solution function _get_num_matches(db, mzStr, adducts, tolerance=0.001) is available here.\ndef main():\n    # Specify which LipidMaps database to query (e.g. 'GLYCOLIPIDS')\n    db = 'GLYCOLIPIDS'\n    # Create a string with one m/z value per line (may contain extra whitespace)\n    mz_values = '100.0\\n\\n200.0 \\n300.0\\n'\n    # Choose adducts of interest\n    adducts = 'M+H,M+Na'\n    # Set mass tolerance in Daltons\n    tolerance = 0.01\n\n    # CALL THE SOLUTION FUNCTION HERE\n    num_matches = <<insert solution here>>\n\n    print(f'Number of unique m/z matches: {num_matches}')\n\nif __name__ == '__main__':\n    main()"
+        },
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_1",
+          "semantic_intent": "The scaled case must prove that the function correctly handles m/z input with extra whitespace and blank lines, ignoring them and still correctly identifying unique matches.",
+          "target_constraint": "The function must parse m/z values robustly even with blank lines, leading/trailing spaces, and trailing newline.",
+          "expected_failure_mode": "If the function does not strip whitespace or skip blank lines, it may incorrectly count blank lines as m/z values, leading to fewer or incorrect matches.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Same m/z values but with extra whitespace and blank lines; expected same number of unique matches."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "C_edge_adducts_handling",
+      "operator_intensity": 1,
+      "transformation_goal": "Add edge cases for adducts parameter: empty string, leading/trailing commas, and repeated adducts.",
+      "rationale": "The seed task uses a simple list of adducts like 'M+H,M+Na'. Real usage may include empty strings (meaning no adduct filter?), extra commas, or duplicates. This operator increases constraint complexity by requiring the function to handle such malformed adducts strings gracefully, possibly ignoring them or defaulting to an empty list.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {
+          "adducts": "M+H,,M+Na"
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import requests\nimport pandas as pd\nfrom requests_toolbelt.multipart.encoder import MultipartEncoder\nfrom io import StringIO\n# Assume the solution function _get_num_matches(db, mzStr, adducts, tolerance=0.001) is available here.\ndef main():\n    # Specify which LipidMaps database to query (e.g. 'GLYCOLIPIDS')\n    db = 'GLYCOLIPIDS'\n    # Create a string with one m/z value per line\n    mz_values = '100.0\\n200.0\\n300.0'\n    # Choose adducts of interest (may contain edge cases like empty string)\n    adducts = 'M+H,,M+Na'\n    # Set mass tolerance in Daltons\n    tolerance = 0.01\n\n    # CALL THE SOLUTION FUNCTION HERE\n    num_matches = <<insert solution here>>\n\n    print(f'Number of unique m/z matches: {num_matches}')\n\nif __name__ == '__main__':\n    main()"
+        },
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "The scaled case must prove that the function handles a comma-separated adducts string with empty entries (e.g., trailing comma or double comma) correctly, interpreting it as just 'M+H' and 'M+Na'.",
+          "target_constraint": "The function must not break or produce invalid API calls when adducts string contains empty segments; it should clean the list by removing empty strings.",
+          "expected_failure_mode": "If the function passes the raw string to the API, the API might misinterpret empty adducts, leading to a different match count or an error.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Same m/z values but adducts string contains a double comma; expected same number of unique matches as with 'M+H,M+Na'."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "role": "assistant",
+  "content": "Let me check what's available in the environment:\n\n",
+  "tool_calls": [
+    {
+      "index": 0,
+      "id": "call_1329912ae752474abd14d7ba",
+      "type": "function",
+      "function": {
+        "name": "run_custom_test",
+        "arguments": "{\"code\": \"from Bio.Graphics import BasicChromosome as BC\\nfrom Bio.Graphics.BasicChromosome import Chromosome\\nimport inspect\\n\\n# Get the source of the original _draw_label method\\nprint(\\\"Original _draw_label method:\\\")\\nprint(inspect.getsource(Chromosome._draw_label))\", \"test_snippet\": \"print(\\\"Test passed\\\")\"}"
+      }
+    }
+  ],
+  "reasoning_content": "",
+  "plugins_content": null
+}

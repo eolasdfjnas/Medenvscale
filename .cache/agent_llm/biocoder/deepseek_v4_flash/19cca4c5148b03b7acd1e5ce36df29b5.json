@@ -1,0 +1,16 @@
+{
+  "role": "assistant",
+  "content": "",
+  "reasoning_content": "Let me analyze the problem. I need to write a function `get_default_error_profile()` that returns a list of 12 numeric values representing typical error rates at successive read positions for Illumina sequencing data.\n\nFrom the context, I can see:\n- The profile should be a list of 12 values\n- First entry (profile[0]) should be 1\n- Last entry (profile[-1]) should be 0.0005\n- These are error rates at successive read positions\n\nFor Illumina sequencing, the error profile typically starts high at the first base (often around 1 or close to it in some probability models), then drops quickly, and gradually increases toward the end of the read. Let me think about the typical Illumina error profile.\n\nActually, in Illumina sequencing, the error rate is typically higher at the beginning and end of reads. The first base often has a higher error rate. A common error probability profile for Illumina data might look like:\n\nPosition 1: higher error (1 might represent some normalized scale, but wait - the first assertion says profile[0] == 1, and profile[-1] == 0.0005. These are error rates, so they should be probabilities between 0 and 1. But 1 would mean 100% error rate? That seems odd.\n\nWait, let me re-read. The values could be on a different scale, or perhaps \"1\" is just a specific test value. Let me think about what typical Illumina error profiles look like.\n\nActually, in some bioinformatics contexts, the error profile for deblurring (a QIIME 2 method) uses specific values. The default Illumina error profile in QIIME 2's deblur workflow is:\n\n[1, 0.5, 0.06, 0.005, 0.001, 0.0005, 0.0005, 0.0005, 0.0005, 0.0005, 0.0005, 0.0005]\n\nWait, but the last entry must be 0.0005 and first must be 1. Let me check what the actual default error profile is for deblur.\n\nIn the deblur algorithm (by Amir et al., 2013), the default error profile for Illumina sequencing is typically:\n\n[1.0, 0.5, 0.06, 0.005, 0.001, 0.0005, 0.0005, 0.0005, 0.0005, 0.0005, 0.0005, 0.0005]\n\nThis is a known profile. Let me verify:\n- Length: 12 ✓\n- First entry: 1 ✓\n- Last entry: 0.0005 ✓\n\nLet me verify this is correct by running a test.",
+  "tool_calls": [
+    {
+      "index": 0,
+      "id": "call_00_06ZHcp1CYyufB7zzaH442837",
+      "type": "function",
+      "function": {
+        "name": "get_task_context",
+        "arguments": "{\"window\": 4000}"
+      }
+    }
+  ]
+}

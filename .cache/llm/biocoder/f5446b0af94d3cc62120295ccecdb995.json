@@ -1,0 +1,24 @@
+{
+  "scaled_executable_gold_code": "import pandas as pd\n\ndef from_label(label):\n    # placeholder for label conversion\n    return label\n\ndef report_bad_line(parse_func):\n    def parse_line(line):\n        line = line.strip()\n        parts = line.split()\n        chrom, rest = parts[0].split(':')\n        start, end = rest.split('-')\n        gene = parts[1] if len(parts) > 1 else ''\n        return (chrom, int(start), int(end), gene)\n    return parse_line\n\ndef as_handle(path, mode):\n    return open(path, mode)\n\ndef read_text(infile):\n    \"\"\"Text coordinate format: \"chr:start-end\", one per line.\n\n    Or sometimes: \"chrom:start-end gene\" or \"chrom:start-end REF>ALT\"\n\n    Coordinate indexing is assumed to be from 1.\n    \"\"\"\n    parse_line = report_bad_line(from_label)\n    with as_handle(infile, 'r') as handle:\n        rows = [parse_line(line) for line in handle]\n    table = pd.DataFrame.from_records(rows, columns=['chromosome', 'start',\n        'end', 'gene'])\n    table['gene'] = table['gene'].replace('', '-')\n    return table",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Task semantics changed due to D, A, C operators (mixed prefixes, varied annotations, whitespace robustness, empty file handling). The seed solution already satisfies all scaled requirements; no code change needed.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_295_M4_d_01",
+    "env_medagentgym_train_295_M4_d_02",
+    "env_medagentgym_train_295_M4_c_03",
+    "env_medagentgym_train_295_M4_a_04"
+  ],
+  "covered_requirements": [
+    "Scaled executable cases must include a test file with various chromosome prefixes and verify correct parsing.",
+    "Scaled executable cases must include a test file with diverse annotation values and verify correct mapping.",
+    "Scaled executable cases must test empty input and verify DataFrame structure.",
+    "Scaled executable cases must test whitespace variations and verify correct parsing."
+  ],
+  "implementation_notes": [
+    "Reused seed solution as it already satisfies all scaled requirements due to use of strip() and split() for whitespace handling, and empty file yields empty DataFrame."
+  ],
+  "assumptions": []
+}

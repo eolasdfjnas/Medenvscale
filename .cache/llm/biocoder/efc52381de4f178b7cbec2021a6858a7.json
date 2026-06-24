@@ -1,0 +1,18 @@
+{
+  "scaled_executable_gold_code": "from statistics import median\n\ndef median_absolute_deviation(data):\n    med = median(data)\n    deviations = [abs(x - med) for x in data]\n    return median(deviations)\n\ndef compute_probs(datalist: list) -> (list, list):\n    FILTER_MINREADS = 100\n    FILTER_MEDDEV_M = 10\n    values = []\n    probabilities = []\n    med = median(datalist)\n    mad = median_absolute_deviation(datalist)\n    for item in sorted(set(datalist)):\n        if 0 < item <= med + FILTER_MEDDEV_M * mad:\n            data_count = datalist.count(item)\n            if data_count >= FILTER_MINREADS:\n                values.append(item)\n                probabilities.append(data_count)\n    count_sum = float(sum(probabilities))\n    probabilities = [(n / count_sum) for n in probabilities]\n    return values, probabilities\n\ndef main():\n    datalist = [8]*200 + [10]*120 + [12]*150 + [15]*90 + [20]*50\n    values, probs = compute_probs(datalist)\n    print(\"Selected fragment lengths:\", values)\n    print(\"Their probabilities:\", probs)\n\nif __name__ == \"__main__\":\n    main()",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "The seed code did not guarantee sorted output; scaled task requires values sorted ascending. Modified iteration to sorted(set(datalist)).",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_811_M2_c_01"
+  ],
+  "covered_requirements": [
+    "Scaled executable cases must check that the first returned list is sorted in ascending order."
+  ],
+  "implementation_notes": [
+    "Modified iteration over unique fragment lengths to use sorted(set(datalist)) to ensure ascending order output."
+  ],
+  "assumptions": []
+}

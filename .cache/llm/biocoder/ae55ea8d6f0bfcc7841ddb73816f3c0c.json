@@ -1,0 +1,21 @@
+{
+  "scaled_executable_gold_code": "import logging\nimport multiprocessing as mp\n\ndef _system_call(command):\n    stdout = f\"Executed command: {command}\"\n    stderr = \"\"\n    return (stdout, stderr, 0)\n\ndef deblur_system_call(params, input_fp):\n    logger = logging.getLogger(__name__)\n    logger.debug('[%s] deblur system call params %s, input_fp %s' % (mp.current_process().name, params, input_fp))\n    sequence_count = 0\n    with open(input_fp, 'r') as f:\n        for line in f:\n            if line.startswith('>'):\n                sequence_count += 1\n    logger.debug('Number of sequences in %s: %d', input_fp, sequence_count)\n    script_name = 'deblur'\n    script_subprogram = 'workflow'\n    command = [script_name, script_subprogram, '--seqs-fp', input_fp]\n    if '--is-worker-thread' not in params:\n        command.append('--is-worker-thread')\n    if '--keep-tmp-files' not in params:\n        command.append('--keep-tmp-files')\n    command.extend(params)\n    logger.debug('[%s] running command %s' % (mp.current_process().name, command))\n    return _system_call(command)\n\ndef main():\n    logging.basicConfig(level=logging.DEBUG)\n    input_fp = 'test_sequences.fasta'\n    with open(input_fp, 'w') as f:\n        f.write(\">seq1\\nACTG\\n>seq2\\nTGCA\\n\")\n    params = ['--min-size', '50']\n    stdout, stderr, returncode = deblur_system_call(params, input_fp)\n    print('STDOUT:', stdout)\n    print('STDERR:', stderr)\n    print('Return code:', returncode)\n\nif __name__ == '__main__':\n    main()",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Added sequence count logging and deduplication of mandatory flags to satisfy D and A operators.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_838_M3_d_01",
+    "env_medagentgym_train_838_M3_a_02"
+  ],
+  "covered_requirements": [
+    "Scaled executable cases must verify that the sequence count is logged in stderr.",
+    "Scaled executable cases must verify that mandatory flags are not duplicated."
+  ],
+  "implementation_notes": [
+    "The function now reads the FASTA file to count sequences and logs the count via logging.debug.",
+    "It checks if mandatory flags '--is-worker-thread' and '--keep-tmp-files' are already in params before adding them to avoid duplication."
+  ],
+  "assumptions": []
+}

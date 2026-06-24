@@ -1,0 +1,35 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main_combined",
+      "description": "Transformed seed case with larger model (3 reactions, 3 compounds), floating-point bounds, special characters in reaction names, and floating-point stoichiometric coefficients. Verifies correct variable definitions and exact bounds.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_388_M4_d_01,env_medagentgym_train_388_M4_c_02,env_medagentgym_train_388_M4_a_03,env_medagentgym_train_388_M4_v_01",
+      "axis": "D,C,A,V",
+      "semantic_intent": "Verify that the function correctly handles a larger metabolic model with floating-point bounds, special characters in reaction/compound names, and floating-point stoichiometric coefficients, producing correct variable definitions and mass balance constraints.",
+      "target_constraint": "Variable bounds must match model limits exactly (including floating-point values), and keys in variable dictionaries must preserve special characters (spaces, underscores) as provided in the model.",
+      "expected_failure_mode": "Solutions that truncate bounds to integers, strip whitespace from names, or assume a fixed number of reactions/compounds may produce incorrect variable dictionaries or missing constraints.",
+      "setup_code": "",
+      "call_code": "model = MetabolicModel()\nsolver = Solver('glpk')\nprob, v, zi, dgri, xij, compounds = make_tmfa_problem(model, solver)\nprint(\"Namespaces:\", list(prob.namespaces.keys()))\nprint(\"Flux vars:\", v.vars)\nprint(\"Binary vars:\", zi.vars)\nprint(\"Gibbs vars:\", dgri.vars)\nprint(\"Concentration vars:\", xij.vars)\nprint(\"Compounds:\", compounds)\nresult = {'prob': prob, 'v': v, 'zi': zi, 'dgri': dgri, 'xij': xij, 'compounds': compounds}",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must expose the behavior with larger model and floating-point coefficients.",
+        "Scaled executable cases must capture the floating-point bounds in the output.",
+        "Scaled executable cases must verify the exact keys in variable dictionaries.",
+        "Scaled executable cases must provide stronger executable verification coverage for this operator."
+      ],
+      "expected_output_signature": {
+        "return_type": "tuple",
+        "stdout_contains": [
+          "Namespaces: ['flux', 'zi', 'dgri', 'xij']",
+          "Flux vars: {('R1 (a)',): {'lower': -10.5, 'upper': 100.5, 'type': 'Continuous'}, ('R2',): {'lower': 0.0, 'upper': 50.0, 'type': 'Continuous'}, ('R3_with_underscore',): {'lower': 0.0, 'upper': 20.0, 'type': 'Continuous'}}",
+          "Binary vars: {('R1 (a)',): {'lower': 0, 'upper': 1, 'type': 'Binary'}, ('R2',): {'lower': 0, 'upper': 1, 'type': 'Binary'}, ('R3_with_underscore',): {'lower': 0, 'upper': 1, 'type': 'Binary'}}",
+          "Gibbs vars: {('R1 (a)',): {'lower': -1000, 'upper': 1000, 'type': 'Continuous'}, ('R2',): {'lower': -1000, 'upper': 1000, 'type': 'Continuous'}, ('R3_with_underscore',): {'lower': -1000, 'upper': 1000, 'type': 'Continuous'}}",
+          "Concentration vars: {('A',): {'lower': -50, 'upper': 50, 'type': 'Continuous'}, ('B',): {'lower': -50, 'upper': 50, 'type': 'Continuous'}, ('C',): {'lower': -50, 'upper': 50, 'type': 'Continuous'}}",
+          "Compounds: ['A', 'B', 'C']"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

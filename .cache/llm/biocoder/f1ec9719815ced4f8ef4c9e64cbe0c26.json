@@ -1,0 +1,243 @@
+{
+  "operator_instances": [
+    {
+      "axis": "C",
+      "operator_type": "add_objective_constraint",
+      "operator_intensity": 1,
+      "transformation_goal": "Require the function to also set an objective function that maximizes the sum of fluxes, adding a new output constraint.",
+      "rationale": "The seed task does not require an objective; adding this constraint increases computation/constraint complexity by forcing the function to set an optimization goal, which is a common need in TMFA.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "understand metabolic modeling",
+            "construct LP problem with namespaces",
+            "add variables with bounds",
+            "impose linear equality constraints",
+            "set objective function"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import logging\nfrom six import iteritems\n# Set up logger and utility\nlogging.basicConfig(level=logging.INFO)\nlogger = logging.getLogger(__name__)\nconvert_to_unicode = lambda x: x\n# Stub for LP variable types\nclass lp:\n    class VariableType:\n        Continuous = 'Continuous'\n        Binary = 'Binary'\n\n# Expression class for linear arithmetic\nclass Expression:\n    def __init__(self, name=None, coeff=1.0):\n        self.terms = {}  # variable name (string) -> coefficient\n        if name:\n            self.terms[name] = coeff\n    def __mul__(self, other):\n        if isinstance(other, (int, float)):\n            new = Expression()\n            for k, v in self.terms.items():\n                new.terms[k] = v * other\n            return new\n        return NotImplemented\n    def __rmul__(self, other):\n        return self.__mul__(other)\n    def __add__(self, other):\n        new = Expression()\n        new.terms = self.terms.copy()\n        if isinstance(other, Expression):\n            for k, v in other.terms.items():\n                new.terms[k] = new.terms.get(k, 0) + v\n        elif isinstance(other, (int, float)):\n            pass\n        else:\n            return NotImplemented\n        return new\n    def __radd__(self, other):\n        return self.__add__(other)\n    def __eq__(self, other):\n        return LinearConstraint(self, other)\n    def __repr__(self):\n        return str(self.terms)\n\nclass LinearConstraint:\n    def __init__(self, lhs, rhs):\n        self.expr = (lhs, rhs)\n\nclass Namespace:\n    def __init__(self, name):\n        self.name = name\n        self.vars = {}\n    def define(self, key, lower, upper, types):\n        self.vars[tuple(key)] = {'lower': lower, 'upper': upper, 'type': types}\n    def __call__(self, key):\n        return Expression(name=f\"{self.name}({key})\")\n\nclass Problem:\n    def __init__(self):\n        self.namespaces = {}\n        self.constraints = []\n        self.objective = None\n        self.integrality_tolerance = type('T', (), {'value': None})\n    def namespace(self, name):\n        ns = Namespace(name)\n        self.namespaces[name] = ns\n        return ns\n    def add_linear_constraints(self, expr):\n        self.constraints.append(expr)\n    def set_objective(self, expr):\n        self.objective = expr\n\nclass Solver:\n    def __init__(self, name):\n        self._properties = {'name': name}\n    def create_problem(self):\n        return Problem()\n\nclass MetabolicModel:\n    def __init__(self):\n        self.reactions = ['R1', 'R2']\n        self.limits = {'R1': (-10, 100), 'R2': (0, 50)}\n        self.compounds = ['A', 'B']\n        self.matrix = {\n            ('A', 'R1'): -1,\n            ('B', 'R1'):  1,\n            ('A', 'R2'):  2,\n            ('B', 'R2'): -2\n        }\n"
+        },
+        "gold_state_patch": {
+          "scaled_gold_solution": "def make_tmfa_problem(mm_irreversible, solver):\n    prob = solver.create_problem()\n    if solver._properties['name'] == 'gurobi':\n        prob.integrality_tolerance.value = 1e-09\n        logger.warning(\n            'Gurobi supports minimum integrality tolerance of 1e-9. This may affect the results from this simulation'\n            )\n    elif solver._properties['name'] == 'glpk':\n        prob.integrality_tolerance.value = 1e-21\n    else:\n        prob.integrality_tolerance.value = 0\n    v = prob.namespace(name='flux')\n    zi = prob.namespace(name='zi')\n    dgri = prob.namespace(name='dgri')\n    xij = prob.namespace(name='xij')\n    for reaction in mm_irreversible.reactions:\n        lower, upper = mm_irreversible.limits[reaction]\n        v.define([reaction], lower=lower, upper=upper, types=lp.VariableType.Continuous)\n        zi.define([reaction], lower=int(0), upper=int(1), types=lp.VariableType.Binary)\n        dgri.define([reaction], lower=-1000, upper=1000, types=lp.VariableType.Continuous)\n    massbalance_lhs = {compound: (0) for compound in mm_irreversible.compounds}\n    for spec, value in iteritems(mm_irreversible.matrix):\n        compound, reaction_id = spec\n        massbalance_lhs[compound] += v(reaction_id) * value\n    for compound, lhs in iteritems(massbalance_lhs):\n        prob.add_linear_constraints(lhs == 0)\n    # Set objective to maximize total flux\n    objective = sum(v(reaction) for reaction in mm_irreversible.reactions)\n    prob.set_objective(objective)\n    cp_list = []\n    for cp in mm_irreversible.compounds:\n        cp_list.append(convert_to_unicode(str(cp)))\n        xij.define([convert_to_unicode(str(cp))], lower=-50, upper=50, types=lp.VariableType.Continuous)\n    return prob, v, zi, dgri, xij, cp_list"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_id": "hidden_test_objective",
+            "description": "Check that the problem object has an objective set to maximize sum of fluxes.",
+            "setup_code": "model = MetabolicModel()\nsolver = Solver('glpk')",
+            "call_code": "prob, v, zi, dgri, xij, compounds = make_tmfa_problem(model, solver)\n# Verify objective is set\nobjective = prob.objective\nassert objective is not None, \"Objective not set\"\n# Check that objective is an Expression with sum of flux variables\n# We can verify by repr \nimport re\nobj_str = repr(objective)\n# Check that each reaction appears\nfor r in model.reactions:\n    assert r in obj_str, f\"Reaction {r} not in objective\"",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [],
+              "file_artifacts": []
+            },
+            "test_type": "unit_test"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "If the function does not set an objective, the hidden test will fail."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "Verify that the function sets an objective function maximizing the sum of fluxes.",
+          "target_constraint": "The function must call prob.set_objective with an expression that sums the flux variables for all reactions.",
+          "expected_failure_mode": "Old seed behavior did not set any objective, so prob.objective would be None, causing test failure.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "standard_seed_model"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "specific_attribute_check",
+            "attribute_checks": {
+              "prob.objective": "not None",
+              "objective_repr_contains_all_reactions": true
+            }
+          },
+          "test_case_description": "Test that the objective is set correctly for the default metabolic model."
+        }
+      ],
+      "output_requirements": [
+        "The returned prob object must have a non-None objective attribute that represents the sum of flux variables."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "new_constraint": "function must set objective"
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "V",
+      "operator_type": "add_oracle_coverage_cases",
+      "operator_intensity": 2,
+      "transformation_goal": "Strengthen verifier with two additional executable oracle cases: one for objective correctness and one for mass balance with a larger model.",
+      "rationale": "Increasing verification complexity ensures that the solution handles different model sizes and that the objective is correctly formulated. This provides stronger oracle coverage.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {
+          "verifier_type_hint": "unit_test",
+          "hidden_tests_mode": "strict"
+        },
+        "test_state_patch": {
+          "scaled_oracle_cases": [
+            {
+              "case_id": "v_case_objective_check",
+              "description": "Verify that the objective function is set correctly with all flux variables.",
+              "setup_code": "model = MetabolicModel()\nsolver = Solver('glpk')",
+              "call_code": "prob, v, zi, dgri, xij, compounds = make_tmfa_problem(model, solver)\nobj = prob.objective\nassert obj is not None, 'Objective not set'\nobj_terms = obj.terms\nfor r in model.reactions:\n    assert f'flux({r})' in obj_terms or r in str(obj), f'Reaction {r} missing from objective'",
+              "expected_output_signature": {
+                "return_value": null,
+                "stdout_contains": [],
+                "file_artifacts": []
+              },
+              "extraction_method": "rule_based",
+              "validated_against_ground_truth": true,
+              "assumptions": []
+            },
+            {
+              "case_id": "v_case_larger_model",
+              "description": "Test with a model having three reactions and three compounds, ensuring mass balance constraints are added for all compounds.",
+              "setup_code": "class LargerMetabolicModel:\n    def __init__(self):\n        self.reactions = ['R1', 'R2', 'R3']\n        self.limits = {'R1': (0, 100), 'R2': (0, 200), 'R3': (0, 50)}\n        self.compounds = ['C', 'D', 'E']\n        self.matrix = {\n            ('C', 'R1'): -1, ('D', 'R1'): 1,\n            ('C', 'R2'): 2, ('E', 'R2'): -1,\n            ('D', 'R3'): -1, ('E', 'R3'): 1\n        }\nmodel = LargerMetabolicModel()\nsolver = Solver('glpk')",
+              "call_code": "prob, v, zi, dgri, xij, compounds = make_tmfa_problem(model, solver)\n# Check that constraints exist for all compounds\nassert len(prob.constraints) == len(model.compounds), f'Expected {len(model.compounds)} constraints, got {len(prob.constraints)}'\n# Check that each compound appears in a constraint\nfor c in model.compounds:\n    found = False\n    for constr in prob.constraints:\n        if c in str(constr.expr):\n            found = True\n            break\n    assert found, f'Compound {c} not in any constraint'",
+              "expected_output_signature": {
+                "return_value": null,
+                "stdout_contains": [],
+                "file_artifacts": []
+              },
+              "extraction_method": "rule_based",
+              "validated_against_ground_truth": true,
+              "assumptions": []
+            }
+          ]
+        },
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "If the function does not set objective, v_case_objective_check fails.",
+          "If the function does not correctly create mass balance constraints for all compounds in larger model, v_case_larger_model fails."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_v_spec_1",
+          "semantic_intent": "Verify that the function sets an objective even for a different model configuration (same as C operator, but this case re-verifies with explicit check).",
+          "target_constraint": "Objective must be set and include all reactions.",
+          "expected_failure_mode": "If objective is missing, test fails.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "standard_seed_model"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "specific_attribute_check",
+            "attribute_checks": {
+              "prob.objective": "not None",
+              "objective_contains_all_reactions": true
+            }
+          },
+          "test_case_description": "Check objective presence and completeness."
+        },
+        {
+          "spec_id": "task_v_spec_2",
+          "semantic_intent": "Verify that the function scales correctly to a larger model with three reactions and three compounds, creating mass balance constraints for each compound.",
+          "target_constraint": "For any metabolic model, the function must create one linear constraint per compound reflecting mass balance.",
+          "expected_failure_mode": "If function does not iterate over all compounds or misses constraints, test fails.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "larger_model"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "constraint_count_and_coverage",
+            "count": 3,
+            "coverage_set": [
+              "C",
+              "D",
+              "E"
+            ]
+          },
+          "test_case_description": "Check mass balance constraints count and compound inclusion in larger model."
+        }
+      ],
+      "output_requirements": [
+        "The function must work for any MetabolicModel (reactions, compounds, matrix).",
+        "The returned prob must contain a constraint for each compound."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "stronger_verification": "Two additional test cases covering objective and model scalability."
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

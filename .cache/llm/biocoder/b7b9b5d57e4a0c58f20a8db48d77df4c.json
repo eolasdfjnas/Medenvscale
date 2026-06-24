@@ -1,0 +1,46 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main_v01",
+      "description": "Transformed seed case: verify exact error profile values and determinism, preserving original print and file save behavior.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_841_M2_v_01",
+      "axis": "V",
+      "semantic_intent": "Verify exact values and determinism",
+      "target_constraint": "Returned list must exactly match [1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005] and two consecutive calls return equal but not identical lists.",
+      "expected_failure_mode": "Returning wrong values, same mutable object, or non-deterministic outputs.",
+      "setup_code": "",
+      "call_code": "profile = get_default_error_profile()\nassert isinstance(profile, list), \"Profile should be a list\"\nassert len(profile) == 12, \"Profile should contain 12 entries\"\nassert profile == [1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005], \"Profile does not match expected values\"\n# Determinism and independence check\nprofile2 = get_default_error_profile()\nassert profile == profile2, \"Profiles are not equal\"\nassert profile is not profile2, \"Profiles are the same object\"\nprint(\"Default Illumina error profile:\", profile)\nwith open(\"error_profile.json\", \"w\") as f:\n    json.dump(profile, f)\nprint(\"Profile saved successfully to error_profile.json\")\nresult = profile",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must expose the exact value requirements and determinism requirement.",
+        "Solutions must satisfy stronger validated oracle case coverage."
+      ],
+      "expected_output_signature": {
+        "return_value": [
+          1,
+          0.06,
+          0.02,
+          0.02,
+          0.01,
+          0.005,
+          0.005,
+          0.005,
+          0.001,
+          0.001,
+          0.001,
+          0.0005
+        ],
+        "stdout_contains": [
+          "Default Illumina error profile: [1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005]",
+          "Profile saved successfully to error_profile.json"
+        ],
+        "file_artifacts": [
+          {
+            "path": "error_profile.json"
+          }
+        ]
+      }
+    }
+  ]
+}

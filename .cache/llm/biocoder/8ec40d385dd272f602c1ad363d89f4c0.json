@@ -1,0 +1,144 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "increase_data_complexity",
+      "operator_intensity": 1,
+      "transformation_goal": "Increase input data complexity by using non-Gaussian distributions and different sample sizes to test robustness of the BAR implementation.",
+      "rationale": "The seed task uses Gaussian data with identical sizes. Real-world data may be asymmetric and non-Gaussian, which can affect numerical stability and convergence. This operator introduces exponential distributions with different sample sizes to challenge the solution.",
+      "state_updates": {
+        "visible_state_patch": {
+          "context": "import numpy as np\nfrom my_module import bar  # assume bar is defined in my_module\n\n# Generate synthetic work distributions with non-Gaussian data and differing sizes\nnp.random.seed(42)\nw_F = np.random.exponential(scale=1.0, size=4000)  # forward work values (exponential)\nw_R = np.random.exponential(scale=2.0, size=6000)  # reverse work values (exponential, different scale and size)\n\ndef main():\n    # Compute the free energy difference using the BAR method\n    <<insert solution here>>\n    print(f\"Free energy difference ΔF = {results['Delta_f']:.3f} ± {results['dDelta_f']:.3f} kT\")\n\nif __name__ == \"__main__\":\n    main()\n"
+        },
+        "gold_state_patch": {
+          "seed_ground_truth_output_signature": {
+            "stdout": "Free energy difference ΔF = -0.693 ± 0.034 kT"
+          }
+        }
+      },
+      "verifier_delta": {},
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_1",
+          "semantic_intent": "Verify that the solution handles non-Gaussian input distributions and differing sample sizes correctly.",
+          "target_constraint": "The solution must compute ΔF and uncertainty for exponential distributions with different sizes, producing correct numerical results.",
+          "expected_failure_mode": "If the solution assumes Gaussian data or equal sizes, it may produce incorrect results or numerical errors.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "exponential_distributions_unequal_sizes"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Run the user's code with the new data and compare stdout to ground truth."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new data variant and validate against updated ground truth."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "complexity_increase": "Data input complexity increased by introducing non-Gaussian distributions and unequal sample sizes."
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": false,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "add_parameter_constraints",
+      "operator_intensity": 2,
+      "transformation_goal": "Require the user to specify specific BAR method parameters (method='self-consistent-iteration' and uncertainty_method='MBAR') to test understanding of parameter options and numerical handling.",
+      "rationale": "The seed task allows default parameters. This operator adds constraints to use a specific iterative method and uncertainty estimation variant, which requires the user to correctly pass arguments to the bar function.",
+      "state_updates": {
+        "visible_state_patch": {
+          "context": "import numpy as np\nfrom my_module import bar  # assume bar is defined in my_module\n\n# Generate synthetic work distributions for demonstration\nnp.random.seed(42)\nw_F = np.random.normal(loc=1.0, scale=1.0, size=5000)  # forward work values\nw_R = np.random.normal(loc=-1.0, scale=1.0, size=5000)  # reverse work values\n\ndef main():\n    # Compute the free energy difference using the BAR method\n    # Use method='self-consistent-iteration' and uncertainty_method='MBAR'\n    <<insert solution here>>\n    print(f\"Free energy difference ΔF = {results['Delta_f']:.3f} ± {results['dDelta_f']:.3f} kT\")\n\nif __name__ == \"__main__\":\n    main()\n"
+        },
+        "gold_state_patch": {
+          "seed_ground_truth_output_signature": {
+            "stdout": "Free energy difference ΔF = 0.000 ± 0.000 kT"
+          }
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [
+          {
+            "check_type": "exact_output",
+            "expected_output": "Free energy difference ΔF = 0.000 ± 0.000 kT",
+            "failure_message": "Output does not match expected with given parameters."
+          }
+        ],
+        "new_hidden_tests": [
+          {
+            "test_id": "ht_C1",
+            "description": "Verifies that the bar function is called with the required parameters.",
+            "setup_code": "import inspect; import my_module; sig = inspect.signature(my_module.bar);",
+            "call_code": "",
+            "assertion_code": "bind = sig.bind(w_F, w_R, method='self-consistent-iteration', uncertainty_method='MBAR'); assert True",
+            "failure_message": "The bar function must be called with method='self-consistent-iteration' and uncertainty_method='MBAR'."
+          }
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "Verify that the solution correctly uses the specified parameters and produces the expected output.",
+          "target_constraint": "The bar function call must include method='self-consistent-iteration' and uncertainty_method='MBAR'.",
+          "expected_failure_mode": "If default parameters are used, the output may differ or the hidden test will fail.",
+          "test_template_type": "parameter_constraint_case",
+          "input_variant": {
+            "kind": "parameter_variant",
+            "value": "use specified parameters"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "parameter_variant"
+          },
+          "test_case_description": "Check that the solution passes the hidden parameter test and produces correct stdout."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a hidden test to verify parameter usage."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "complexity_increase": "Computation/constraint complexity increased by requiring specific non-default parameters."
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": false,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

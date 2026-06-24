@@ -1,0 +1,387 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "preserve_config_comments",
+      "operator_intensity": 1,
+      "transformation_goal": "Increase data complexity by requiring serialization to preserve comments in ConfigParserWithComments object.",
+      "rationale": "The signature mentions ConfigParserWithComments, implying comments need to be preserved. This operator adds the requirement to handle a config object that stores comments per section and per option.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "file I/O",
+            "configparser library usage",
+            "basic Python programming",
+            "comment preservation"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context": "import configparser\nimport os\n\nclass ConfigParserWithComments(configparser.ConfigParser):\n    def __init__(self, *args, **kwargs):\n        super().__init__(*args, **kwargs)\n        self.comments = {}  # {'section': {'option': 'comment', ...}, 'section': 'section_comment'}\n\ndef main():\n    # Create a configuration with two sections and options, including comments\n    config = ConfigParserWithComments()\n    config['General'] = {\n        'version': '1.0',\n        'enabled': 'yes'\n    }\n    config['User'] = {\n        'name': 'Alice',\n        'email': 'alice@example.com'\n    }\n    # Add comments\n    config.comments = {\n        'General': 'General settings',\n        'General.version': 'Version number',\n        'General.enabled': 'Enable feature',\n        'User': 'User information',\n        'User.name': 'Full name',\n        'User.email': 'Email address'\n    }\n\n    # Define the output file path\n    path = 'test_config.ini'\n\n    # Save the configuration to disk, preserving comments\n    <<insert solution here>>\n\n    # Verify that the file was created and print its contents\n    if os.path.exists(path):\n        with open(path, 'r') as f:\n            content = f.read()\n        print('Configuration file content:')\n        print(content)\n    else:\n        print('Failed to create configuration file.')\n\nif __name__ == '__main__':\n    main()"
+        },
+        "gold_state_patch": {
+          "gold_solution": "def serialize(config, path):\n    with open(path, 'w') as file:\n        # Write section comments\n        if hasattr(config, 'comments') and 'header' in config.comments:\n            file.write(f\"# {config.comments['header']}\\n\")\n        for section in config.sections():\n            if hasattr(config, 'comments') and section in config.comments:\n                file.write(f\"\\n# {config.comments[section]}\\n\")\n            file.write(f\"[{section}]\\n\")\n            for key, value in config.items(section):\n                if hasattr(config, 'comments') and f\"{section}.{key}\" in config.comments:\n                    file.write(f\"# {config.comments[f'{section}.{key}']}\\n\")\n                file.write(f\"{key} = {value}\\n\")"
+        },
+        "verifier_state_patch": {
+          "verifier_type_hint": "execution and file content check with comment preservation"
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "case_id": "hidden_comment_preservation",
+            "description": "Check that comments are written correctly.",
+            "setup_code": "config = ConfigParserWithComments()\nconfig['General'] = {'version': '1.0'}\nconfig['User'] = {'name': 'Alice'}\nconfig.comments = {\n    'General': 'General section',\n    'General.version': 'Version number',\n    'User': 'User section',\n    'User.name': 'Full name'\n}\npath = 'test_comments.ini'",
+            "call_code": "serialize(config, path)\nwith open(path, 'r') as f:\n    content = f.read()\n# Check that comments appear\nassert '# General section' in content\nassert '# Version number' in content\nassert '# User section' in content\nassert '# Full name' in content\nprint('Comments preserved.')",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [
+                "Comments preserved."
+              ]
+            }
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Missing comments in output"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_1",
+          "semantic_intent": "The function must write comments from config.comments before each section and option.",
+          "target_constraint": "Comments must be preserved in the output INI file exactly as stored in config.comments, with '#' prefix.",
+          "expected_failure_mode": "Old seed behavior writes only key=value lines, losing comments.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "custom_config_with_comments"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Pass a ConfigParserWithComments object with comments and verify they appear in the output file."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must verify that comments are preserved in the output file."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "handle_config_edge_cases",
+      "operator_intensity": 2,
+      "transformation_goal": "Increase computation/constraint complexity by requiring the function to handle edge cases: empty config, large config, special characters, and error handling for invalid paths.",
+      "rationale": "Scientific software deals with varied configurations; function must be robust to edge cases in config content and file system.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "file I/O",
+            "configparser library usage",
+            "basic Python programming",
+            "error handling",
+            "edge case handling"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context": "import configparser\nimport os\n\ndef main():\n    # Create a configuration with two sections and options\n    config = configparser.ConfigParser()\n    config['General'] = {\n        'version': '1.0',\n        'enabled': 'yes'\n    }\n    config['User'] = {\n        'name': 'Alice',\n        'email': 'alice@example.com'\n    }\n\n    # Define the output file path\n    path = 'test_config.ini'\n\n    # Save the configuration to disk\n    # The function must handle:\n    # - Empty config (no sections)\n    # - Config with many options (e.g., 100+)\n    # - Option values containing newlines or quotes\n    # - File write errors (e.g., permission denied) by raising IOError or similar\n    <<insert solution here>>\n\n    # Verify that the file was created and print its contents\n    if os.path.exists(path):\n        with open(path, 'r') as f:\n            content = f.read()\n        print('Configuration file content:')\n        print(content)\n    else:\n        print('Failed to create configuration file.')\n\nif __name__ == '__main__':\n    main()"
+        },
+        "gold_state_patch": {
+          "gold_solution": "def serialize(config, path):\n    try:\n        with open(path, 'w') as file:\n            config.write(file)\n    except OSError as e:\n        raise IOError(f\"Failed to write config to {path}: {e}\")"
+        },
+        "verifier_state_patch": {
+          "verifier_type_hint": "execution and file content check, error handling, edge case coverage"
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "case_id": "hidden_empty_config",
+            "description": "Test serialize with an empty config (no sections).",
+            "setup_code": "config = configparser.ConfigParser()\npath = 'test_empty.ini'",
+            "call_code": "serialize(config, path)\nwith open(path, 'r') as f:\n    content = f.read()\nassert content.strip() == ''\nprint('Empty config handled.')",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [
+                "Empty config handled."
+              ]
+            }
+          },
+          {
+            "case_id": "hidden_large_config",
+            "description": "Test serialize with a config having 100 options.",
+            "setup_code": "config = configparser.ConfigParser()\nconfig['Section'] = {f'key{i}': f'value{i}' for i in range(100)}\npath = 'test_large.ini'",
+            "call_code": "serialize(config, path)\nwith open(path, 'r') as f:\n    lines = f.readlines()\nassert len(lines) == 101  # header + 100 options\nprint('Large config handled.')",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [
+                "Large config handled."
+              ]
+            }
+          },
+          {
+            "case_id": "hidden_special_chars",
+            "description": "Test serialize with special characters in values.",
+            "setup_code": "config = configparser.ConfigParser()\nconfig['Section'] = {'value1': 'line1\\nline2', 'value2': 'quote\"test'}\npath = 'test_special.ini'",
+            "call_code": "serialize(config, path)\nwith open(path, 'r') as f:\n    content = f.read()\nassert 'line1\\nline2' in content or 'line1\\n  line2' in content\nprint('Special characters handled.')",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [
+                "Special characters handled."
+              ]
+            }
+          },
+          {
+            "case_id": "hidden_file_error",
+            "description": "Test serialize with invalid path (e.g., directory).",
+            "setup_code": "config = configparser.ConfigParser()\nconfig['Section'] = {'key': 'value'}\npath = '/nonexistent_dir/test.ini'",
+            "call_code": "try:\n    serialize(config, path)\n    print('No exception raised')\nexcept (IOError, OSError, PermissionError):\n    print('Error handled.')",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [
+                "Error handled."
+              ]
+            }
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Fail for empty config (writes nothing or error)",
+          "Fail for large config (performance or truncation)",
+          "Fail for special characters (improper escaping)",
+          "Fail for file errors (no exception or wrong exception)"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "The function must handle empty config without error.",
+          "target_constraint": "When config has no sections, serialize writes an empty file (or no content).",
+          "expected_failure_mode": "Old seed may assume non-empty config.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "empty_config"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Pass an empty ConfigParser object and verify no crash and file exists."
+        },
+        {
+          "spec_id": "task_c_spec_2",
+          "semantic_intent": "The function must handle large config efficiently.",
+          "target_constraint": "Must handle at least 100 options without performance degradation.",
+          "expected_failure_mode": "Old seed may be slow or fail with memory issues.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "large_config"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Pass a config with 100 options and verify correct output length."
+        },
+        {
+          "spec_id": "task_c_spec_3",
+          "semantic_intent": "The function must handle option values with special characters (newlines, quotes).",
+          "target_constraint": "Values with newlines should be properly escaped per INI standard (multi-line or enclosed in quotes).",
+          "expected_failure_mode": "Old seed may produce malformed file.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "special_characters"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Pass config with newline and quote in values, verify file is well-formed."
+        },
+        {
+          "spec_id": "task_c_spec_4",
+          "semantic_intent": "The function must raise an appropriate exception on file write failure.",
+          "target_constraint": "Must propagate IOError/OSError if path is invalid (e.g., directory, permission denied).",
+          "expected_failure_mode": "Old seed may not handle errors gracefully.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "invalid_path"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Pass an invalid path (e.g., /nonexistent/test.ini) and verify exception is raised."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must cover empty config, large config, special characters, and error handling."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "robust_serialization_generic",
+      "operator_intensity": 1,
+      "transformation_goal": "Increase adversarial/robustness complexity by requiring the function to not hardcode the config object type and to handle generic objects with a write method.",
+      "rationale": "Adversarial robustness: the function should work with any object that has a write-like method, and should not assume specific ConfigParser implementation details.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "file I/O",
+            "duck typing",
+            "basic Python programming",
+            "generic object handling"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context": "import configparser\nimport os\n\ndef main():\n    # Create a configuration with two sections and options\n    config = configparser.ConfigParser()\n    config['General'] = {\n        'version': '1.0',\n        'enabled': 'yes'\n    }\n    config['User'] = {\n        'name': 'Alice',\n        'email': 'alice@example.com'\n    }\n\n    # Define the output file path\n    path = 'test_config.ini'\n\n    # Save the configuration to disk\n    # The function should work with any object that has a write(file) method,\n    # not just configparser.ConfigParser. Do not rely on specific attributes.\n    <<insert solution here>>\n\n    # Verify that the file was created and print its contents\n    if os.path.exists(path):\n        with open(path, 'r') as f:\n            content = f.read()\n        print('Configuration file content:')\n        print(content)\n    else:\n        print('Failed to create configuration file.')\n\nif __name__ == '__main__':\n    main()"
+        },
+        "gold_state_patch": {
+          "gold_solution": "def serialize(config, path):\n    with open(path, 'w') as file:\n        config.write(file)"
+        },
+        "verifier_state_patch": {
+          "verifier_type_hint": "execution and file content check, generic duck typing"
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "case_id": "hidden_generic_object",
+            "description": "Test serialize with a custom object that has a write method.",
+            "setup_code": "class CustomWriter:\n    def __init__(self):\n        self.sections = {'Section': {'key': 'value'}}\n    def write(self, file):\n        for section, options in self.sections.items():\n            file.write(f'[{section}]\\n')\n            for key, value in options.items():\n                file.write(f'{key} = {value}\\n')\nconfig = CustomWriter()\npath = 'test_generic.ini'",
+            "call_code": "serialize(config, path)\nwith open(path, 'r') as f:\n    content = f.read()\nassert '[Section]' in content and 'key = value' in content\nprint('Generic object handled.')",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [
+                "Generic object handled."
+              ]
+            }
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Crash with AttributeError when passed non-ConfigParser object",
+          "Hardcoded reliance on configparser-specific methods"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_a_spec_1",
+          "semantic_intent": "The function must work with any object that has a write(file) method.",
+          "target_constraint": "Must not call configparser-specific methods like sections(), items(), etc.",
+          "expected_failure_mode": "Old seed calls config.write(file) which works for ConfigParser but could fail if object's write method expects different arguments. However, the seed solution already uses config.write(file), which is generic. But the adversarial aspect is that the function should not assume the object has other methods. For robustness, we require that it only calls write. Actual failure would be if the function tries to iterate sections or modify the config.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "generic_custom_object"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Pass a custom object with write method but no other configparser attributes, verify function works."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must use a custom config-like object that only has a write method."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

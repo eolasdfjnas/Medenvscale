@@ -1,0 +1,324 @@
+{
+  "operator_instances": [
+    {
+      "axis": "V",
+      "operator_type": "add_edge_case_empty_annotations",
+      "operator_intensity": 1,
+      "transformation_goal": "Introduce test cases where fragment or precursor annotations are empty or missing to verify graceful handling.",
+      "rationale": "The seed test case has non-empty annotations. Edge cases with empty or missing annotations ensure the function correctly handles the early return condition and empty list trimming.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {
+          "verifier_type_hint": "unit_test",
+          "hidden_tests": [
+            {
+              "case_id": "test_empty_fragment_annotations",
+              "description": "Row with empty fragment annotations (empty string) and valid precursor annotations.",
+              "setup_code": "header = ['FullPeptideName', 'aggr_Fragment_Annotation', 'aggr_prec_Fragment_Annotation', 'Charge', 'ProteinName']\nrow = ['PEPTIDE_A', '', 'p1;p2;', '2', 'P12345']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping = {}\nprotein_mapping = {}",
+              "call_code": "mapRow(row, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nprint('Precursors Mapping:', precursors_mapping)\nprint('Sequences Mapping:', sequences_mapping)\nprint('Protein Mapping:', protein_mapping)",
+              "expected_output_signature": {
+                "return_value": null,
+                "stdout_contains": [
+                  "Precursors Mapping: {}",
+                  "Sequences Mapping: {}",
+                  "Protein Mapping: {}"
+                ],
+                "file_artifacts": []
+              },
+              "extraction_method": "rule_based",
+              "assumptions": []
+            },
+            {
+              "case_id": "test_empty_precursor_annotations",
+              "description": "Row with empty precursor annotations and valid fragment annotations.",
+              "setup_code": "header = ['FullPeptideName', 'aggr_Fragment_Annotation', 'aggr_prec_Fragment_Annotation', 'Charge', 'ProteinName']\nrow = ['PEPTIDE_B', 'b1;b2;b3;', '', '2', 'P12345']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping = {}\nprotein_mapping = {}",
+              "call_code": "mapRow(row, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nprint('Precursors Mapping:', precursors_mapping)\nprint('Sequences Mapping:', sequences_mapping)\nprint('Protein Mapping:', protein_mapping)",
+              "expected_output_signature": {
+                "return_value": null,
+                "stdout_contains": [
+                  "Precursors Mapping: {'PEPTIDE_B/2': ['b1', 'b2', 'b3'], 'PEPTIDE_B/2_pr': []}",
+                  "Sequences Mapping: {'PEPTIDE_B': ['PEPTIDE_B/2', 'PEPTIDE_B/2_pr']}",
+                  "Protein Mapping: {'P12345': ['PEPTIDE_B']}"
+                ],
+                "file_artifacts": []
+              },
+              "extraction_method": "rule_based",
+              "assumptions": []
+            }
+          ]
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "case_id": "test_empty_fragment_annotations",
+            "description": "Row with empty fragment annotations (empty string) and valid precursor annotations.",
+            "setup_code": "header = ['FullPeptideName', 'aggr_Fragment_Annotation', 'aggr_prec_Fragment_Annotation', 'Charge', 'ProteinName']\nrow = ['PEPTIDE_A', '', 'p1;p2;', '2', 'P12345']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping = {}\nprotein_mapping = {}",
+            "call_code": "mapRow(row, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nprint('Precursors Mapping:', precursors_mapping)\nprint('Sequences Mapping:', sequences_mapping)\nprint('Protein Mapping:', protein_mapping)",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [
+                "Precursors Mapping: {}",
+                "Sequences Mapping: {}",
+                "Protein Mapping: {}"
+              ],
+              "file_artifacts": []
+            },
+            "extraction_method": "rule_based",
+            "assumptions": []
+          },
+          {
+            "case_id": "test_empty_precursor_annotations",
+            "description": "Row with empty precursor annotations and valid fragment annotations.",
+            "setup_code": "header = ['FullPeptideName', 'aggr_Fragment_Annotation', 'aggr_prec_Fragment_Annotation', 'Charge', 'ProteinName']\nrow = ['PEPTIDE_B', 'b1;b2;b3;', '', '2', 'P12345']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping = {}\nprotein_mapping = {}",
+            "call_code": "mapRow(row, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nprint('Precursors Mapping:', precursors_mapping)\nprint('Sequences Mapping:', sequences_mapping)\nprint('Protein Mapping:', protein_mapping)",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [
+                "Precursors Mapping: {'PEPTIDE_B/2': ['b1', 'b2', 'b3'], 'PEPTIDE_B/2_pr': []}",
+                "Sequences Mapping: {'PEPTIDE_B': ['PEPTIDE_B/2', 'PEPTIDE_B/2_pr']}",
+                "Protein Mapping: {'P12345': ['PEPTIDE_B']}"
+              ],
+              "file_artifacts": []
+            },
+            "extraction_method": "rule_based",
+            "assumptions": []
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "v_spec_empty_annotations",
+          "semantic_intent": "Verify correct handling of empty fragment or precursor annotations.",
+          "target_constraint": "When fragment annotations are empty, the function should return early without modifying mappings. When precursor annotations are empty, the function should still process fragment transitions and create a key for precursors with an empty list.",
+          "expected_failure_mode": "If the seed behavior does not check for empty fragment annotations, it may proceed and cause errors or incorrect mappings.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "empty or missing annotation strings in CSV row"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Tests with empty fragment annotations and empty precursor annotations."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "V",
+      "operator_type": "add_edge_case_varying_charge",
+      "operator_intensity": 1,
+      "transformation_goal": "Add test cases with different charge state values: NA, empty, integer, and verify that keys are built correctly.",
+      "rationale": "The function must default to '0' when charge is 'NA' or empty, and use the integer string otherwise. This ensures robustness in charge handling.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {
+          "verifier_type_hint": "unit_test",
+          "hidden_tests": [
+            {
+              "case_id": "test_charge_na",
+              "description": "Row with charge 'NA'.",
+              "setup_code": "header = ['FullPeptideName', 'aggr_Fragment_Annotation', 'aggr_prec_Fragment_Annotation', 'Charge', 'ProteinName']\nrow = ['PEPTIDE_C', 'b1;b2;b3;', 'p1;p2;', 'NA', 'P12345']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping = {}\nprotein_mapping = {}",
+              "call_code": "mapRow(row, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nprint('Precursors Mapping:', precursors_mapping)\nprint('Sequences Mapping:', sequences_mapping)\nprint('Protein Mapping:', protein_mapping)",
+              "expected_output_signature": {
+                "return_value": null,
+                "stdout_contains": [
+                  "Precursors Mapping: {'PEPTIDE_C/0': ['b1', 'b2', 'b3'], 'PEPTIDE_C/0_pr': ['p1', 'p2']}",
+                  "Sequences Mapping: {'PEPTIDE_C': ['PEPTIDE_C/0', 'PEPTIDE_C/0_pr']}",
+                  "Protein Mapping: {'P12345': ['PEPTIDE_C']}"
+                ],
+                "file_artifacts": []
+              },
+              "extraction_method": "rule_based",
+              "assumptions": []
+            },
+            {
+              "case_id": "test_charge_empty",
+              "description": "Row with empty charge.",
+              "setup_code": "header = ['FullPeptideName', 'aggr_Fragment_Annotation', 'aggr_prec_Fragment_Annotation', 'Charge', 'ProteinName']\nrow = ['PEPTIDE_D', 'b1;b2;b3;', 'p1;p2;', '', 'P12345']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping = {}\nprotein_mapping = {}",
+              "call_code": "mapRow(row, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nprint('Precursors Mapping:', precursors_mapping)\nprint('Sequences Mapping:', sequences_mapping)\nprint('Protein Mapping:', protein_mapping)",
+              "expected_output_signature": {
+                "return_value": null,
+                "stdout_contains": [
+                  "Precursors Mapping: {'PEPTIDE_D/0': ['b1', 'b2', 'b3'], 'PEPTIDE_D/0_pr': ['p1', 'p2']}",
+                  "Sequences Mapping: {'PEPTIDE_D': ['PEPTIDE_D/0', 'PEPTIDE_D/0_pr']}",
+                  "Protein Mapping: {'P12345': ['PEPTIDE_D']}"
+                ],
+                "file_artifacts": []
+              },
+              "extraction_method": "rule_based",
+              "assumptions": []
+            },
+            {
+              "case_id": "test_charge_numeric",
+              "description": "Row with numeric charge (e.g., 3).",
+              "setup_code": "header = ['FullPeptideName', 'aggr_Fragment_Annotation', 'aggr_prec_Fragment_Annotation', 'Charge', 'ProteinName']\nrow = ['PEPTIDE_E', 'b1;b2;b3;', 'p1;p2;', '3', 'P12345']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping = {}\nprotein_mapping = {}",
+              "call_code": "mapRow(row, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nprint('Precursors Mapping:', precursors_mapping)\nprint('Sequences Mapping:', sequences_mapping)\nprint('Protein Mapping:', protein_mapping)",
+              "expected_output_signature": {
+                "return_value": null,
+                "stdout_contains": [
+                  "Precursors Mapping: {'PEPTIDE_E/3': ['b1', 'b2', 'b3'], 'PEPTIDE_E/3_pr': ['p1', 'p2']}",
+                  "Sequences Mapping: {'PEPTIDE_E': ['PEPTIDE_E/3', 'PEPTIDE_E/3_pr']}",
+                  "Protein Mapping: {'P12345': ['PEPTIDE_E']}"
+                ],
+                "file_artifacts": []
+              },
+              "extraction_method": "rule_based",
+              "assumptions": []
+            }
+          ]
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "case_id": "test_charge_na",
+            "description": "Row with charge 'NA'.",
+            "setup_code": "header = ['FullPeptideName', 'aggr_Fragment_Annotation', 'aggr_prec_Fragment_Annotation', 'Charge', 'ProteinName']\nrow = ['PEPTIDE_C', 'b1;b2;b3;', 'p1;p2;', 'NA', 'P12345']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping = {}\nprotein_mapping = {}",
+            "call_code": "mapRow(row, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nprint('Precursors Mapping:', precursors_mapping)\nprint('Sequences Mapping:', sequences_mapping)\nprint('Protein Mapping:', protein_mapping)",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [
+                "Precursors Mapping: {'PEPTIDE_C/0': ['b1', 'b2', 'b3'], 'PEPTIDE_C/0_pr': ['p1', 'p2']}",
+                "Sequences Mapping: {'PEPTIDE_C': ['PEPTIDE_C/0', 'PEPTIDE_C/0_pr']}",
+                "Protein Mapping: {'P12345': ['PEPTIDE_C']}"
+              ],
+              "file_artifacts": []
+            },
+            "extraction_method": "rule_based",
+            "assumptions": []
+          },
+          {
+            "case_id": "test_charge_empty",
+            "description": "Row with empty charge.",
+            "setup_code": "header = ['FullPeptideName', 'aggr_Fragment_Annotation', 'aggr_prec_Fragment_Annotation', 'Charge', 'ProteinName']\nrow = ['PEPTIDE_D', 'b1;b2;b3;', 'p1;p2;', '', 'P12345']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping = {}\nprotein_mapping = {}",
+            "call_code": "mapRow(row, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nprint('Precursors Mapping:', precursors_mapping)\nprint('Sequences Mapping:', sequences_mapping)\nprint('Protein Mapping:', protein_mapping)",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [
+                "Precursors Mapping: {'PEPTIDE_D/0': ['b1', 'b2', 'b3'], 'PEPTIDE_D/0_pr': ['p1', 'p2']}",
+                "Sequences Mapping: {'PEPTIDE_D': ['PEPTIDE_D/0', 'PEPTIDE_D/0_pr']}",
+                "Protein Mapping: {'P12345': ['PEPTIDE_D']}"
+              ],
+              "file_artifacts": []
+            },
+            "extraction_method": "rule_based",
+            "assumptions": []
+          },
+          {
+            "case_id": "test_charge_numeric",
+            "description": "Row with numeric charge (e.g., 3).",
+            "setup_code": "header = ['FullPeptideName', 'aggr_Fragment_Annotation', 'aggr_prec_Fragment_Annotation', 'Charge', 'ProteinName']\nrow = ['PEPTIDE_E', 'b1;b2;b3;', 'p1;p2;', '3', 'P12345']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping = {}\nprotein_mapping = {}",
+            "call_code": "mapRow(row, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nprint('Precursors Mapping:', precursors_mapping)\nprint('Sequences Mapping:', sequences_mapping)\nprint('Protein Mapping:', protein_mapping)",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [
+                "Precursors Mapping: {'PEPTIDE_E/3': ['b1', 'b2', 'b3'], 'PEPTIDE_E/3_pr': ['p1', 'p2']}",
+                "Sequences Mapping: {'PEPTIDE_E': ['PEPTIDE_E/3', 'PEPTIDE_E/3_pr']}",
+                "Protein Mapping: {'P12345': ['PEPTIDE_E']}"
+              ],
+              "file_artifacts": []
+            },
+            "extraction_method": "rule_based",
+            "assumptions": []
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "v_spec_charge_handling",
+          "semantic_intent": "Verify correct handling of charge state: default to '0' when 'NA' or empty, and use the string representation otherwise.",
+          "target_constraint": "The charge_state should be set to '0' if the original value is 'NA' or empty; otherwise, it should be the string from the row. Keys must reflect this.",
+          "expected_failure_mode": "If the code does not default charge properly, keys may be built with 'NA' or empty string, causing dictionary key mismatches.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "various charge state values"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Tests with 'NA', empty, and numeric charge states."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

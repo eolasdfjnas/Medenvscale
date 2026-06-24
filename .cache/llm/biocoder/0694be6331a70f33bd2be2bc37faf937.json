@@ -1,0 +1,55 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Parse input with two tumors and alphabetic placeholders in C and p* columns.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_59_M2_d_01,env_medagentgym_train_59_M2_d_02",
+      "axis": "D",
+      "semantic_intent": "Verify the parser correctly handles two tumors and converts alphabetic placeholders to None.",
+      "target_constraint": "When mu has three values (normal, tumor1, tumor2), C contains colon-separated parts with comma-separated values where some are letters, and p* contains colon-separated parts with comma-separated values where some are letters, the parser must return mu_tumors as list of two floats, C as list of two lists with None for letters, and p* as list of two lists with None for letters.",
+      "expected_failure_mode": "A parser that only handles single tumor will mis-parse C and p*; a parser that tries to int() or float() letters will raise ValueError.",
+      "setup_code": "sample = (\n    \"NLL\\tmu\\tC\\tp*\\n\"\n    \"12.5\\t0.4,0.3,0.3\\tA,4:3,5\\t0.1,X:0.2,0.4\\n\"\n)\nfname = \"theta_test.txt\"\nwith open(fname, \"w\") as f:\n    f.write(sample)",
+      "call_code": "result = parse_theta_results(fname)\nprint(result)\nos.remove(fname)",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Increase data complexity by adding a second tumor to the input line, requiring the parser to handle multi-tumor formatting (transposed copy numbers and probabilities).",
+        "Introduce alphabetic placeholders in the C and p* columns to test robust handling of non-numeric values (None conversion)."
+      ],
+      "expected_output_signature": {
+        "return_value": {
+          "NLL": 12.5,
+          "mu_normal": 0.4,
+          "mu_tumors": [
+            0.3,
+            0.3
+          ],
+          "C": [
+            [
+              null,
+              4
+            ],
+            [
+              3,
+              5
+            ]
+          ],
+          "p*": [
+            [
+              0.1,
+              null
+            ],
+            [
+              0.2,
+              0.4
+            ]
+          ]
+        },
+        "stdout_contains": [
+          "{'NLL': 12.5, 'mu_normal': 0.4, 'mu_tumors': [0.3, 0.3], 'C': [[None, 4], [3, 5]], 'p*': [[0.1, None], [0.2, 0.4]]}"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

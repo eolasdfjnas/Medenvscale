@@ -1,0 +1,17 @@
+{
+  "scaled_executable_gold_code": "def get_cell_umi_read_string(read_id, sep='_'):\n    parts = read_id.split(sep)\n    if len(parts) < 3:\n        raise ValueError(\"Could not extract UMI or CB from the read ID, pleasecheck UMI and CB are encoded in the read name:\" + read_id)\n    return (parts[-1].encode('utf-8'), parts[-2].encode('utf-8'))\n\nif __name__ == '__main__':\n    pass",
+  "repair_summary": "Fixed error message to match expected stdout: removed space in 'please check' to 'pleasecheck'.",
+  "covered_operator_ids": [
+    "env_medagentgym_train_879_M3_d_01",
+    "env_medagentgym_train_879_M3_d_02",
+    "env_medagentgym_train_879_M3_c_03",
+    "env_medagentgym_train_879_M3_c_04"
+  ],
+  "covered_requirements": [
+    "Scaled executable cases must include tests with non-default separators.",
+    "Scaled executable cases must include a read ID with more than two fields.",
+    "Scaled executable cases must include a test with a multi-character separator.",
+    "Scaled executable cases must include read IDs with leading and trailing separators."
+  ],
+  "remaining_risks": []
+}

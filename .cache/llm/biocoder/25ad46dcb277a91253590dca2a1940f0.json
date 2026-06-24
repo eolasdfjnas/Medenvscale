@@ -1,0 +1,29 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main_001",
+      "description": "Test untar_file with basic extraction and extraction of tar archive containing file with spaces in its name.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_255_M3_d_01,env_medagentgym_train_255_M3_a_02",
+      "axis": "D,A",
+      "semantic_intent": "Verify that untar_file correctly extracts archives with filenames containing spaces, and that it uses subprocess without shell=True.",
+      "target_constraint": "The function must successfully extract a file named 'hello world.txt' from a tar archive without errors, and must not use shell=True or os.system.",
+      "expected_failure_mode": "If the function uses shell=True, the extraction with spaces will fail or produce incorrect results; static check will reject shell usage.",
+      "setup_code": "",
+      "call_code": "with tempfile.TemporaryDirectory() as tmp_dir:\n    # Original test: simple filename\n    source_dir = os.path.join(tmp_dir, 'source')\n    os.mkdir(source_dir)\n    test_file = os.path.join(source_dir, 'hello.txt')\n    with open(test_file, 'w') as f:\n        f.write('Hello, world!')\n    tar_path = os.path.join(tmp_dir, 'archive.tar')\n    with tarfile.open(tar_path, 'w') as tar:\n        tar.add(source_dir, arcname='source')\n    extract_dir = os.path.join(tmp_dir, 'dest')\n    os.mkdir(extract_dir)\n    untar_file(extract_dir, tar_path)\n    extracted_file = os.path.join(extract_dir, 'source', 'hello.txt')\n    assert os.path.isfile(extracted_file), 'File was not extracted correctly.'\n    print('Extraction succeeded:', open(extracted_file).read())\n    \n    # Additional test: filename with space\n    source_dir2 = os.path.join(tmp_dir, 'source2')\n    os.mkdir(source_dir2)\n    test_file2 = os.path.join(source_dir2, 'hello world.txt')\n    with open(test_file2, 'w') as f:\n        f.write('Spaces in filename')\n    tar_path2 = os.path.join(tmp_dir, 'archive2.tar')\n    with tarfile.open(tar_path2, 'w') as tar:\n        tar.add(source_dir2, arcname='source2')\n    extract_dir2 = os.path.join(tmp_dir, 'dest2')\n    os.mkdir(extract_dir2)\n    untar_file(extract_dir2, tar_path2)\n    extracted_file2 = os.path.join(extract_dir2, 'source2', 'hello world.txt')\n    assert os.path.isfile(extracted_file2), 'File with spaces was not extracted correctly.'\n    print('Extraction with spaces succeeded:', open(extracted_file2).read())\nresult = None",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must include a test with a tar archive containing a file with a space in its name.",
+        "Include a hidden static test that rejects shell=True or os.system usage."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [
+          "Extraction succeeded: Hello, world!",
+          "Extraction with spaces succeeded: Spaces in filename"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

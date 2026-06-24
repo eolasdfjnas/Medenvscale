@@ -1,0 +1,18 @@
+{
+  "scaled_executable_gold_code": "import sys\nimport types\nimport pandas as pd\nimport networkx as nx\n\ndef get_version_message():\n    \"\"\"\n    :return: the long description of the macsyfinder version\n    :rtype: str\n    \"\"\"\n    version = macsypy.__version__\n    py_vers = sys.version.replace('\\n', ' ')\n    vers_msg = f\"\"\"Macsyfinder {version}\nusing:\n- Python {py_vers}\n- NetworkX {macsypy.solution.nx.__version__}\n- Pandas {pd.__version__}\n\nMacsyFinder is distributed under the terms of the GNU General Public License (GPLv3).\nSee the COPYING file for details.\n\nIf you use this software please cite:\n{macsypy.__citation__}\nand don't forget to cite models used:\nmacsydata cite <model>\"\"\"\n    return vers_msg\n",
+  "repair_summary": "Removed global macsypy placeholder to avoid hardcoding and ensure test setup is used. Removed trailing newline from returned string so that when printed, stdout has exactly one trailing newline as expected by regex.",
+  "covered_operator_ids": [
+    "env_medagentgym_train_611_M4_d_01",
+    "env_medagentgym_train_611_M4_c_02",
+    "env_medagentgym_train_611_M4_v_04",
+    "env_medagentgym_train_611_M4_a_03"
+  ],
+  "covered_requirements": [
+    "Scaled executable cases must verify that the version message contains the correct version string when __version__ is a custom object.",
+    "Scaled executable cases must include a hidden test with a multi-part version string.",
+    "Scaled executable cases must include an exact regex match and two hidden tests for dynamic behavior.",
+    "Additionally, a static check for return type should be included.",
+    "Scaled executable cases must include a hidden test that checks for dynamic retrieval by altering version numbers."
+  ],
+  "remaining_risks": []
+}

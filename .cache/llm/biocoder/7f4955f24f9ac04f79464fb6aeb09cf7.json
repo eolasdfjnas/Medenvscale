@@ -1,0 +1,32 @@
+{
+  "scaled_executable_gold_code": "import numpy as np\n\ndef kln_to_kn(kln, N_k=None, cleanup=False):\n    \"\"\"Convert KxLxN_max array to LxN array.\n\n    Parameters\n    ----------\n    kln : np.ndarray, shape=(K, L, N_max)\n    N_k : np.ndarray, optional, shape=(K,)\n        Number of samples to take from each group. If None, use all N_max.\n    cleanup : bool, optional\n        If True, delete the input kln array to free memory.\n\n    Returns\n    -------\n    u_kn : np.ndarray, shape=(L, sum(N_k))\n    \"\"\"\n    K, L, N_max = kln.shape\n    if N_k is None:\n        N_k = np.full(K, N_max, dtype=np.int64)\n    else:\n        N_k = np.asarray(N_k, dtype=np.int64)\n        if np.any((N_k < 0) | (N_k > N_max)):\n            raise ValueError(\"N_k values must be non-negative and <= N_max\")\n    slices = [kln[k, :, :N_k[k]] for k in range(K) if N_k[k] > 0]\n    if len(slices) == 0:\n        u_kn = np.empty((L, 0), dtype=kln.dtype)\n    else:\n        u_kn = np.concatenate(slices, axis=1)\n    if cleanup:\n        del kln\n    return u_kn\n\ndef main():\n    K, L, N_max = 3, 4, 5\n    kln = np.arange(K * L * N_max).reshape(K, L, N_max)\n    N_k = np.array([2, 4, 3], dtype=int)\n    u_kn = kln_to_kn(kln, N_k, cleanup=True)\n    print(\"Resulting shape:\", u_kn.shape)\n    print(\"Resulting array:\\n\", u_kn)\n\nif __name__ == \"__main__\":\n    main()\n",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Added input validation for N_k (non-negative and <= N_max) as required by C-axis operator; also refactored to vectorized concatenation for robustness.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_683_M3_c_01",
+    "env_medagentgym_train_683_M3_v_02",
+    "env_medagentgym_train_683_M3_v_03"
+  ],
+  "covered_requirements": [
+    "Add validation constraint that N_k values must be non-negative and ≤ N_max, raising ValueError otherwise.",
+    "Add comprehensive hidden tests for normal operation with various array sizes and N_k values, including N_k=None.",
+    "Add hidden tests for edge cases: single group, single feature, single sample, zero samples per group, and verify cleanup flag does not cause errors.",
+    "Scaled executable cases must pass validation tests for N_k.",
+    "Scaled executable cases must include normal operation tests.",
+    "Scaled executable cases must include edge case tests."
+  ],
+  "implementation_notes": [
+    "Validation: if N_k not None, convert to ndarray and check all entries between 0 and N_max inclusive; raise ValueError if violated.",
+    "When N_k is None, default to using all N_max samples per group.",
+    "Concatenation uses list comprehension with slices; handles zero-sample groups by skipping them.",
+    "Cleanup flag deletes local kln reference; does not affect caller's variable.",
+    "Edge cases with single dimension or zero samples are supported."
+  ],
+  "assumptions": [
+    "Input kln is a 3D numpy array with shape (K, L, N_max).",
+    "If N_k is provided, it is array-like of length K."
+  ]
+}

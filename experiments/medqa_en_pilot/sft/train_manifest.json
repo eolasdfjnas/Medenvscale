@@ -1,0 +1,8 @@
+{
+  "trainer": "trl_sft",
+  "dataset_path": "data/splits/sft_train.jsonl",
+  "output_dir": "experiments/medqa_en_pilot/sft",
+  "max_steps": 10,
+  "status": "configured_only",
+  "note": "This MVP prepares TRL-compatible data and config, but does not force heavy training during smoke runs."
+}

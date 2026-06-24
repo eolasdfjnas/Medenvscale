@@ -1,0 +1,204 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "add_compression_support",
+      "operator_intensity": 1,
+      "transformation_goal": "Extend the function to handle gzip-compressed tar archives (e.g., .tar.gz) in addition to uncompressed .tar files.",
+      "rationale": "The seed only tests with a .tar file. To increase input complexity, the function should handle compressed archives, which are common in scientific and biomedical data workflows. The gold solution already works due to tar's auto-detection.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Write a Python function named `untar_file(path, fn)` that uses the system `tar` command to extract the tar archive file `fn` into the directory `path`. The function must support both uncompressed .tar files and gzip-compressed .tar.gz archives. If the extraction fails, the function should raise a `GenipeError` with an appropriate message."
+        },
+        "data_state_patch": {
+          "resource_files": [
+            {
+              "name": "archive.tar.gz",
+              "type": "generated",
+              "content_template": "Create a tar.gz archive containing a single file"
+            }
+          ]
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_id": "hidden_test_compressed",
+            "description": "Extract a .tar.gz archive and verify content.",
+            "setup_code": "import tempfile, os, tarfile\nwith tempfile.TemporaryDirectory() as tmp_dir:\n    source_dir = os.path.join(tmp_dir, 'source')\n    os.mkdir(source_dir)\n    test_file = os.path.join(source_dir, 'hello.txt')\n    with open(test_file, 'w') as f:\n        f.write('Hello, world!')\n    tar_path = os.path.join(tmp_dir, 'archive.tar.gz')\n    with tarfile.open(tar_path, 'w:gz') as tar:\n        tar.add(source_dir, arcname='source')\n    extract_dir = os.path.join(tmp_dir, 'dest')\n    os.mkdir(extract_dir)\n    call_str = f'untar_file(extract_dir, tar_path)'",
+            "call_code": "call_str",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [],
+              "file_artifacts": [
+                {
+                  "path": "os.path.join(extract_dir, 'source', 'hello.txt')",
+                  "exists": true,
+                  "content_contains": "Hello, world!"
+                }
+              ]
+            }
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [
+          {
+            "path_expression": "os.path.join(extract_dir, 'source', 'hello.txt')",
+            "check": "exists_and_contains",
+            "expected_content": "Hello, world!"
+          }
+        ],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_1",
+          "semantic_intent": "Ensure the function can extract a gzip-compressed tar archive.",
+          "target_constraint": "The function must correctly extract files from a .tar.gz archive.",
+          "expected_failure_mode": "A solution that only works with uncompressed .tar files would fail because tar would be called without the --gunzip flag if not using auto-detection. However, the gold solution uses plain 'tar -xf' which auto-detects compression, so it passes.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Create a .tar.gz archive and call untar_file to extract into a new directory. Verify the extracted file exists and contains expected content."
+        }
+      ],
+      "output_requirements": [
+        "The scaled executable case must use a .tar.gz archive as input and verify extraction success."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "handle_nonexistent_directory",
+      "operator_intensity": 1,
+      "transformation_goal": "Ensure the function raises GenipeError when the target extraction directory does not exist, rather than creating it or failing silently.",
+      "rationale": "The seed assumes the directory exists. To increase robustness, the function should explicitly handle non-existent target paths by raising an error, as tar would fail anyway. This prevents silent creation of directories and aligns with common error-handling practices.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Write a Python function named `untar_file(path, fn)` that uses the system `tar` command to extract the tar archive file `fn` into the directory `path`. The function must support both uncompressed .tar files and gzip-compressed .tar.gz archives. If the extraction fails, or if the target directory does not exist, the function should raise a `GenipeError` with an appropriate message."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_id": "hidden_test_missing_dir",
+            "description": "Call untar_file with a non-existent target directory, expect GenipeError.",
+            "setup_code": "import tempfile, os\nwith tempfile.TemporaryDirectory() as tmp_dir:\n    source_dir = os.path.join(tmp_dir, 'source')\n    os.mkdir(source_dir)\n    test_file = os.path.join(source_dir, 'hello.txt')\n    with open(test_file, 'w') as f:\n        f.write('Hello, world!')\n    tar_path = os.path.join(tmp_dir, 'archive.tar')\n    with tarfile.open(tar_path, 'w') as tar:\n        tar.add(source_dir, arcname='source')\n    nonexistent_dir = os.path.join(tmp_dir, 'nonexistent')\n    # The directory should not exist; tmp_dir is empty.\n    call_str = f'untar_file(nonexistent_dir, tar_path)'",
+            "call_code": "call_str",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [],
+              "file_artifacts": [],
+              "expect_exception": true,
+              "exception_type": "GenipeError"
+            }
+          }
+        ],
+        "exception_tests": [
+          {
+            "test_id": "exception_missing_dir",
+            "description": "Missing directory should raise GenipeError.",
+            "setup_code": "same as above",
+            "call_code": "call_str",
+            "expected_exception": "GenipeError"
+          }
+        ],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "A solution that creates the directory would not raise an error and would pass extraction, but that deviates from the requirement."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_a_spec_1",
+          "semantic_intent": "Ensure the function raises GenipeError when the destination directory does not exist.",
+          "target_constraint": "The function must not create the directory; it must raise an error.",
+          "expected_failure_mode": "A solution that creates the directory (e.g., using os.makedirs) would not raise an error and would incorrectly succeed. The gold solution will raise GenipeError because tar fails (tar -C nonexistent_dir fails).",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Create a valid tar archive and call untar_file with a non-existent destination directory. Expect a GenipeError to be raised."
+        }
+      ],
+      "output_requirements": [
+        "The scaled executable case must include a test where the target directory does not exist, and verify that a GenipeError is raised."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

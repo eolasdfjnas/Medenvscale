@@ -1,0 +1,26 @@
+{
+  "dataset_name": "bigbio/med_qa",
+  "language": "en",
+  "download_method": "zip_direct",
+  "source_zip_url": "https://huggingface.co/datasets/bigbio/med_qa/resolve/main/data_clean.zip",
+  "source_zip_path": "/home/zengjiaqi/medenvscale_medqa/data/raw/medqa_en/source/data_clean.zip",
+  "extract_dir": "/home/zengjiaqi/medenvscale_medqa/data/raw/medqa_en/source/extracted",
+  "splits_requested": [
+    "train",
+    "valid",
+    "test"
+  ],
+  "splits_available": [
+    "train",
+    "valid",
+    "test"
+  ],
+  "rows_written": 12723,
+  "limit": null,
+  "raw_path": "/home/zengjiaqi/medenvscale_medqa/data/raw/medqa_en/medqa_en_raw.jsonl",
+  "split_counts": {
+    "train": 10178,
+    "valid": 1272,
+    "test": 1273
+  }
+}

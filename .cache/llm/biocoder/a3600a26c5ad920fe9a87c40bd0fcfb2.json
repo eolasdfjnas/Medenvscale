@@ -1,0 +1,179 @@
+{
+  "operator_instances": [
+    {
+      "axis": "V",
+      "operator_type": "add_verifier_cases",
+      "operator_intensity": 1,
+      "transformation_goal": "Strengthen verification by adding multiple edge-case tests: N_k=None, single group, and cleanup validation.",
+      "rationale": "The seed only tests one scenario. To increase oracle coverage, we add tests for default N_k, single group (K=1), and ensure cleanup actually frees memory. These cases expose potential failure modes like incorrect shape or memory leaks.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {
+          "verifier_type_hint": "exact_match",
+          "hidden_tests_mode": "regular"
+        },
+        "test_state_patch": {
+          "hidden_tests": [
+            {
+              "case_id": "case_Nk_None",
+              "description": "Test when N_k is None (all samples used).",
+              "setup_code": "K, L, N_max = 2, 3, 4\nkln = np.arange(K * L * N_max).reshape(K, L, N_max)",
+              "call_code": "result = kln_to_kn(kln, N_k=None, cleanup=False)\nexpected_shape = (L, K * N_max)\nassert result.shape == expected_shape, f'Shape mismatch: {result.shape} vs {expected_shape}'",
+              "expected_output_signature": {
+                "return_value": null,
+                "stdout_contains": [],
+                "file_artifacts": []
+              }
+            },
+            {
+              "case_id": "case_single_group",
+              "description": "Test with K=1 and random N_k.",
+              "setup_code": "K, L, N_max = 1, 5, 6\nkln = np.random.rand(K, L, N_max)\nN_k = np.array([4], dtype=int)",
+              "call_code": "result = kln_to_kn(kln, N_k=N_k, cleanup=False)\nexpected_shape = (L, N_k[0])\nassert result.shape == expected_shape, f'Shape mismatch: {result.shape} vs {expected_shape}'",
+              "expected_output_signature": {
+                "return_value": null,
+                "stdout_contains": [],
+                "file_artifacts": []
+              }
+            },
+            {
+              "case_id": "case_cleanup_delete",
+              "description": "Ensure cleanup=True deletes the input array.",
+              "setup_code": "K, L, N_max = 2, 2, 3\nkln = np.arange(K * L * N_max).reshape(K, L, N_max)\nkln_copy = kln.copy()",
+              "call_code": "result = kln_to_kn(kln, N_k=np.array([2,1], dtype=int), cleanup=True)\ntry:\n    _ = kln.shape\n    deleted = False\nexcept NameError:\n    deleted = True\nassert deleted, 'Input array was not deleted after cleanup=True'",
+              "expected_output_signature": {
+                "return_value": null,
+                "stdout_contains": [],
+                "file_artifacts": []
+              }
+            }
+          ]
+        },
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "case_id": "case_Nk_None",
+            "description": "Test when N_k is None (all samples used).",
+            "setup_code": "K, L, N_max = 2, 3, 4\nkln = np.arange(K * L * N_max).reshape(K, L, N_max)",
+            "call_code": "result = kln_to_kn(kln, N_k=None, cleanup=False)\nexpected_shape = (L, K * N_max)\nassert result.shape == expected_shape, f'Shape mismatch: {result.shape} vs {expected_shape}'",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [],
+              "file_artifacts": []
+            }
+          },
+          {
+            "case_id": "case_single_group",
+            "description": "Test with K=1 and random N_k.",
+            "setup_code": "K, L, N_max = 1, 5, 6\nkln = np.random.rand(K, L, N_max)\nN_k = np.array([4], dtype=int)",
+            "call_code": "result = kln_to_kn(kln, N_k=N_k, cleanup=False)\nexpected_shape = (L, N_k[0])\nassert result.shape == expected_shape, f'Shape mismatch: {result.shape} vs {expected_shape}'",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [],
+              "file_artifacts": []
+            }
+          },
+          {
+            "case_id": "case_cleanup_delete",
+            "description": "Ensure cleanup=True deletes the input array.",
+            "setup_code": "K, L, N_max = 2, 2, 3\nkln = np.arange(K * L * N_max).reshape(K, L, N_max)\nkln_copy = kln.copy()",
+            "call_code": "result = kln_to_kn(kln, N_k=np.array([2,1], dtype=int), cleanup=True)\ntry:\n    _ = kln.shape\n    deleted = False\nexcept NameError:\n    deleted = True\nassert deleted, 'Input array was not deleted after cleanup=True'",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [],
+              "file_artifacts": []
+            }
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "v_spec_1",
+          "semantic_intent": "Verify correct concatenation when N_k is None (use all samples).",
+          "target_constraint": "Output shape should be (L, K*N_max) and values correct.",
+          "expected_failure_mode": "Old seed behavior may assume N_k is always provided.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "All groups use max samples"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Test with N_k=None, typical small dimensions."
+        },
+        {
+          "spec_id": "v_spec_2",
+          "semantic_intent": "Verify correct shape for single group (K=1).",
+          "target_constraint": "Output shape must be (L, N_k[0]) with N_k provided.",
+          "expected_failure_mode": "Code may mishandle K=1 edge case due to indexing or loop assumptions.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "Single group with partial samples"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Test with K=1 and random data."
+        },
+        {
+          "spec_id": "v_spec_3",
+          "semantic_intent": "Verify cleanup=True deletes the input array to free memory.",
+          "target_constraint": "After function call, the original kln variable should be undefined (NameError) or deleted.",
+          "expected_failure_mode": "If cleanup is not implemented or only reassigns kln locally, global variable persists.",
+          "test_template_type": "state_check_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "Standard test with cleanup=True"
+          },
+          "expected_behavior": {
+            "kind": "state_check",
+            "mode": "deletion_verified"
+          },
+          "test_case_description": "Check that cleanup flag effectively deletes the input array in the caller's scope."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

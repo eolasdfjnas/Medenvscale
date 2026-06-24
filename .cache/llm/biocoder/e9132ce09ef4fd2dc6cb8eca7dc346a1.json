@@ -1,0 +1,342 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "extend_config_with_special_chars",
+      "operator_intensity": 1,
+      "transformation_goal": "Increase data complexity by adding a section with options containing special characters, such as dots and spaces.",
+      "rationale": "The gold solution using config.write handles such values correctly, so it remains valid. The increased number of sections and special characters makes the input more representative of real-world configurations.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {
+          "resource_manifest": [],
+          "seed_execution_case": {
+            "case_id": "seed_case_main",
+            "setup_code": "config = configparser.ConfigParser()\nconfig['General'] = {\n    'version': '1.0',\n    'enabled': 'yes'\n}\nconfig['User'] = {\n    'name': 'Alice',\n    'email': 'alice@example.com'\n}\nconfig['Database.Config'] = {\n    'host': 'localhost',\n    'port': '5432',\n    'connection string': 'dbname=test'\n}\npath = 'test_config.ini'",
+            "call_code": "result = serialize(config, path)\nif os.path.exists(path):\n    with open(path, 'r') as f:\n        content = f.read()\n    print('Configuration file content:')\n    print(content)\nelse:\n    print('Failed to create configuration file.')",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [
+                "Configuration file content:",
+                "[General]",
+                "version = 1.0",
+                "enabled = yes",
+                "[User]",
+                "name = Alice",
+                "email = alice@example.com",
+                "[Database.Config]",
+                "host = localhost",
+                "port = 5432",
+                "connection string = dbname=test"
+              ],
+              "file_artifacts": [
+                {
+                  "path": "test_config.ini"
+                }
+              ]
+            },
+            "observed_output_signature": null,
+            "extraction_method": "rule_based",
+            "validated_against_ground_truth": false,
+            "assumptions": []
+          }
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import configparser\nimport os\n\ndef main():\n    # Create a configuration with three sections and options\n    config = configparser.ConfigParser()\n    config['General'] = {\n        'version': '1.0',\n        'enabled': 'yes'\n    }\n    config['User'] = {\n        'name': 'Alice',\n        'email': 'alice@example.com'\n    }\n    config['Database.Config'] = {\n        'host': 'localhost',\n        'port': '5432',\n        'connection string': 'dbname=test'\n    }\n\n    # Define the output file path\n    path = 'test_config.ini'\n\n    # Save the configuration to disk\n    <<insert solution here>>\n\n    # Verify that the file was created and print its contents\n    if os.path.exists(path):\n        with open(path, 'r') as f:\n            content = f.read()\n        print('Configuration file content:')\n        print(content)\n    else:\n        print('Failed to create configuration file.')\n\nif __name__ == '__main__':\n    main()"
+        },
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_1",
+          "semantic_intent": "Verify that the serialized output includes the new section with special characters in option names.",
+          "target_constraint": "The output file must contain exactly the sections and options defined in the extended config, with proper formatting.",
+          "expected_failure_mode": "If the solution does not use config.write, it might mishandle special characters like dots or spaces.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Execute the extended seed case and compare stdout and file contents to expected signatures."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "enforce_ordered_and_custom_format",
+      "operator_intensity": 2,
+      "transformation_goal": "Add computational constraints: serialize must write sections in alphabetical order, use '=' delimiter with no spaces, and return the number of bytes written.",
+      "rationale": "These constraints require the user to implement custom serialization logic rather than relying solely on config.write, increasing algorithmic complexity. The gold solution is updated accordingly.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import configparser\nimport os\n\ndef serialize(config, path):\n    \"\"\"\n    save the configuration on file\n\n    :param config: the config to save\n    :type config: :class:`ConfigParserWithComments` object\n    :param str path: where to store the configuration\n    :return: number of bytes written\n    :rtype: int\n    \"\"\"\n    # Write sections in alphabetical order, use '=' with no spaces\n    <insert solution here>\n\ndef main():\n    # Create a configuration with two sections and options\n    config = configparser.ConfigParser()\n    config['General'] = {\n        'version': '1.0',\n        'enabled': 'yes'\n    }\n    config['User'] = {\n        'name': 'Alice',\n        'email': 'alice@example.com'\n    }\n\n    # Define the output file path\n    path = 'test_config.ini'\n\n    # Save the configuration to disk\n    bytes_written = serialize(config, path)\n\n    # Verify that the file was created and print its contents\n    if os.path.exists(path):\n        with open(path, 'r') as f:\n            content = f.read()\n        print('Configuration file content:')\n        print(content)\n        print(f'Bytes written: {bytes_written}')\n    else:\n        print('Failed to create configuration file.')\n\nif __name__ == '__main__':\n    main()",
+          "placeholder_token": "<insert solution here>"
+        },
+        "gold_state_patch": {
+          "scaled_gold_solution": "def serialize(config, path):\n    \"\"\"\n    save the configuration on file\n\n    :param config: the config to save\n    :type config: :class:`ConfigParserWithComments` object\n    :param str path: where to store the configuration\n    :return: number of bytes written\n    :rtype: int\n    \"\"\"\n    with open(path, 'w') as file:\n        # Write sections in sorted order\n        for section in sorted(config.sections()):\n            file.write(f'[{section}]\\n')\n            for key, value in sorted(config[section].items()):\n                file.write(f'{key}={value}\\n')\n            file.write('\\n')\n        # Get file size\n    return os.path.getsize(path)"
+        },
+        "verifier_state_patch": {
+          "verifier_type_hint": "unit_test",
+          "hidden_tests": [
+            {
+              "test_id": "ctest_ordered_format",
+              "description": "Check that sections and options are sorted alphabetically and delimiter is '=' with no spaces.",
+              "setup_code": "config = configparser.ConfigParser()\nconfig['ZSection'] = {'beta': '1', 'alpha': '2'}\nconfig['ASection'] = {'gamma': '3'}\npath = 'temp_test.ini'",
+              "call_code": "result = serialize(config, path)\nwith open(path, 'r') as f:\n    content = f.read()\nexpected = '[ASection]\\ngamma=3\\n\\n[ZSection]\\nalpha=2\\nbeta=1\\n\\n'\nassert content == expected, f'Format mismatch: {content}'\nassert result == len(expected.encode('utf-8')), f'Byte count mismatch: {result}'",
+              "expected_output_signature": {
+                "return_value": null,
+                "stdout_contains": [],
+                "file_artifacts": [
+                  {
+                    "path": "temp_test.ini"
+                  }
+                ]
+              },
+              "hidden": false
+            }
+          ]
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          {
+            "check_id": "check_return_int",
+            "description": "Verify that serialize returns an integer (byte count)."
+          },
+          {
+            "check_id": "check_alphabetical_order",
+            "description": "Verify that sections and options appear in alphabetical order."
+          },
+          {
+            "check_id": "check_delimiter_no_spaces",
+            "description": "Verify that '=' is used without spaces."
+          }
+        ],
+        "new_hidden_tests": [
+          {
+            "test_id": "ctest_ordered_format",
+            "description": "Check that sections and options are sorted alphabetically and delimiter is '=' with no spaces.",
+            "setup_code": "config = configparser.ConfigParser()\nconfig['ZSection'] = {'beta': '1', 'alpha': '2'}\nconfig['ASection'] = {'gamma': '3'}\npath = 'temp_test.ini'",
+            "call_code": "result = serialize(config, path)\nwith open(path, 'r') as f:\n    content = f.read()\nexpected = '[ASection]\\ngamma=3\\n\\n[ZSection]\\nalpha=2\\nbeta=1\\n\\n'\nassert content == expected, f'Format mismatch: {content}'\nassert result == len(expected.encode('utf-8')), f'Byte count mismatch: {result}'",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [],
+              "file_artifacts": [
+                {
+                  "path": "temp_test.ini"
+                }
+              ]
+            },
+            "hidden": false
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [
+          {
+            "path": "temp_test.ini",
+            "relation": "content_equals",
+            "value": "[ASection]\\ngamma=3\\n\\n[ZSection]\\nalpha=2\\nbeta=1\\n\\n"
+          }
+        ],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Using config.write without custom formatting leads to non-sorted order and spaces around delimiters.",
+          "Not returning byte count leads to return value mismatch."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "Prove that the serialize function outputs sections and options in alphabetical order and uses '=' delimiter with no spaces.",
+          "target_constraint": "The output file must be exactly as expected in the hidden test.",
+          "expected_failure_mode": "A naive solution using config.write will produce unsorted order and ' = ' delimiters, causing assertion failure.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "config with sections in non-alphabetical order and options unsorted"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "exact_match"
+          },
+          "test_case_description": "Execute with a config having sections ['ZSection', 'ASection'] and options unsorted, ensure output matches sorted order and no-space delimiter."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "guard_against_none_config",
+      "operator_intensity": 1,
+      "transformation_goal": "Add adversarial robustness: serialize must raise a TypeError if config is None.",
+      "rationale": "This forces the solution to include input validation, preventing a common oversight. The gold solution is updated to include the check.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import configparser\nimport os\n\ndef serialize(config, path):\n    \"\"\"\n    save the configuration on file\n\n    :param config: the config to save\n    :type config: :class:`ConfigParserWithComments` object\n    :param str path: where to store the configuration\n    :raises TypeError: if config is None\n    \"\"\"\n    <insert solution here>\n\ndef main():\n    # Create a configuration with two sections and options\n    config = configparser.ConfigParser()\n    config['General'] = {\n        'version': '1.0',\n        'enabled': 'yes'\n    }\n    config['User'] = {\n        'name': 'Alice',\n        'email': 'alice@example.com'\n    }\n\n    # Define the output file path\n    path = 'test_config.ini'\n\n    # Save the configuration to disk\n    serialize(config, path)\n\n    # Also test with None to verify robustness\n    try:\n        serialize(None, path)\n        print('No exception raised for None config - FAIL')\n    except TypeError:\n        print('TypeError raised for None config - PASS')\n    except Exception as e:\n        print(f'Wrong exception: {e}')\n\n    # Verify that the file was created and print its contents\n    if os.path.exists(path):\n        with open(path, 'r') as f:\n            content = f.read()\n        print('Configuration file content:')\n        print(content)\n    else:\n        print('Failed to create configuration file.')\n\nif __name__ == '__main__':\n    main()"
+        },
+        "gold_state_patch": {
+          "scaled_gold_solution": "def serialize(config, path):\n    \"\"\"\n    save the configuration on file\n\n    :param config: the config to save\n    :type config: :class:`ConfigParserWithComments` object\n    :param str path: where to store the configuration\n    :raises TypeError: if config is None\n    \"\"\"\n    if config is None:\n        raise TypeError('config must not be None')\n    with open(path, 'w') as file:\n        config.write(file)"
+        },
+        "verifier_state_patch": {
+          "verifier_type_hint": "unit_test",
+          "exception_tests": [
+            {
+              "test_id": "a_test_none_config",
+              "description": "Call serialize with config=None and expect TypeError.",
+              "setup_code": "path = 'temp_test.ini'",
+              "call_code": "result = serialize(None, path)",
+              "expected_exception": {
+                "type": "TypeError"
+              }
+            }
+          ]
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [
+          {
+            "test_id": "a_test_none_config",
+            "description": "Call serialize with config=None and expect TypeError.",
+            "setup_code": "path = 'temp_test.ini'",
+            "call_code": "result = serialize(None, path)",
+            "expected_exception": {
+              "type": "TypeError"
+            }
+          }
+        ],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "If no check for None, the function will fail with AttributeError when calling config.write.",
+          "If raises wrong exception, test fails."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_a_spec_1",
+          "semantic_intent": "Prove that serialize raises TypeError when config is None.",
+          "target_constraint": "The function should raise TypeError for None input.",
+          "expected_failure_mode": "Without guard, it raises AttributeError or no exception.",
+          "test_template_type": "exception_case",
+          "input_variant": {
+            "kind": "exception",
+            "value": "None config"
+          },
+          "expected_behavior": {
+            "kind": "exception",
+            "type": "TypeError"
+          },
+          "test_case_description": "Call serialize with config=None and assert TypeError."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

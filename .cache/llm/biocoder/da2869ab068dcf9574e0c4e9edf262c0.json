@@ -1,0 +1,30 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Replay the canonical main() seed flow for make_tmfa_problem with added big-M constraints.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_388_M2_c_01",
+      "axis": "C",
+      "semantic_intent": "Verify that the function imposes big-M constraints linking each flux variable to its binary indicator.",
+      "target_constraint": "For each reaction i, constraints v_i <= upper_i * zi_i and v_i >= lower_i * zi_i must be present.",
+      "expected_failure_mode": "A solution without big-M constraints would have fewer constraints in the problem object and missing inequalities.",
+      "setup_code": "model = MetabolicModel()\nsolver = Solver('glpk')",
+      "call_code": "prob, v, zi, dgri, xij, compounds = make_tmfa_problem(model, solver)\nprint(\"Namespaces:\", list(prob.namespaces.keys()))\nprint(\"Flux vars:\", v.vars)\nprint(\"Binary vars:\", zi.vars)\nprint(\"Gibbs vars:\", dgri.vars)\nprint(\"Concentration vars:\", xij.vars)\nprint(\"Compounds:\", compounds)\nresult = {'prob': prob, 'v': v, 'zi': zi, 'dgri': dgri, 'xij': xij, 'compounds': compounds}",
+      "assertion_code": "# Verify big-M constraints\nconstraints = prob.constraints\nassert len(constraints) == 6, f\"Expected 6 constraints total, got {len(constraints)}\"\nineq_count = 0\nfor c in constraints:\n    if hasattr(c, 'sense'):\n        assert c.sense in ('<=', '>='), f\"Unexpected sense: {c.sense}\"\n        assert 'flux' in c.lhs and 'zi' in c.rhs, f\"Constraint should link flux and zi: {c.lhs} {c.sense} {c.rhs}\"\n        ineq_count += 1\nassert ineq_count == 4, f\"Expected 4 inequality constraints, got {ineq_count}\"",
+      "covered_requirements": [
+        "Scaled executable cases must prove that the big-M constraints are correctly added for each reaction."
+      ],
+      "expected_output_signature": {
+        "stdout_contains": [
+          "Namespaces: ['flux', 'zi', 'dgri', 'xij']",
+          "Flux vars: {('R1',): {'lower': -10, 'upper': 100, 'type': 'Continuous'}, ('R2',): {'lower': 0, 'upper': 50, 'type': 'Continuous'}}",
+          "Binary vars: {('R1',): {'lower': 0, 'upper': 1, 'type': 'Binary'}, ('R2',): {'lower': 0, 'upper': 1, 'type': 'Binary'}}",
+          "Gibbs vars: {('R1',): {'lower': -1000, 'upper': 1000, 'type': 'Continuous'}, ('R2',): {'lower': -1000, 'upper': 1000, 'type': 'Continuous'}}",
+          "Concentration vars: {('A',): {'lower': -50, 'upper': 50, 'type': 'Continuous'}, ('B',): {'lower': -50, 'upper': 50, 'type': 'Continuous'}}",
+          "Compounds: ['A', 'B']"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,248 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "data_noise_and_outliers",
+      "operator_intensity": 1,
+      "transformation_goal": "Increase data complexity by introducing outliers and non-ideal work distributions to test the BAR method's robustness and the student's ability to handle anomalous inputs.",
+      "rationale": "The seed task uses clean Gaussian distributions. Real-world data often contains outliers. By injecting extreme values, the student must ensure the BAR computation remains stable and accurate, or handle potential failures.",
+      "state_updates": {
+        "visible_state_patch": {
+          "context": "import numpy as np\nfrom my_module import bar\n\nnp.random.seed(42)\nw_F = np.random.normal(loc=1.0, scale=1.0, size=5000)\nw_R = np.random.normal(loc=-1.0, scale=1.0, size=5000)\n# Add outliers to test robustness\nw_F[0] = 100.0\nw_F[1] = -50.0\nw_R[0] = 80.0\nw_R[1] = -60.0\n\ndef main():\n    <<insert solution here>>\n    print(f\"Free energy difference ΔF = {results['Delta_f']:.3f} ± {results['dDelta_f']:.3f} kT\")\n\nif __name__ == \"__main__\":\n    main()"
+        }
+      },
+      "verifier_delta": {
+        "new_hidden_tests": [
+          {
+            "test_id": "outlier_robustness",
+            "description": "Check that the BAR computation with outliers returns a reasonable DeltaF (within 20% of true value) and does not crash.",
+            "setup_code": "import numpy as np\nfrom my_module import bar\nnp.random.seed(42)\nw_F = np.random.normal(loc=1.0, scale=1.0, size=5000)\nw_R = np.random.normal(loc=-1.0, scale=1.0, size=5000)\nw_F[0] = 100.0; w_F[1] = -50.0; w_R[0] = 80.0; w_R[1] = -60.0",
+            "call_code": "results = bar(w_F, w_R)\nresult_value = results['Delta_f']",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": []
+            },
+            "numeric_tolerance_tests": [
+              {
+                "variable": "result_value",
+                "expected_value": 1.009,
+                "relative_tolerance": 0.2
+              }
+            ]
+          }
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "spec_D_outliers",
+          "semantic_intent": "Prove that the solution can compute free energy difference even with extreme outlier work values.",
+          "target_constraint": "The BAR function call must succeed and produce a DeltaF close to the true value despite outliers.",
+          "expected_failure_mode": "The seed solution (without modifications) might produce NaN or very large deviation due to outliers; the scaled solution must handle it gracefully.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "outlier_modified_distributions"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Given work distributions with injected extreme outliers, the BAR computation should still return a DeltaF within 20% of the true expected value (1.0 kT)."
+        }
+      ],
+      "output_requirements": [
+        "The scaled executable case must include the outlier-modified data and verify that the function runs without error and returns a result within tolerance."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "gold_solution_must_pass": true,
+        "seed_solution_may_fail": true
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "convergence_failure_handling",
+      "operator_intensity": 1,
+      "transformation_goal": "Add a requirement to handle convergence failures in the BAR root-finding process, e.g., by catching exceptions or using fallback methods.",
+      "rationale": "The seed task assumes that BAR always converges with default settings. Real usage may encounter non-convergence, especially with poor overlap. The student must write robust code that detects and handles such cases, e.g., by raising a clear error or switching methods.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "understanding BAR method",
+            "numerical root-finding",
+            "data analysis",
+            "exception handling",
+            "robust computational practices"
+          ]
+        },
+        "visible_state_patch": {
+          "context": "import numpy as np\nfrom my_module import bar\n\nnp.random.seed(42)\nw_F = np.random.normal(loc=1.0, scale=1.0, size=5000)\nw_R = np.random.normal(loc=-1.0, scale=1.0, size=5000)\n\ndef main():\n    # Compute the free energy difference using the BAR method\n    # Handle potential convergence failures gracefully\n    <<insert solution here>>\n    print(f\"Free energy difference ΔF = {results['Delta_f']:.3f} ± {results['dDelta_f']:.3f} kT\")\n\nif __name__ == \"__main__\":\n    main()"
+        }
+      },
+      "verifier_delta": {
+        "new_hidden_tests": [
+          {
+            "test_id": "convergence_failure_recovery",
+            "description": "Force a quasi-non-convergent scenario by using very poor overlap distributions.",
+            "setup_code": "import numpy as np\nfrom my_module import bar\n# Poor overlap: forward and reverse distributions far apart\nnp.random.seed(0)\nw_F = np.random.normal(loc=10.0, scale=0.5, size=200)\nw_R = np.random.normal(loc=-10.0, scale=0.5, size=200)",
+            "call_code": "try:\n    results = bar(w_F, w_R, maximum_iterations=50, relative_tolerance=1e-8)\n    error_occurred = False\nexcept Exception:\n    error_occurred = True",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": []
+            },
+            "object_state_tests": [
+              {
+                "variable": "error_occurred",
+                "expected_value": false
+              }
+            ]
+          }
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "spec_C_convergence",
+          "semantic_intent": "Prove that the solution gracefully handles convergence failures without crashing, e.g., by catching exceptions and returning a result or raising a meaningful error.",
+          "target_constraint": "The BAR function call must not raise an unhandled exception even when convergence is not achieved within the given tolerance and iterations.",
+          "expected_failure_mode": "The seed solution (or a naively written call) would throw a ConvergenceError; the scaled solution must have a try-except or use fallback.",
+          "test_template_type": "edge_case",
+          "input_variant": {
+            "kind": "edge_case",
+            "value": "poor_overlap_distributions"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "edge_case"
+          },
+          "test_case_description": "Given work distributions with very poor overlap, the solution should not crash; it should either still compute an approximate DeltaF or handle the error gracefully."
+        }
+      ],
+      "output_requirements": [
+        "The scaled case must include a test with poor overlap and verify no unhandled exception."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "gold_solution_must_pass": true,
+        "seed_solution_may_fail": true
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "uncertainty_method_selection",
+      "operator_intensity": 1,
+      "transformation_goal": "Require the solution to compute and print the uncertainty using both 'BAR' and 'MBAR' uncertainty methods, and compare them, thereby increasing algorithmic complexity.",
+      "rationale": "The seed task only calls bar with default settings. By requiring multiple uncertainty estimates, the student must understand the difference and ensure correct syntax for the parameter. This adds computational depth.",
+      "state_updates": {
+        "visible_state_patch": {
+          "context": "import numpy as np\nfrom my_module import bar\n\nnp.random.seed(42)\nw_F = np.random.normal(loc=1.0, scale=1.0, size=5000)\nw_R = np.random.normal(loc=-1.0, scale=1.0, size=5000)\n\ndef main():\n    # Compute the free energy difference using both uncertainty methods\n    <<insert solution here>>\n    # Print both estimates\n    print(f\"BAR uncertainty method: ΔF = {results_BAR['Delta_f']:.3f} ± {results_BAR['dDelta_f']:.3f} kT\")\n    print(f\"MBAR uncertainty method: ΔF = {results_MBAR['Delta_f']:.3f} ± {results_MBAR['dDelta_f']:.3f} kT\")\n\nif __name__ == \"__main__\":\n    main()"
+        }
+      },
+      "verifier_delta": {
+        "new_hidden_tests": [
+          {
+            "test_id": "both_uncertainty_methods",
+            "description": "Check that results from both BAR and MBAR uncertainty methods are computed and printed, and that they are close.",
+            "setup_code": "import numpy as np\nfrom my_module import bar\nnp.random.seed(42)\nw_F = np.random.normal(loc=1.0, scale=1.0, size=5000)\nw_R = np.random.normal(loc=-1.0, scale=1.0, size=5000)",
+            "call_code": "results_BAR = bar(w_F, w_R, uncertainty_method='BAR')\nresults_MBAR = bar(w_F, w_R, uncertainty_method='MBAR')\ndF_BAR = results_BAR['Delta_f']\ndF_MBAR = results_MBAR['Delta_f']",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": []
+            },
+            "numeric_tolerance_tests": [
+              {
+                "variable": "dF_BAR",
+                "expected_value": 1.009,
+                "relative_tolerance": 0.1
+              },
+              {
+                "variable": "dF_MBAR",
+                "expected_value": 1.009,
+                "relative_tolerance": 0.1
+              }
+            ]
+          }
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "spec_C_uncertainty_methods",
+          "semantic_intent": "Prove that the solution correctly uses the uncertainty_method parameter to compute and output both BAR and MBAR uncertainties.",
+          "target_constraint": "The solution must call bar twice with different uncertainty_method and print both results in the specified format.",
+          "expected_failure_mode": "A solution that only calls bar once or uses default uncertainty will fail to produce the required output.",
+          "test_template_type": "output_format_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "same_as_seed"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "output_format"
+          },
+          "test_case_description": "Given the same work distributions, the solution must compute and print BAR and MBAR uncertainty results; the two Delta_f values should be within 0.1 of each other."
+        }
+      ],
+      "output_requirements": [
+        "The scaled case must check that both print statements appear and that the numeric values are reasonable and consistent."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "gold_solution_must_pass": true,
+        "seed_solution_may_fail": true
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

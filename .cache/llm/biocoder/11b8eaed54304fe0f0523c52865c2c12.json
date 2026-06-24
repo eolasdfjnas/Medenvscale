@@ -1,0 +1,288 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "add_data_validation_input_existence_and_basic_format",
+      "operator_intensity": 1,
+      "transformation_goal": "Add requirement that deblur_system_call validates the input FASTA file exists and has a valid header (starts with '>'), raising ValueError otherwise.",
+      "rationale": "Increases data complexity by requiring the function to check input validity, moving beyond simple command construction.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "command construction",
+            "logging",
+            "error handling",
+            "input validation"
+          ]
+        },
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "path": "missing.fasta",
+              "exists": false
+            },
+            {
+              "path": "malformed.fasta",
+              "exists": true,
+              "content": "NOT_A_HEADER\nACTG"
+            }
+          ]
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "problem": "Write a Python function named deblur_system_call that builds a Deblur CLI command to deblur a FASTA file. The function should take two arguments: params (a list of strings representing additional command-line options) and input_fp (a string path to the input FASTA file). It must construct a command list invoking 'deblur workflow' with flags '--is-worker-thread' and '--keep-tmp-files', append all items in params, log the full command via Python's logging module, and invoke it via a helper function _system_call. The function should also validate that the input file exists and contains at least one sequence (first line starts with '>'). If the file does not exist or does not have a valid header, raise a ValueError with a descriptive message. The function should return the stdout, stderr, and return code from _system_call."
+        },
+        "gold_state_patch": {
+          "operator_mode": "gold_compatible"
+        },
+        "verifier_state_patch": {
+          "verifier_type_hint": "functional"
+        },
+        "test_state_patch": {
+          "hidden_tests": [
+            {
+              "id": "missing_file",
+              "type": "exception",
+              "exception_type": "ValueError",
+              "exception_message_contains": "File not found or invalid FASTA"
+            },
+            {
+              "id": "malformed_file",
+              "type": "exception",
+              "exception_type": "ValueError",
+              "exception_message_contains": "File not found or invalid FASTA"
+            }
+          ]
+        },
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          {
+            "id": "D_input_validation_case1",
+            "description": "Verify ValueError raised when input_fp does not exist.",
+            "test_code": "import os; import tempfile; fp = 'nonexistent.fasta'; try: deblur_system_call([], fp); assert False; except ValueError: pass"
+          },
+          {
+            "id": "D_input_validation_case2",
+            "description": "Verify ValueError raised when input_fp is not a valid FASTA (no '>' header).",
+            "test_code": "with tempfile.NamedTemporaryFile(mode='w', suffix='.fasta', delete=False) as f: f.write('NOT_A_HEADER\\nACTG\\n'); fp = f.name; try: deblur_system_call([], fp); assert False; except ValueError: pass; os.unlink(fp)"
+          }
+        ],
+        "new_hidden_tests": [
+          {
+            "id": "missing_file",
+            "type": "exception",
+            "exception_type": "ValueError",
+            "exception_message_contains": "File not found or invalid FASTA"
+          },
+          {
+            "id": "malformed_file",
+            "type": "exception",
+            "exception_type": "ValueError",
+            "exception_message_contains": "File not found or invalid FASTA"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "The seed solution does not validate input and would execute _system_call even with invalid input, potentially causing errors downstream."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_D_spec_1",
+          "semantic_intent": "Prove that deblur_system_call validates input file existence and format.",
+          "target_constraint": "The function must raise ValueError when input file does not exist or lacks a '>' header.",
+          "expected_failure_mode": "A solution that skips validation will execute successfully on invalid input and produce unexpected results.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "missing_file_or_malformed_header"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "exception_raised"
+          },
+          "test_case_description": "Call deblur_system_call with a non-existent file path and with a file that does not start with '>', expect ValueError."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new input validation requirement introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "add_adversarial_special_characters_and_type_checking",
+      "operator_intensity": 1,
+      "transformation_goal": "Add robustness requirements: type checking for params and input_fp, and ensure special characters in params do not break command construction or logging.",
+      "rationale": "Increases adversarial complexity by forcing the function to handle edge cases like non-list params, empty string input_fp, and params with spaces or quotes.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "command construction",
+            "logging",
+            "error handling",
+            "input validation",
+            "type checking"
+          ]
+        },
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "path": "test_sequences.fasta",
+              "exists": true,
+              "content": ">seq1\nACTG\n>seq2\nTGCA\n"
+            }
+          ]
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "problem": "Write a Python function named deblur_system_call that builds a Deblur CLI command to deblur a FASTA file. The function should take two arguments: params (a list of strings representing additional command-line options) and input_fp (a string path to the input FASTA file). It must construct a command list invoking 'deblur workflow' with flags '--is-worker-thread' and '--keep-tmp-files', append all items in params, log the full command via Python's logging module, and invoke it via a helper function _system_call. The function should also validate that input_fp is a non-empty string and params is a list. If these types are incorrect, raise TypeError. Additionally, ensure that the function handles params that contain spaces or special characters (e.g., quotes) correctly by preserving them as separate list elements. The function should return the stdout, stderr, and return code from _system_call."
+        },
+        "gold_state_patch": {
+          "operator_mode": "gold_compatible"
+        },
+        "verifier_state_patch": {
+          "verifier_type_hint": "functional"
+        },
+        "test_state_patch": {
+          "hidden_tests": [
+            {
+              "id": "type_error_params_not_list",
+              "type": "exception",
+              "exception_type": "TypeError",
+              "exception_message_contains": "params must be a list"
+            },
+            {
+              "id": "type_error_input_fp_not_string",
+              "type": "exception",
+              "exception_type": "TypeError",
+              "exception_message_contains": "input_fp must be a non-empty string"
+            },
+            {
+              "id": "special_chars_in_params",
+              "type": "output_match",
+              "expected_stdout_contains": "'--min-size', '50', '--arg-with-space', 'value with spaces'"
+            }
+          ]
+        },
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          {
+            "id": "A_type_check_params",
+            "description": "Verify TypeError raised when params is not a list.",
+            "test_code": "import os; import tempfile; fp = 'test_sequences.fasta'; with open(fp, 'w') as f: f.write('>h\\nA\\n'); try: deblur_system_call('not_a_list', fp); assert False; except TypeError: pass; os.unlink(fp)"
+          },
+          {
+            "id": "A_type_check_input_fp",
+            "description": "Verify TypeError raised when input_fp is not a string.",
+            "test_code": "try: deblur_system_call([], 123); assert False; except TypeError: pass"
+          },
+          {
+            "id": "A_special_chars_in_params",
+            "description": "Verify command construction preserves special characters in params.",
+            "test_code": "import os; import tempfile; fp = 'test_sequences.fasta'; with open(fp, 'w') as f: f.write('>h\\nA\\n'); stdout, stderr, rc = deblur_system_call(['--arg-with-space', 'value with spaces'], fp); assert \"'--arg-with-space', 'value with spaces'\" in stdout; os.unlink(fp)"
+          }
+        ],
+        "new_hidden_tests": [
+          {
+            "id": "type_error_params_not_list",
+            "type": "exception",
+            "exception_type": "TypeError",
+            "exception_message_contains": "params must be a list"
+          },
+          {
+            "id": "type_error_input_fp_not_string",
+            "type": "exception",
+            "exception_type": "TypeError",
+            "exception_message_contains": "input_fp must be a non-empty string"
+          },
+          {
+            "id": "special_chars_in_params",
+            "type": "output_match",
+            "expected_stdout_contains": "'--arg-with-space', 'value with spaces'"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "The seed solution does not perform type checks and would treat a string or integer as a valid argument, potentially crashing or producing incorrect behavior. It may also not handle special characters in logging (though list representation handles spaces, but type safety is missing)."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_A_spec_1",
+          "semantic_intent": "Prove that deblur_system_call performs type checking and handles special characters in params.",
+          "target_constraint": "The function must raise TypeError for non-list params or non-string input_fp, and must correctly incorporate params with spaces into the command list.",
+          "expected_failure_mode": "A solution without type checking will allow invalid inputs and may raise unrelated errors or produce wrong command.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "adversarial_variant",
+            "value": "type_errors_and_special_chars"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "exception_or_output"
+          },
+          "test_case_description": "Call deblur_system_call with invalid types (params as string, input_fp as int) expecting TypeError. Also call with params containing spaces and verify the command list in stdout contains the space-containing argument as a single element."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new type checking and special character handling requirements introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

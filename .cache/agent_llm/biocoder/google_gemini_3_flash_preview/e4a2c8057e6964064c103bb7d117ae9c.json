@@ -1,0 +1,26 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "zx1e31xp",
+      "function": {
+        "name": "run_custom_test",
+        "arguments": "{\"code\":\"def mapRow(this_row, header_dict, precursors_mapping, sequences_mapping, protein_mapping):\\n    peptide_name = this_row[header_dict['FullPeptideName']].strip()\\n    \\n    frag_ann = this_row[header_dict['aggr_Fragment_Annotation']]\\n    prec_ann = this_row[header_dict['aggr_prec_Fragment_Annotation']]\\n    \\n    transitions = [t for t in frag_ann.split(';') if t]\\n    pr_transitions = [t for t in prec_ann.split(';') if t]\\n    \\n    # Deduplicate transitions while preserving order\\n    seen_t = set()\\n    transitions = [x for x in transitions if not (x in seen_t or seen_t.add(x))]\\n    seen_p = set()\\n    pr_transitions = [x for x in pr_transitions if not (x in seen_p or seen_p.add(x))]\\n    \\n    if not transitions:\\n        return\\n\\n    charge_state = this_row[header_dict['Charge']].strip()\\n    if charge_state == 'NA' or not charge_state:\\n        charge_state = '0'\\n    \\n    key1 = f\\\"{peptide_name}/{charge_state}\\\"\\n    key2 = f\\\"{peptide_name}/{charge_state}_pr\\\"\\n    \\n    precursors_mapping[key1] = transitions\\n    precursors_mapping[key2] = pr_transitions\\n    \\n    if peptide_name not in sequences_mapping:\\n        sequences_mapping[peptide_name] = []\\n    if key1 not in sequences_mapping[peptide_name]:\\n        sequences_mapping[peptide_name].append(key1)\\n    if key2 not in sequences_mapping[peptide_name]:\\n        sequences_mapping[peptide_name].append(key2)\\n        \\n    protein_name = this_row[header_dict['ProteinName']]\\n    if protein_name not in protein_mapping:\\n        protein_mapping[protein_name] = []\\n    if peptide_name not in protein_mapping[protein_name]:\\n        protein_mapping[protein_name].append(peptide_name)\\n\\ndef test():\\n    header = ['FullPeptideName', 'aggr_Fragment_Annotation', 'aggr_prec_Fragment_Annotation', 'Charge', 'ProteinName']\\n    header_dict = {name: idx for idx, name in enumerate(header)}\\n    \\n    # Case 1: Normal\\n    pm, sm, ptm = {}, {}, {}\\n    mapRow([' PEPTIDE ', 'b1;b2;b1;', 'p1;p1;', ' 2 ', 'ProtA'], header_dict, pm, sm, ptm)\\n    assert pm['PEPTIDE/2'] == ['b1', 'b2']\\n    assert pm['PEPTIDE/2_pr'] == ['p1']\\n    assert sm['PEPTIDE'] == ['PEPTIDE/2', 'PEPTIDE/2_pr']\\n    assert ptm['ProtA'] == ['PEPTIDE']\\n    \\n    # Case 2: Empty transitions\\n    pm, sm, ptm = {}, {}, {}\\n    mapRow(['PEPTIDE', '', 'p1;', '2', 'ProtA'], header_dict, pm, sm, ptm)\\n    assert pm == {}\\n    \\n    # Case 3: NA charge\\n    pm, sm, ptm = {}, {}, {}\\n    mapRow(['PEPTIDE', 'b1;', 'p1;', 'NA', 'ProtA'], header_dict, pm, sm, ptm)\\n    assert 'PEPTIDE/0' in pm\\n    \\n    # Case 4: Empty charge\\n    pm, sm, ptm = {}, {}, {}\\n    mapRow(['PEPTIDE', 'b1;', 'p1;', '', 'ProtA'], header_dict, pm, sm, ptm)\\n    assert 'PEPTIDE/0' in pm\\n\\ntest()\\nprint(\\\"Tests passed\\\")\\n\",\"test_snippet\":\"# No additional test snippet needed as the code includes its own test function.\\n\"}"
+      }
+    }
+  ],
+  "reasoning_details": [
+    {
+      "type": "reasoning.encrypted",
+      "data": "EjQKMgEMOdbH2zIeZ6I2c9EYjLVu54T5AgPnEpgJGC/XOTCshvLJ490/ORoJwOazCodwMwY+",
+      "format": "google-gemini-v1",
+      "id": "zx1e31xp",
+      "index": 0
+    }
+  ]
+}

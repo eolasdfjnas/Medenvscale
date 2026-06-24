@@ -1,0 +1,370 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "add_second_module_versions",
+      "operator_intensity": 1,
+      "transformation_goal": "Increase data complexity by requiring the function to retrieve and display version information from multiple modules, not just macsypy.",
+      "rationale": "The original task only uses a single dummy module. Adding a second module with its own version and citation forces the solution to handle multiple data sources, increasing input/data complexity.",
+      "state_updates": {
+        "visible_state_patch": {
+          "context_summary": "import sys\nimport types\nimport pandas as pd\nimport networkx as nx\n\n# Create dummy modules for testing\nmacsypy = types.SimpleNamespace(__version__=\"1.2.3\",\n                                solution=types.SimpleNamespace(nx=nx),\n                                __citation__=\"Doe et al., 2023\")\nmacsypy_annotations = types.SimpleNamespace(__version__=\"0.1.0\",\n                                            __citation__=\"Smith et al., 2022\")"
+        },
+        "gold_state_patch": {
+          "gold_solution": "def get_version_message():\n    version = macsypy.__version__\n    py_vers = sys.version.replace('\\n', ' ')\n    vers_msg = f\"\"\"Macsyfinder {version}\nusing:\n- Python {py_vers}\n- NetworkX {macsypy.solution.nx.__version__}\n- Pandas {pd.__version__}\n- Macsyfinder-annotations {macsypy_annotations.__version__}\n\nMacsyFinder is distributed under the terms of the GNU General Public License (GPLv3).\nSee the COPYING file for details.\n\nIf you use this software please cite:\n{macsypy.__citation__}\nand don't forget to cite models used:\nmacsydata cite <model>\n\nIf you use Macsyfinder-annotations please cite:\n{macsypy_annotations.__citation__}\n\"\"\"\n    return vers_msg"
+        }
+      },
+      "verifier_delta": {
+        "new_hidden_tests": [
+          {
+            "test_id": "test_second_module_version_present",
+            "description": "Check that the output contains the version and citation of macsypy_annotations.",
+            "setup": "",
+            "call": "msg = get_version_message()",
+            "assertions": [
+              "assert 'Macsyfinder-annotations 0.1.0' in msg",
+              "assert 'Smith et al., 2022' in msg"
+            ]
+          }
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_1",
+          "semantic_intent": "Prove that the function handles multiple modules with different version and citation information.",
+          "target_constraint": "The output must include version and citation for both macsypy and macsypy_annotations.",
+          "expected_failure_mode": "The original seed solution only includes macsypy info, so it will fail the new assertions.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "add_second_module"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "With additional module macsypy_annotations, the version message should include both."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must verify that the output includes version and citation for both modules."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "impose_output_sorting_and_missing_version_handling",
+      "operator_intensity": 1,
+      "transformation_goal": "Increase computation/constraint complexity by requiring the output to list modules in alphabetical order and to handle missing __version__ gracefully (display 'unknown').",
+      "rationale": "The original task does not specify ordering or error handling. Adding these constraints makes the solution more complex in terms of algorithmic logic and edge-case handling.",
+      "state_updates": {
+        "visible_state_patch": {
+          "context_summary": "import sys\nimport types\nimport pandas as pd\nimport networkx as nx\n\n# Create dummy modules for testing; one lacks __version__\nmacsypy = types.SimpleNamespace(__version__=\"1.2.3\",\n                                solution=types.SimpleNamespace(nx=nx),\n                                __citation__=\"Doe et al., 2023\")\nmacsypy_annotations = types.SimpleNamespace(__citation__=\"Smith et al., 2022\")  # no __version__"
+        },
+        "gold_state_patch": {
+          "gold_solution": "def get_version_message():\n    version = macsypy.__version__\n    py_vers = sys.version.replace('\\n', ' ')\n    # Collect module versions in a list for sorting\n    modules = [\n        (\"Macsyfinder-annotations\", getattr(macsypy_annotations, '__version__', 'unknown')),\n        (\"Macsyfinder\", macsypy.__version__),\n        (\"NetworkX\", macsypy.solution.nx.__version__),\n        (\"Pandas\", pd.__version__)\n    ]\n    modules.sort(key=lambda x: x[0])\n    modules_str = '\\n'.join([f\"- {name} {ver}\" for name, ver in modules])\n    vers_msg = f\"\"\"Macsyfinder {version}\nusing:\n{modules_str}\n\nMacsyFinder is distributed under the terms of the GNU General Public License (GPLv3).\nSee the COPYING file for details.\n\nIf you use this software please cite:\n{macsypy.__citation__}\nand don't forget to cite models used:\nmacsydata cite <model>\n\"\"\"\n    return vers_msg"
+        }
+      },
+      "verifier_delta": {
+        "new_hidden_tests": [
+          {
+            "test_id": "test_alphabetical_order",
+            "description": "Check that modules are listed alphabetically by name in the output.",
+            "setup": "",
+            "call": "msg = get_version_message()\nlines = msg.split('\\n')\nmodule_lines = [l for l in lines if l.startswith('- ')]",
+            "assertions": [
+              "names = [l.split()[1] for l in module_lines]",
+              "assert names == sorted(names)"
+            ]
+          },
+          {
+            "test_id": "test_missing_version_unknown",
+            "description": "Check that missing __version__ is displayed as 'unknown'.",
+            "setup": "",
+            "call": "msg = get_version_message()",
+            "assertions": [
+              "assert 'Macsyfinder-annotations unknown' in msg"
+            ]
+          }
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "Prove that the function sorts modules alphabetically and handles missing versions.",
+          "target_constraint": "Output must list modules in alphabetical order, and if __version__ is missing, display 'unknown'.",
+          "expected_failure_mode": "Original seed solution does not sort and assumes all modules have __version__, so it would fail the new assertions (order wrong, crashes on missing attribute).",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "module_without_version"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "With one module lacking __version__, the function should output 'unknown' and maintain alphabetical order."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must verify alphabetical order and missing version handling."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "vary_module_attribute_types_and_structure",
+      "operator_intensity": 1,
+      "transformation_goal": "Increase adversarial/robustness complexity by making the dummy module's attributes have different types or structures that the solution must handle without crashing.",
+      "rationale": "The original solution assumes macsypy.solution.nx is a networkx module and __citation__ is a string. Changing these to different types (e.g., __citation__ being a function, solution being a dict) tests robustness against unexpected inputs and prevents hardcoding.",
+      "state_updates": {
+        "visible_state_patch": {
+          "context_summary": "import sys\nimport types\nimport pandas as pd\nimport networkx as nx\n\n# Create dummy modules with non-standard attribute types\nmacsypy = types.SimpleNamespace(__version__=\"1.2.3\",\n                                solution={\"nx\": nx},  # solution is a dict, not SimpleNamespace\n                                __citation__=lambda: \"Doe et al., 2023\")  # citation is a callable"
+        },
+        "gold_state_patch": {
+          "gold_solution": "def get_version_message():\n    version = macsypy.__version__\n    py_vers = sys.version.replace('\\n', ' ')\n    # Robust attribute access\n    solution = macsypy.solution if hasattr(macsypy, 'solution') else {}\n    if isinstance(solution, dict):\n        nx_ver = solution.get('nx', None)\n    else:\n        nx_ver = getattr(solution, 'nx', None)\n    nx_ver_str = nx_ver.__version__ if nx_ver is not None else 'unknown'\n    # citation handling\n    citation = macsypy.__citation__\n    if callable(citation):\n        citation_str = citation()\n    else:\n        citation_str = citation\n    vers_msg = f\"\"\"Macsyfinder {version}\nusing:\n- Python {py_vers}\n- NetworkX {nx_ver_str}\n- Pandas {pd.__version__}\n\nMacsyFinder is distributed under the terms of the GNU General Public License (GPLv3).\nSee the COPYING file for details.\n\nIf you use this software please cite:\n{citation_str}\nand don't forget to cite models used:\nmacsydata cite <model>\n\"\"\"\n    return vers_msg"
+        }
+      },
+      "verifier_delta": {
+        "new_hidden_tests": [
+          {
+            "test_id": "test_robustness_dict_solution",
+            "description": "Check that the function works when solution is a dict and citation is callable.",
+            "setup": "",
+            "call": "msg = get_version_message()",
+            "assertions": [
+              "assert isinstance(msg, str)",
+              "assert 'Macsyfinder 1.2.3' in msg",
+              "assert 'NetworkX' in msg"
+            ]
+          }
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_a_spec_1",
+          "semantic_intent": "Prove that the function robustly handles unusual attribute types (dict solution, callable citation) without error.",
+          "target_constraint": "The function must not crash and must produce correct output when __citation__ is callable and solution is a dict.",
+          "expected_failure_mode": "Original seed solution assumes attribute access with dot notation on SimpleNamespace, so it would raise AttributeError or TypeError.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "non_standard_types"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "With macsypy.solution as dict and __citation__ as function, the function should still return a valid message."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must verify that the function does not crash and returns correct content under non-standard attribute types."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "V",
+      "operator_type": "add_comprehensive_test_cases",
+      "operator_intensity": 1,
+      "transformation_goal": "Increase verification/oracle complexity by adding multiple test cases covering normal, edge (missing attributes, empty strings), and adversarial (module name collision) scenarios.",
+      "rationale": "The original verification only had a single case with assertions in main(). Adding diverse test cases strengthens the oracle and ensures the solution is robust across variations.",
+      "state_updates": {
+        "test_state_patch": {
+          "hidden_tests": [
+            {
+              "test_id": "test_normal_case",
+              "description": "Standard case with all attributes present.",
+              "setup": "import types; macsypy = types.SimpleNamespace(__version__='1.2.3', solution=types.SimpleNamespace(nx=nx), __citation__='Doe et al., 2023')",
+              "call": "msg = get_version_message()",
+              "assertions": [
+                "assert 'Macsyfinder 1.2.3' in msg",
+                "assert '- Python' in msg",
+                "assert '- NetworkX' in msg",
+                "assert '- Pandas' in msg",
+                "assert 'If you use this software please cite' in msg"
+              ]
+            },
+            {
+              "test_id": "test_missing_citation",
+              "description": "Module missing __citation__ attribute.",
+              "setup": "import types; macsypy = types.SimpleNamespace(__version__='2.0.0', solution=types.SimpleNamespace(nx=nx)); del macsypy.__citation__",
+              "call": "msg = get_version_message()",
+              "assertions": [
+                "assert 'Macsyfinder 2.0.0' in msg",
+                "assert 'If you use this software please cite' not in msg"
+              ],
+              "expected_exception": false
+            },
+            {
+              "test_id": "test_empty_version",
+              "description": "Module with empty string version.",
+              "setup": "import types; macsypy = types.SimpleNamespace(__version__='', solution=types.SimpleNamespace(nx=nx), __citation__='None')",
+              "call": "msg = get_version_message()",
+              "assertions": [
+                "assert 'Macsyfinder ' in msg",
+                "assert msg.count('Macsyfinder') == 1"
+              ]
+            },
+            {
+              "test_id": "test_module_name_collision",
+              "description": "A module named 'sys' or 'pd' collides with built-in.",
+              "setup": "import types; macsypy = types.SimpleNamespace(__version__='1.0', solution=types.SimpleNamespace(nx=nx), __citation__='Conflicting'); sys = types.SimpleNamespace(__version__='conflict')",
+              "call": "msg = get_version_message()",
+              "assertions": [
+                "assert 'Macsyfinder 1.0' in msg",
+                "assert 'conflict' not in msg  # should use original sys version, not the dummy"
+              ]
+            }
+          ]
+        }
+      },
+      "verifier_delta": {
+        "new_hidden_tests": [
+          {
+            "test_id": "test_normal_case",
+            "description": "Standard case with all attributes present.",
+            "setup": "import types; macsypy = types.SimpleNamespace(__version__='1.2.3', solution=types.SimpleNamespace(nx=nx), __citation__='Doe et al., 2023')",
+            "call": "msg = get_version_message()",
+            "assertions": [
+              "assert 'Macsyfinder 1.2.3' in msg",
+              "assert '- Python' in msg",
+              "assert '- NetworkX' in msg",
+              "assert '- Pandas' in msg",
+              "assert 'If you use this software please cite' in msg"
+            ]
+          },
+          {
+            "test_id": "test_missing_citation",
+            "description": "Module missing __citation__ attribute.",
+            "setup": "import types; macsypy = types.SimpleNamespace(__version__='2.0.0', solution=types.SimpleNamespace(nx=nx)); del macsypy.__citation__",
+            "call": "msg = get_version_message()",
+            "assertions": [
+              "assert 'Macsyfinder 2.0.0' in msg",
+              "assert 'If you use this software please cite' not in msg"
+            ],
+            "expected_exception": false
+          },
+          {
+            "test_id": "test_empty_version",
+            "description": "Module with empty string version.",
+            "setup": "import types; macsypy = types.SimpleNamespace(__version__='', solution=types.SimpleNamespace(nx=nx), __citation__='None')",
+            "call": "msg = get_version_message()",
+            "assertions": [
+              "assert 'Macsyfinder ' in msg",
+              "assert msg.count('Macsyfinder') == 1"
+            ]
+          },
+          {
+            "test_id": "test_module_name_collision",
+            "description": "A module named 'sys' or 'pd' collides with built-in.",
+            "setup": "import types; macsypy = types.SimpleNamespace(__version__='1.0', solution=types.SimpleNamespace(nx=nx), __citation__='Conflicting'); sys = types.SimpleNamespace(__version__='conflict')",
+            "call": "msg = get_version_message()",
+            "assertions": [
+              "assert 'Macsyfinder 1.0' in msg",
+              "assert 'conflict' not in msg  # should use original sys version, not the dummy"
+            ]
+          }
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_v_spec_1",
+          "semantic_intent": "Prove that the function is verified across multiple scenarios: normal, missing attribute, empty version, and name collision.",
+          "target_constraint": "The solution must pass all four test cases without exception.",
+          "expected_failure_mode": "Original seed solution may crash on missing citation or use the colliding sys variable incorrectly.",
+          "test_template_type": "comprehensive_test_suite",
+          "input_variant": {
+            "kind": "multiple_variants",
+            "value": "four_cases"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "multiple_variants"
+          },
+          "test_case_description": "A suite of test cases covering normal, edge, and adversarial scenarios."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include at least four test variations and check outputs/errors."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

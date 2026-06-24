@@ -1,0 +1,165 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "content_based_format_detection",
+      "operator_intensity": 1,
+      "transformation_goal": "Extend format detection to rely on file content when extension is ambiguous or unknown.",
+      "rationale": "The seed task only detects format by file extension. Adding a file with a .dat extension but TSV content forces the function to inspect content, increasing data/input complexity.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "In metabolic modeling, exchange reactions are often defined in files that list metabolites and their allowable flux bounds. Write a function `parse_exchange_file(path, default_compartment)` that reads an exchange file (either TSV or YAML) and yields each compound entry as a dictionary with keys 'compound', 'lower', 'upper', and, for YAML, a 'compartment'. The file format should be auto-detected based on file extension or content: if TSV, use `parse_exchange_table_file(f)`; if YAML, use `parse_exchange_yaml_file(context, f, default_compartment)`. If the extension is not recognized, detect the format by reading the first line. Raise a `ParseError` if the format cannot be determined."
+        },
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "path": "exchange_limits.dat",
+              "content": "compound\tlower\tupper\nGlucose\t-10\t100\nLactate\t0\t50\n"
+            }
+          ]
+        }
+      },
+      "verifier_delta": {},
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_1",
+          "semantic_intent": "The function must correctly parse a .dat file with TSV content.",
+          "target_constraint": "Format detection should fall back to content sniffing when extension is unknown.",
+          "expected_failure_mode": "Old seed behavior would raise ParseError because .dat extension is not in supported list.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_case_dat_tsv"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Parse exchange_limits.dat as TSV and yield correct entries."
+        }
+      ],
+      "output_requirements": [
+        "Add executable case that tests parsing of .dat file with TSV content."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "new_behavior_required": "Content-aware format detection"
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": false,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      }
+    },
+    {
+      "axis": "D",
+      "operator_type": "malformed_input_handling",
+      "operator_intensity": 1,
+      "transformation_goal": "Require robustness to malformed lines (extra columns, missing fields) in TSV files while still yielding valid entries.",
+      "rationale": "The stub parser skips lines with !=3 parts, but the function should handle files with occasional malformed lines gracefully, potentially logging warnings. This increases data complexity as input is messy.",
+      "state_updates": {
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "path": "exchange_limits_malformed.tsv",
+              "content": "compound\tlower\tupper\nGlucose\t-10\t100\nLactate\t0\t50\textra\nO2\t-1000\t1000\n"
+            }
+          ]
+        }
+      },
+      "verifier_delta": {},
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_2",
+          "semantic_intent": "The function should parse a TSV file with an extra column on one line, skipping that line but yielding valid entries.",
+          "target_constraint": "Malformed lines should be skipped without raising an exception; valid lines still output.",
+          "expected_failure_mode": "Old seed behavior might yield incorrect number of entries or fail to skip malformed line (but stub already skips). This test ensures the function doesn't crash and yields exactly two entries.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_case_malformed_tsv"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Parse exchange_limits_malformed.tsv, expect two entries (Glucose and O2)."
+        }
+      ],
+      "output_requirements": [
+        "Add executable case that tests parsing of TSV with malformed line."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "new_behavior_required": "Graceful handling of malformed lines"
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": false,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "flux_bound_validation",
+      "operator_intensity": 1,
+      "transformation_goal": "Add constraint that lower bound must be <= upper bound; raise ValueError otherwise.",
+      "rationale": "Metabolic flux bounds should satisfy lower <= upper. Enforcing this adds computational/constraint complexity, as the function must validate and reject invalid data.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "In metabolic modeling, exchange reactions are often defined in files that list metabolites and their allowable flux bounds. Write a function `parse_exchange_file(path, default_compartment)` that reads an exchange file (either TSV or YAML) and yields each compound entry as a dictionary with keys 'compound', 'lower', 'upper', and, for YAML, a 'compartment'. The file format should be auto-detected: if TSV, use `parse_exchange_table_file(f)`; if YAML, use `parse_exchange_yaml_file(context, f, default_compartment)`. Raise a `ParseError` if the format cannot be determined. Additionally, ensure that for each entry, lower <= upper; if not, raise a ValueError with an appropriate message."
+        }
+      },
+      "verifier_delta": {},
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "The function must reject an entry where lower > upper by raising ValueError.",
+          "target_constraint": "Flux bounds must satisfy lower <= upper.",
+          "expected_failure_mode": "Old seed behavior would yield the entry without validation.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_case_invalid_bounds"
+          },
+          "expected_behavior": {
+            "kind": "exception_or_error",
+            "exception_type": "ValueError",
+            "message_contains": "lower bound greater than upper bound"
+          },
+          "test_case_description": "Parse a TSV file with an entry where lower > upper; expect ValueError."
+        }
+      ],
+      "output_requirements": [
+        "Add executable case that tests validation of flux bounds and raises ValueError when violated."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "new_behavior_required": "Flux bound validation"
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "scaled_executable_gold_code": "import requests\nimport pandas as pd\nfrom io import StringIO\n\nLIPIDMAPS_URL = \"https://www.lipidmaps.org/ms/rest/ms_search/\"\n\ndef _get_num_matches(db, mzStr, adducts, tolerance=0.001):\n    \"\"\"Return the number of matches for the selected database and parameters.\n\n    Keyword Arguments:\n        db        -- LIPID MAPS' database\n        mzStr     -- string with one m/z per line (text file alike)\n        adducts   -- list of adducts separated by commas\n        tolerance -- mass tolerance in Daltons (+/- to each m/z)\n                     [default: 0.001]\n    \"\"\"\n    # Preprocess mzStr: splitlines, strip whitespace, ignore empty lines, rejoin\n    lines = mzStr.splitlines()\n    cleaned_lines = [line.strip() for line in lines if line.strip() != '']\n    cleaned_mzStr = '\\n'.join(cleaned_lines)\n    \n    # Prepare multipart form data\n    files = {'file': ('file', StringIO(cleaned_mzStr), 'text/plain')}\n    data = {\n        'CHOICE': db,\n        'ion': adducts,\n        'tol': str(tolerance),\n        'sort': 'DELTA'\n    }\n    try:\n        response = requests.post(LIPIDMAPS_URL, data=data, files=files)\n    except:\n        raise Exception(\n            'Connection error with the database. Please check your network and try again after a few minutes.'\n            )\n    if len(response.text) == 0:\n        return 0\n    else:\n        matches = pd.read_csv(StringIO(response.text), sep='\\t', engine='python', index_col=False)\n        if matches.empty:\n            return 0\n        else:\n            try:\n                unique_masses = matches['Input Mass'].unique()\n            except KeyError:\n                unique_masses = matches.iloc[:, 0].unique()\n            return len(unique_masses)\n\ndef main():\n    db = 'GLYCOLIPIDS'\n    mz_values = '100.0\\n200.0\\n300.0'\n    adducts = 'M+H,M+Na'\n    tolerance = 0.01\n    num_matches = _get_num_matches(db, mz_values, adducts, tolerance)\n    print(f'Number of unique m/z matches: {num_matches}')\n\nif __name__ == '__main__':\n    main()",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Added preprocessing of input string to remove whitespace and blank lines, ensuring robust parsing as required by the D-axis operator.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_764_M2_d_01"
+  ],
+  "covered_requirements": [
+    "Increase data complexity by introducing whitespace, blank lines, and mixed line endings in the m/z input string to test parsing robustness.",
+    "Scaled executable cases must expose the new requirement introduced by this operator."
+  ],
+  "implementation_notes": [
+    "The _get_num_matches function now splits the input string into lines, strips whitespace from each line, filters out empty lines, and rejoins them with newline before sending to the API."
+  ],
+  "assumptions": [
+    "The API expects a plain text file with one m/z value per line after whitespace removal."
+  ]
+}

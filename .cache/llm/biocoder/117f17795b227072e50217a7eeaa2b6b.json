@@ -1,0 +1,22 @@
+{
+  "primary_axis_weight_hint": {
+    "D": 2,
+    "C": 5,
+    "A": 4,
+    "V": 3
+  },
+  "secondary_axis_weight_hints": [
+    {
+      "task_type": "structured_data_processing",
+      "relevance": 0.7,
+      "axis_weight_hint": {
+        "D": 5,
+        "C": 4,
+        "A": 2,
+        "V": 3
+      },
+      "reason": "The secondary task involves processing structured data (compartments and penalties dict), following priority D > C > V > A."
+    }
+  ],
+  "axis_weight_reason": "Primary task code_validation_and_utility with statement_block_completion prioritizes clarity (C) and accuracy (A) over versatility (V) and difficulty (D) according to given axis priority. Secondary task structured_data_processing emphasizes difficulty (D) and clarity (C) for handling data structures."
+}

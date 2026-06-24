@@ -1,0 +1,16 @@
+{
+  "role": "assistant",
+  "content": "",
+  "reasoning_content": "Let me check if requests_toolbelt is available.",
+  "tool_calls": [
+    {
+      "index": 0,
+      "id": "call_00_AkqnlqRCTucdkJe2nlHa2670",
+      "type": "function",
+      "function": {
+        "name": "run_custom_test",
+        "arguments": "{\"code\": \"try:\\n    from requests_toolbelt.multipart.encoder import MultipartEncoder\\n    print(\\\"requests_toolbelt available\\\")\\nexcept ImportError:\\n    print(\\\"requests_toolbelt not available\\\")\\n\", \"test_snippet\": \"\"}"
+      }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "trainer": "trl_sft",
+  "dataset_path": "data/biocoder/splits/sft_train.jsonl",
+  "output_dir": "/home/zengjiaqi/medenvscale/experiments/biocoder/sft",
+  "max_steps": 1,
+  "status": "configured_only",
+  "note": "This MVP prepares TRL-compatible data and config, but does not force heavy training during smoke runs."
+}

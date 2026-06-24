@@ -1,0 +1,48 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Combined scaled case verifying data complexity, ordered format with '=' delimiter and byte count, and TypeError on None config.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_644_M4_d_01,env_medagentgym_train_644_M4_c_02,env_medagentgym_train_644_M4_a_03",
+      "axis": "D,C,A",
+      "semantic_intent": "Verify that serialize handles data with special characters, writes sections and options in alphabetical order with '=' delimiter, returns byte count, and raises TypeError for None config.",
+      "target_constraint": "The output file must contain sections and options in alphabetical order, delimiter '=' with no spaces, serialize must return the number of bytes written, and raise TypeError if config is None.",
+      "expected_failure_mode": "A solution using config.write will produce unsorted order with spaces around '=', will not return byte count, and will not raise TypeError for None.",
+      "setup_code": "config = configparser.ConfigParser()\nconfig['General'] = {'version': '1.0', 'enabled': 'yes'}\nconfig['User'] = {'name': 'Alice', 'email': 'alice@example.com'}\nconfig['Database.Config'] = {'host': 'localhost', 'port': '5432', 'connection string': 'dbname=test'}\npath = 'test_config.ini'",
+      "call_code": "result = serialize(config, path)\nif os.path.exists(path):\n    with open(path, 'r') as f:\n        content = f.read()\n    print('Configuration file content:')\n    print(content)\n    print(f'Bytes written: {result}')\nelse:\n    print('Failed to create configuration file.')\ntry:\n    serialize(None, path)\n    print('No exception raised for None config - FAIL')\nexcept TypeError:\n    print('TypeError raised for None config - PASS')\nexcept Exception as e:\n    print(f'Wrong exception: {e}')",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Increase data complexity by adding a section with options containing special characters, such as dots and spaces.",
+        "Add computational constraints: serialize must write sections in alphabetical order, use '=' delimiter with no spaces, and return the number of bytes written.",
+        "Add adversarial robustness: serialize must raise a TypeError if config is None."
+      ],
+      "expected_output_signature": {
+        "return_type": null,
+        "return_keys": null,
+        "return_value": null,
+        "stdout_contains": [
+          "Configuration file content:",
+          "[Database.Config]",
+          "connection string=dbname=test",
+          "host=localhost",
+          "port=5432",
+          "[General]",
+          "enabled=yes",
+          "version=1.0",
+          "[User]",
+          "email=alice@example.com",
+          "name=Alice",
+          "Bytes written:",
+          "TypeError raised for None config - PASS"
+        ],
+        "stdout_regex": null,
+        "file_artifacts": [
+          {
+            "path": "test_config.ini"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,117 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Main scaled seed case: verify that the label is drawn with font 'Times-Roman' and positioned above the chromosome with offset proportional to title_size.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_98_M4_c_02,env_medagentgym_train_98_M4_v_04",
+      "axis": "C,V",
+      "semantic_intent": "The label must be drawn using 'Times-Roman' font and its y coordinate must be exactly start_y_position + title_size * 0.5.",
+      "target_constraint": "Font must be 'Times-Roman' and label y = start_y_position + title_size * 0.5.",
+      "expected_failure_mode": "Solution uses wrong font or places label at incorrect y.",
+      "setup_code": "",
+      "call_code": "Chromosome._draw_label = bc_chromosome_draw_label\ndwg = Drawing(400, 100)\nchrom = Chromosome('Chr1')\nchrom.start_x_position = 50\nchrom.end_x_position   = 350\nchrom.start_y_position = 20\nchrom.title_size       = 14\nchrom._draw_label(dwg, 'Chromosome 1')\ndwg.save(formats=['svg'], outDir='.', fnRoot='test_chrom_label')\nprint('SVG saved as test_chrom_label.svg')\nresult = None",
+      "assertion_code": "import xml.etree.ElementTree as ET\ntree = ET.parse('test_chrom_label.svg')\nns = {'svg': 'http://www.w3.org/2000/svg'}\ntexts = tree.findall('svg:text', ns)\nassert len(texts) == 1, f\"Expected one text element, got {len(texts)}\"\ntext = texts[0]\nassert text.get('font-family') == 'Times-Roman', f\"Font mismatch: {text.get('font-family')}\"\ny = float(text.get('y'))\nexpected_y = 20 + 14 * 0.5\nassert abs(y - expected_y) < 0.5, f\"Label y {y} not within tolerance of {expected_y}\"",
+      "covered_requirements": [
+        "Scaled executable cases must enforce the font constraint via SVG parsing.",
+        "Scaled executable cases must include a precise SVG coordinate check for the label position."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [
+          "SVG saved as test_chrom_label.svg"
+        ],
+        "file_artifacts": [
+          {
+            "path": "test_chrom_label.svg"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "multiline_label_case",
+      "description": "Verify that the solution correctly draws a multiline label, resulting in two separate text elements in the SVG.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_98_M4_d_01",
+      "axis": "D",
+      "semantic_intent": "The solution must handle label names containing newline characters by rendering multiple lines.",
+      "target_constraint": "If label_name contains '\\n', the SVG must contain two text elements (or one with newline).",
+      "expected_failure_mode": "Solution ignores newline and renders only one line.",
+      "setup_code": "",
+      "call_code": "Chromosome._draw_label = bc_chromosome_draw_label\ndwg = Drawing(400, 100)\nchrom = Chromosome('Chr1')\nchrom.start_x_position = 50\nchrom.end_x_position   = 350\nchrom.start_y_position = 20\nchrom.title_size       = 14\nchrom._draw_label(dwg, 'Line1\\nLine2')\ndwg.save(formats=['svg'], outDir='.', fnRoot='test_multiline')\nprint('SVG saved as test_multiline.svg')",
+      "assertion_code": "import xml.etree.ElementTree as ET\ntree = ET.parse('test_multiline.svg')\nns = {'svg': 'http://www.w3.org/2000/svg'}\ntexts = tree.findall('svg:text', ns)\nif len(texts) >= 2:\n    lines = [t.text for t in texts if t.text]\n    assert 'Line1' in lines and 'Line2' in lines, f\"Lines not found: {lines}\"\nelse:\n    assert len(texts) == 1 and texts[0].text and '\\n' in texts[0].text, \"Expected newline in text\"",
+      "covered_requirements": [
+        "Scaled executable cases must include a test with multiline label."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [
+          "SVG saved as test_multiline.svg"
+        ],
+        "file_artifacts": [
+          {
+            "path": "test_multiline.svg"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "relative_offset_case",
+      "description": "Verify that the label y position changes with title_size, indicating the offset is relative to chromosome dimensions.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_98_M4_a_03",
+      "axis": "A",
+      "semantic_intent": "The label offset must be proportional to title_size, not a fixed inch value.",
+      "target_constraint": "When title_size changes, the y coordinate of the label should change accordingly.",
+      "expected_failure_mode": "Solution uses constant offset (e.g., 0.1*inch) resulting in same y for different title_size.",
+      "setup_code": "",
+      "call_code": "Chromosome._draw_label = bc_chromosome_draw_label\ndwg1 = Drawing(400, 100)\nchrom1 = Chromosome('Chr1')\nchrom1.start_x_position = 50\nchrom1.end_x_position   = 350\nchrom1.start_y_position = 20\nchrom1.title_size       = 14\nchrom1._draw_label(dwg1, 'Label')\ndwg1.save(formats=['svg'], outDir='.', fnRoot='test_rel1')\ndwg2 = Drawing(400, 100)\nchrom2 = Chromosome('Chr2')\nchrom2.start_x_position = 50\nchrom2.end_x_position   = 350\nchrom2.start_y_position = 20\nchrom2.title_size       = 20\nchrom2._draw_label(dwg2, 'Label')\ndwg2.save(formats=['svg'], outDir='.', fnRoot='test_rel2')\nprint('SVGs saved')",
+      "assertion_code": "import xml.etree.ElementTree as ET\nns = {'svg': 'http://www.w3.org/2000/svg'}\ntree1 = ET.parse('test_rel1.svg')\ntext1 = tree1.find('svg:text', ns)\ny1 = float(text1.get('y'))\ntree2 = ET.parse('test_rel2.svg')\ntext2 = tree2.find('svg:text', ns)\ny2 = float(text2.get('y'))\nassert y2 != y1, f\"Label y did not change: {y1} vs {y2}\"\nfactor1 = (y1 - 20) / 14\nfactor2 = (y2 - 20) / 20\nassert abs(factor1 - factor2) < 0.01, f\"Factors differ: {factor1} vs {factor2}\"",
+      "covered_requirements": [
+        "Scaled executable cases must verify that label y position changes with title_size."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [
+          "SVGs saved"
+        ],
+        "file_artifacts": [
+          {
+            "path": "test_rel1.svg"
+          },
+          {
+            "path": "test_rel2.svg"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "multiline_font_case",
+      "description": "Combined D and C: draw a multiline label with font Times-Roman.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_98_M4_d_01,env_medagentgym_train_98_M4_c_02",
+      "axis": "D,C",
+      "semantic_intent": "Solution must handle multiline label and use font Times-Roman.",
+      "target_constraint": "Font must be 'Times-Roman' and label must have two lines.",
+      "expected_failure_mode": "Either font wrong or multiline not supported.",
+      "setup_code": "",
+      "call_code": "Chromosome._draw_label = bc_chromosome_draw_label\ndwg = Drawing(400, 100)\nchrom = Chromosome('Chr1')\nchrom.start_x_position = 50\nchrom.end_x_position   = 350\nchrom.start_y_position = 20\nchrom.title_size       = 14\nchrom._draw_label(dwg, 'Line1\\nLine2')\ndwg.save(formats=['svg'], outDir='.', fnRoot='test_comb')\nprint('SVG saved')",
+      "assertion_code": "import xml.etree.ElementTree as ET\ntree = ET.parse('test_comb.svg')\nns = {'svg': 'http://www.w3.org/2000/svg'}\ntexts = tree.findall('svg:text', ns)\nassert len(texts) >= 2, f\"Expected at least two text elements for multiline, got {len(texts)}\"\nassert texts[0].get('font-family') == 'Times-Roman', f\"Font mismatch\"",
+      "covered_requirements": [
+        "Scaled executable cases must include a test with multiline label.",
+        "Scaled executable cases must enforce the font constraint via SVG parsing."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [
+          "SVG saved"
+        ],
+        "file_artifacts": [
+          {
+            "path": "test_comb.svg"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "seed_execution_case": {
+    "case_id": "seed_case_main",
+    "description": "Replays the main example from the seed: creates a sample THetA file with one tumor, parses it, and prints the result.",
+    "setup_code": "import os\n\ndef parse_theta_results(fname):\n    \"\"\"Parse THetA results into a data structure.\n\n    Columns: NLL, mu, C, p*\n    \"\"\"\n    with open(fname) as handle:\n        header = next(handle).rstrip().split('\\t')\n        body = next(handle).rstrip().split('\\t')\n        assert len(body) == len(header) == 4\n        nll = float(body[0])\n        mu = body[1].split(',')\n        mu_normal = float(mu[0])\n        mu_tumors = list(map(float, mu[1:]))\n        copies = body[2].split(':')\n        if len(mu_tumors) == 1:\n            copies = [[(int(c) if c.isdigit() else None) for c in copies]]\n        else:\n            copies = [[(int(c) if c.isdigit() else None) for c in subcop] for\n                subcop in zip(*[c.split(',') for c in copies])]\n        probs = body[3].split(',')\n        if len(mu_tumors) == 1:\n            probs = [(float(p) if not p.isalpha() else None) for p in probs]\n        else:\n            probs = [[(float(p) if not p.isalpha() else None) for p in\n                subprob] for subprob in zip(*[p.split(',') for p in probs])]\n    return {'NLL': nll, 'mu_normal': mu_normal, 'mu_tumors': mu_tumors, 'C':\n        copies, 'p*': probs}\n\nsample = (\n    \"NLL\\tmu\\tC\\tp*\\n\"\n    \"12.5\\t0.4,0.6\\t2:3\\t0.1,0.2\\n\"\n)\nfname = \"theta_test.txt\"\nwith open(fname, \"w\") as f:\n    f.write(sample)",
+    "call_code": "result = parse_theta_results(fname)\nprint(result)\nos.remove(fname)",
+    "expected_output_signature": {
+      "return_value": null,
+      "stdout_contains": [
+        "{'NLL': 12.5, 'mu_normal': 0.4, 'mu_tumors': [0.6], 'C': [[2, 3]], 'p*': [0.1, 0.2]}"
+      ],
+      "file_artifacts": []
+    },
+    "extraction_method": "llm_reconstructed",
+    "validated_against_ground_truth": false,
+    "assumptions": []
+  }
+}

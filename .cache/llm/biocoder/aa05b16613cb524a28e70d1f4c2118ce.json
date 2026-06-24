@@ -1,0 +1,87 @@
+{
+  "operator_instances": [
+    {
+      "axis": "C",
+      "operator_type": "require_parent_directory_creation",
+      "operator_intensity": 1,
+      "transformation_goal": "Add requirement that serialize function must create parent directories of the output path if they do not exist.",
+      "rationale": "This increases computational complexity by introducing conditional directory creation, a common real-world constraint in file I/O tasks that demands additional logic (e.g., os.makedirs) and edge-case handling.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "file I/O",
+            "configparser library usage",
+            "basic Python programming",
+            "directory creation"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {
+          "scaled_gold_solution": "def serialize(config, path):\n    \"\"\"\n    save the configuration on file\n\n    :param config: the config to save\n    :type config: :class:`ConfigParserWithComments` object\n    :param str path: where to store the configuration\n    \"\"\"\n    os.makedirs(os.path.dirname(path), exist_ok=True)\n    with open(path, 'w') as file:\n        config.write(file)"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          "Verify that if the output path contains a non-existent parent directory, the directory is created after calling serialize."
+        ],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "FileNotFoundError when directory is missing and no directory creation logic is present."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "c_spec_dir_creation",
+          "semantic_intent": "Ensure that serialize creates parent directories when needed.",
+          "target_constraint": "When the output path includes a directory that does not exist, the function must create it before writing.",
+          "expected_failure_mode": "A naive implementation using open(path, 'w') without directory creation will raise FileNotFoundError.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "path_variant",
+            "value": "subdir/test_config.ini"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Call serialize with path='subdir/test_config.ini' and check that the file is written to subdir/test_config.ini and that the subdir directory exists."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement that serialize must create missing parent directories."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Test parsing of exchange files with unambiguous extensions (.tsv, .yaml) and ambiguous extensions (.txt) using content-based detection. Also verify that ambiguous content raises ParseError.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_441_M2_c_01",
+      "axis": "C",
+      "semantic_intent": "Verify that the function correctly detects file format from content when extension is ambiguous (.txt or no extension) and raises ParseError for unsupported content.",
+      "target_constraint": "The function must read the first line of files with ambiguous extension and detect tab for TSV, colon for YAML; else raise ParseError.",
+      "expected_failure_mode": "Old seed behavior (extension-only) would treat .txt as TSV regardless of content, thus failing to parse YAML content correctly and not raising ParseError for invalid content.",
+      "setup_code": "import tempfile, os, sys\n# Unambiguous TSV\nwith open('unambiguous.tsv', 'w') as f:\n    f.write('compound\\tlower\\tupper\\n')\n    f.write('A\\t-1\\t10\\n')\n# Unambiguous YAML\nwith open('unambiguous.yaml', 'w') as f:\n    f.write('X:-100:50:cytosol\\n')\n# Ambiguous .txt with TSV content\nwith open('ambiguous_tsv.txt', 'w') as f:\n    f.write('compound\\tlower\\tupper\\n')\n    f.write('B\\t0\\t5\\n')\n# Ambiguous .txt with YAML content\nwith open('ambiguous_yaml.txt', 'w') as f:\n    f.write('Y:0:200:mito\\n')\n# Ambiguous .txt with unsupported content\nwith open('ambiguous_fail.txt', 'w') as f:\n    f.write('This is not valid\\n')",
+      "call_code": "results = {}\n# Parse unambiguous TSV\nresults['tsv'] = list(parse_exchange_file('unambiguous.tsv', default_compartment='c'))\n# Parse unambiguous YAML\nresults['yaml'] = list(parse_exchange_file('unambiguous.yaml', default_compartment='c'))\n# Parse ambiguous .txt with TSV content\nresults['tsv_txt'] = list(parse_exchange_file('ambiguous_tsv.txt', default_compartment='c'))\n# Parse ambiguous .txt with YAML content\nresults['yaml_txt'] = list(parse_exchange_file('ambiguous_yaml.txt', default_compartment='c'))\n# Parse ambiguous .txt with unsupported content (should raise ParseError)\ntry:\n    list(parse_exchange_file('ambiguous_fail.txt', default_compartment='c'))\n    results['ambiguous_fail'] = {'error': False}\nexcept ParseError:\n    results['ambiguous_fail'] = {'error': True}\nresult = results",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must include at least one case where file extension is ambiguous (e.g., .txt or no extension) and content determines format.",
+        "Scaled executable cases must include at least one case where content is ambiguous and ParseError is raised."
+      ],
+      "expected_output_signature": {
+        "return_type": "dict",
+        "return_keys": [
+          "tsv",
+          "yaml",
+          "tsv_txt",
+          "yaml_txt",
+          "ambiguous_fail"
+        ],
+        "return_value": {
+          "tsv": [
+            {
+              "compound": "A",
+              "lower": -1.0,
+              "upper": 10.0
+            }
+          ],
+          "yaml": [
+            {
+              "compound": "X",
+              "lower": -100.0,
+              "upper": 50.0,
+              "compartment": "cytosol"
+            }
+          ],
+          "tsv_txt": [
+            {
+              "compound": "B",
+              "lower": 0.0,
+              "upper": 5.0
+            }
+          ],
+          "yaml_txt": [
+            {
+              "compound": "Y",
+              "lower": 0.0,
+              "upper": 200.0,
+              "compartment": "mito"
+            }
+          ],
+          "ambiguous_fail": {
+            "error": true
+          }
+        },
+        "stdout_contains": [],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

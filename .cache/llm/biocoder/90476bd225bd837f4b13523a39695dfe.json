@@ -1,0 +1,32 @@
+{
+  "primary_domain": "bioinformatics_sequence_structure",
+  "secondary_domains": [
+    {
+      "domain": "scientific_software_engineering",
+      "relevance": 0.9
+    },
+    {
+      "domain": "biomedical_data_analysis",
+      "relevance": 0.7
+    }
+  ],
+  "primary_task_type": "io_format_and_cli",
+  "solution_form": "python_function",
+  "secondary_task_types": [
+    "code_validation_and_utility"
+  ],
+  "domain_concepts": [
+    "command-line construction",
+    "logging",
+    "subprocess management",
+    "sequence denoising"
+  ],
+  "required_capabilities": [
+    "Python programming",
+    "understanding of CLI tools",
+    "logging"
+  ],
+  "verifier_type_hint": "unit_test",
+  "routing_reason": "Task involves writing a function that constructs and executes a CLI command for a bioinformatics tool (Deblur), with logging and system call invocation, fitting scientific software engineering and bioinformatics domains.",
+  "confidence": 0.95
+}

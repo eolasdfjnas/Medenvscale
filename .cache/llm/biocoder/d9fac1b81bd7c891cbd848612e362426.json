@@ -1,0 +1,243 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "increase_tumor_count",
+      "operator_intensity": 1,
+      "transformation_goal": "Increase data complexity by adding a second tumor to the input line, requiring the parser to handle multi-tumor formatting (transposed copy numbers and probabilities).",
+      "rationale": "The seed task only includes a single tumor. Adding a second tumor exercises the multi-tumor branch of the gold solution, which involves splitting by colon and transposing. This is a natural extension of data complexity within the same format.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "parse tab-separated files",
+            "handle mixed data types",
+            "conditional multi-sample parsing",
+            "error handling for placeholder values",
+            "transpose colon-separated comma-separated values for multi-tumor cases"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context": "import os\n\n<<insert solution here>>\n\ndef main():\n    # Create a temporary THetA output file with two tumors\n    sample = (\n        \"NLL\\tmu\\tC\\tp*\\n\"\n        \"12.5\\t0.4,0.3,0.3\\t2,4:3,5\\t0.1,0.3:0.2,0.4\\n\"\n    )\n    fname = \"theta_test.txt\"\n    with open(fname, \"w\") as f:\n        f.write(sample)\n\n    # Parse the THetA results\n    result = parse_theta_results(fname)\n    print(result)\n\n    # Clean up\n    os.remove(fname)\n\nif __name__ == \"__main__\":\n    main()"
+        },
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_id": "hidden_multi_tumor",
+            "description": "Parse input with two tumors",
+            "setup_code": "sample = (\n    \"NLL\\tmu\\tC\\tp*\\n\"\n    \"12.5\\t0.4,0.3,0.3\\t2,4:3,5\\t0.1,0.3:0.2,0.4\\n\"\n)\nfname = \"theta_test.txt\"\nwith open(fname, \"w\") as f:\n    f.write(sample)",
+            "call_code": "result = parse_theta_results(fname)\nprint(result)\nos.remove(fname)",
+            "expected_output_signature": {
+              "return_value": {
+                "NLL": 12.5,
+                "mu_normal": 0.4,
+                "mu_tumors": [
+                  0.3,
+                  0.3
+                ],
+                "C": [
+                  [
+                    2,
+                    4
+                  ],
+                  [
+                    3,
+                    5
+                  ]
+                ],
+                "p*": [
+                  [
+                    0.1,
+                    0.2
+                  ],
+                  [
+                    0.3,
+                    0.4
+                  ]
+                ]
+              },
+              "stdout_contains": [
+                "{'NLL': 12.5, 'mu_normal': 0.4, 'mu_tumors': [0.3, 0.3], 'C': [[2, 4], [3, 5]], 'p*': [[0.1, 0.2], [0.3, 0.4]]}"
+              ],
+              "file_artifacts": []
+            },
+            "extraction_method": "rule_based"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "old seed behavior that only handles single tumor would fail because mu_tumors length > 1 and C/p* parsing incorrectly flattens"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "D_multi_tumor_spec",
+          "semantic_intent": "Verify the parser correctly handles two tumors by returning mu_tumors with two values, and transposed lists for C and p*.",
+          "target_constraint": "When mu has three comma-separated values (normal, tumor1, tumor2), the C column should be parsed as a list of two lists, each containing integers, and p* as a list of two lists of floats.",
+          "expected_failure_mode": "A parser that only handles single tumor will incorrectly treat C and p* as flat lists or mis-transpose.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Input line with two tumors in mu, C, p*"
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement introduced by this operator.",
+        "The hidden test must be executed and must match expected output."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "D",
+      "operator_type": "add_placeholders",
+      "operator_intensity": 1,
+      "transformation_goal": "Introduce alphabetic placeholders in the C and p* columns to test robust handling of non-numeric values (None conversion).",
+      "rationale": "The problem statement mentions placeholders (digits or placeholders for C, floats or alphabetic placeholders for p*). The seed example has only numeric values. Adding alphabetic placeholders increases input variety and ensures the parser correctly maps them to None.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "parse tab-separated files",
+            "handle mixed data types",
+            "conditional multi-sample parsing",
+            "error handling for placeholder values",
+            "convert alphabetic placeholders to None"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context": "import os\n\n<<insert solution here>>\n\ndef main():\n    # Create a temporary THetA output file with placeholder values\n    sample = (\n        \"NLL\\tmu\\tC\\tp*\\n\"\n        \"15.0\\t0.5,0.5\\tA:B\\t0.2,X\\n\"\n    )\n    fname = \"theta_test.txt\"\n    with open(fname, \"w\") as f:\n        f.write(sample)\n\n    # Parse the THetA results\n    result = parse_theta_results(fname)\n    print(result)\n\n    # Clean up\n    os.remove(fname)\n\nif __name__ == \"__main__\":\n    main()"
+        },
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_id": "hidden_placeholders",
+            "description": "Parse input with alphabetic placeholders in C and p*",
+            "setup_code": "sample = (\n    \"NLL\\tmu\\tC\\tp*\\n\"\n    \"15.0\\t0.5,0.5\\tA:B\\t0.2,X\\n\"\n)\nfname = \"theta_test.txt\"\nwith open(fname, \"w\") as f:\n    f.write(sample)",
+            "call_code": "result = parse_theta_results(fname)\nprint(result)\nos.remove(fname)",
+            "expected_output_signature": {
+              "return_value": {
+                "NLL": 15.0,
+                "mu_normal": 0.5,
+                "mu_tumors": [
+                  0.5
+                ],
+                "C": [
+                  [
+                    null,
+                    null
+                  ]
+                ],
+                "p*": [
+                  0.2,
+                  null
+                ]
+              },
+              "stdout_contains": [
+                "{'NLL': 15.0, 'mu_normal': 0.5, 'mu_tumors': [0.5], 'C': [[None, None]], 'p*': [0.2, None]}"
+              ],
+              "file_artifacts": []
+            },
+            "extraction_method": "rule_based"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "old seed behavior that assumes only digits would crash or misinterpret alphabetic characters"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "D_placeholders_spec",
+          "semantic_intent": "Verify the parser correctly maps alphabetic placeholders in C and p* to None.",
+          "target_constraint": "When C contains letters like 'A' and 'B', they should be converted to None; when p* contains a letter like 'X', it should be None.",
+          "expected_failure_mode": "A parser that tries to int() or float() a letter will raise ValueError.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Input line with alphabetic placeholders in C and p*"
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement introduced by this operator.",
+        "The hidden test must be executed and must match expected output."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

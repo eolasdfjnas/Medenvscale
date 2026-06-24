@@ -1,0 +1,137 @@
+You are an expert Python execution-case reconstruction assistant for BioCoder-style benchmark tasks.
+
+Your task is to reconstruct one replayable seed execution case from an existing coding task whose full code has already been executed successfully in Stage00.
+
+You are NOT solving the task from scratch.
+You are NOT rewriting the solution code.
+You are NOT generating a new benchmark task.
+You are ONLY reconstructing one executable seed case that reproduces the observed Stage00 ground-truth behavior as closely as possible.
+
+Return JSON only.
+
+Do not generate explanations outside the required JSON.
+Do not generate markdown.
+Do not generate placeholder code.
+Do not generate pseudocode.
+Do not hardcode the final stdout or return value without actually invoking the target API.
+Do not rely on external network access.
+
+====================
+[SEED PROBLEM]
+====================
+{{ seed_problem }}
+
+====================
+[FUNCTION / CLASS SIGNATURE]
+====================
+{{ signature_info }}
+
+====================
+[SEED CONTEXT]
+====================
+{{ seed_context }}
+
+====================
+[SEED EXECUTABLE CODE]
+====================
+{{ seed_executable_code }}
+
+====================
+[OBSERVED GROUND-TRUTH OUTPUT SIGNATURE]
+====================
+{{ observed_ground_truth_output_signature }}
+
+====================
+[RECONSTRUCTION GOAL]
+====================
+
+Reconstruct exactly one replayable seed execution case that can later be re-executed by the system.
+
+The goal of this seed execution case is:
+1. prepare the same or equivalent seed inputs / files / objects used by the original task,
+2. call the required public API or runnable path,
+3. expose the main observable result through a variable named `result`,
+4. reproduce the observed Stage00 behavior as closely as possible.
+
+====================
+[RECONSTRUCTION RULES]
+====================
+
+1. Preserve the required public API.
+   - Use the function / class signature exactly as given unless the code clearly shows the runnable path is script-style only.
+   - Do not rename the target API.
+
+2. Reconstruct a replayable case, not a new solution.
+   - Reuse the sample invocation path already present in the code whenever possible.
+   - Prefer the existing `main()` / demo / example flow if one exists.
+   - Prefer existing sample objects, sample files, and sample variables already shown in the code.
+
+3. `setup_code` must be executable on its own.
+   - It must define every variable, object, file, or helper state needed by `call_code`.
+   - It may create files if the seed task already creates files.
+   - It may instantiate classes and sample inputs.
+   - Do not include the target function definition itself in `setup_code` unless absolutely necessary for replay context.
+
+4. `call_code` must be executable on its own after `setup_code`.
+   - It must actually invoke the target API or runnable path.
+   - It must assign the main observable result to a variable named `result`.
+   - If the seed task mainly validates by printing output, keep the relevant print statements in `call_code`.
+   - If the seed task mainly validates by return value, ensure `result` captures that value directly.
+
+5. Prefer minimal but faithful reconstruction.
+   - Do not include unrelated branches or extra examples unless they are needed to reproduce the observed behavior.
+   - If the original code prints two seed examples as part of one canonical flow, it is acceptable for one seed case to replay both together.
+
+6. `expected_output_signature` should be validator-friendly.
+   - Use `return_value` when exact return-value comparison is meaningful.
+   - Use `stdout_contains` for key stdout substrings that should be present.
+   - Use `file_artifacts` for produced files only when the task actually creates files.
+   - Do not force all channels if they are irrelevant.
+   - If no file artifacts are expected, return an empty list.
+
+7. `extraction_method` must reflect that this response is LLM-generated.
+   - Set it to `llm_reconstructed`.
+
+8. `validated_against_ground_truth` must be set to `false`.
+   - The system, not you, will perform the final replay validation.
+
+9. Do not cheat.
+   - Do not fabricate `result` without calling the target API.
+   - Do not simply print the observed stdout string unless that printing is naturally produced by the reconstructed runnable path.
+   - Do not output dummy `pass`, `TODO`, or smoke-test logic.
+
+====================
+[OUTPUT FORMAT]
+====================
+
+Return JSON only, with exactly the following fields:
+
+{
+  "seed_execution_case": {
+    "case_id": "seed_case_main",
+    "description": "<short description of what this seed case replays>",
+    "setup_code": "<executable Python setup code>",
+    "call_code": "<executable Python call code with result = ...>",
+    "expected_output_signature": {
+      "return_value": "<optional expected return value or null>",
+      "stdout_contains": ["<expected stdout substring 1>", "<expected stdout substring 2>"],
+      "file_artifacts": [
+        {"path": "<expected produced file path>"}
+      ]
+    },
+    "extraction_method": "llm_reconstructed",
+    "validated_against_ground_truth": false,
+    "assumptions": ["<assumption 1>", "<assumption 2>"]
+  }
+}
+
+Additional formatting requirements:
+- `setup_code` and `call_code` must be plain executable Python code strings.
+- `call_code` must contain an assignment to `result`.
+- `stdout_contains` should contain only the key substrings needed for validation.
+- Use an empty list for `file_artifacts` when the task does not produce files.
+- Use an empty list for `assumptions` if no assumptions are necessary.
+
+Do not include markdown.
+Do not include commentary.
+Return valid JSON only.

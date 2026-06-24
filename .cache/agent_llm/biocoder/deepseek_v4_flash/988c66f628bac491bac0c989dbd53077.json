@@ -1,0 +1,16 @@
+{
+  "role": "assistant",
+  "content": "",
+  "reasoning_content": "Let me see the full source of the Chromosome class.",
+  "tool_calls": [
+    {
+      "index": 0,
+      "id": "call_00_WXqUMv3Wj1O993hSRgo97344",
+      "type": "function",
+      "function": {
+        "name": "run_custom_test",
+        "arguments": "{\"code\": \"import inspect\\nfrom Bio.Graphics import BasicChromosome as BC\\nfrom Bio.Graphics.BasicChromosome import Chromosome\\n\\n# Get the full source file\\nimport Bio.Graphics.BasicChromosome as bc_module\\nprint(inspect.getsource(bc_module))\", \"test_snippet\": \"print(\\\"done\\\")\"}"
+      }
+    }
+  ]
+}

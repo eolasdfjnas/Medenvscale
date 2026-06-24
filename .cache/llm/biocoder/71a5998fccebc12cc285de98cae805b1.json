@@ -1,0 +1,196 @@
+{
+  "operator_instances": [
+    {
+      "axis": "C",
+      "operator_type": "content_based_format_detection",
+      "operator_intensity": 1,
+      "transformation_goal": "Increase computation complexity by requiring the parser to detect file format from content when extension is ambiguous (e.g., no extension or .txt), rather than relying solely on extension. The function must read the first line and check for tab (TSV) or colon (YAML). If neither, raise ParseError.",
+      "rationale": "The seed task relies on file extension detection only. Adding content-based detection forces the model to write more robust parsing logic, increasing computational complexity (C-axis). This operator adds real constraint: the format detection must be intelligent enough to handle ambiguous extensions by inspecting file content.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "In metabolic modeling, exchange reactions are often defined in files that list metabolites and their allowable flux bounds. Write a function `parse_exchange_file(path, default_compartment)` that reads an exchange file (either TSV or YAML) and yields each compound entry as a dictionary with keys 'compound', 'lower', 'upper', and, for YAML, a 'compartment'. The file format should be auto-detected: if TSV, use `parse_exchange_table_file(f)`; if YAML, use `parse_exchange_yaml_file(context, f, default_compartment)`. Raise a `ParseError` if the format cannot be determined. For file extensions that are not specific (e.g., no extension or .txt), the function must determine the format by reading the first line of the file: if the first line contains a tab character, treat as TSV; if it contains a colon (but no tab), treat as YAML; otherwise raise ParseError. This content-based detection applies only when extension-based detection cannot uniquely determine the format."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {
+          "gold_solution": "def parse_exchange_file(path, default_compartment):\n    \"\"\"Parse a file as a list of exchange compounds with flux limits.\n\n    The file format is detected and the file is parsed accordingly. Path can\n    be given as a string or a context.\n    \"\"\"\n    context = FilePathContext(path)\n    format = resolve_format(None, context.filepath)\n    # If extension is ambiguous (no extension or .txt), use content detection\n    if format == 'tsv' and not context.filepath.lower().endswith(('.tsv', '.yaml', '.yml')):\n        # Peek first line to confirm or override\n        with context.open('r') as f:\n            first_line = f.readline()\n        if '\\t' in first_line:\n            format = 'tsv'\n        elif ':' in first_line and '\\t' not in first_line:\n            format = 'yaml'\n        else:\n            raise ParseError('Unable to detect format of exchange file {}'.format(context.filepath))\n    elif format == 'yaml' and not context.filepath.lower().endswith(('.tsv', '.yaml', '.yml')):\n        with context.open('r') as f:\n            first_line = f.readline()\n        if ':' in first_line and '\\t' not in first_line:\n            format = 'yaml'\n        elif '\\t' in first_line:\n            format = 'tsv'\n        else:\n            raise ParseError('Unable to detect format of exchange file {}'.format(context.filepath))\n    if format == 'tsv':\n        logger.debug('Parsing exchange file {} as TSV'.format(context.filepath))\n        with context.open('r') as f:\n            for entry in parse_exchange_table_file(f):\n                yield entry\n    elif format == 'yaml':\n        logger.debug('Parsing exchange file {} as YAML'.format(context.filepath))\n        with context.open('r') as f:\n            for entry in parse_exchange_yaml_file(context, f, default_compartment):\n                yield entry\n    else:\n        raise ParseError('Unable to detect format of exchange file {}'.format(context.filepath))"
+        },
+        "verifier_state_patch": {
+          "verifier_type_hint": "unit_test",
+          "hidden_tests_mode": "some_hidden"
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "case_id": "hidden_txt_tsv",
+            "description": "File with .txt extension containing TSV format (tab-separated). Should be parsed as TSV.",
+            "setup_code": "import tempfile, os, sys\n# Create temporary .txt file with TSV content\ncontent = 'compound\\tlower\\tupper\\nGlucose\\t-10\\t100\\n'\ntmp = tempfile.NamedTemporaryFile(suffix='.txt', mode='w', delete=False)\ntmp.write(content)\ntmp.close()",
+            "call_code": "entries = list(parse_exchange_file(tmp.name, default_compartment='c'))\nresult = entries",
+            "expected_output_signature": {
+              "return_value": [
+                {
+                  "compound": "Glucose",
+                  "lower": -10.0,
+                  "upper": 100.0
+                }
+              ],
+              "stdout_contains": [],
+              "file_artifacts": []
+            },
+            "extraction_method": "json",
+            "type": "hidden"
+          },
+          {
+            "case_id": "hidden_txt_yaml",
+            "description": "File with .txt extension containing YAML-like format (colon-separated). Should be parsed as YAML.",
+            "setup_code": "import tempfile, os\ncontent = 'Glucose:-10:100:cytosol\\n'\ntmp = tempfile.NamedTemporaryFile(suffix='.txt', mode='w', delete=False)\ntmp.write(content)\ntmp.close()",
+            "call_code": "entries = list(parse_exchange_file(tmp.name, default_compartment='c'))\nresult = entries",
+            "expected_output_signature": {
+              "return_value": [
+                {
+                  "compound": "Glucose",
+                  "lower": -10.0,
+                  "upper": 100.0,
+                  "compartment": "cytosol"
+                }
+              ],
+              "stdout_contains": [],
+              "file_artifacts": []
+            },
+            "extraction_method": "json",
+            "type": "hidden"
+          },
+          {
+            "case_id": "hidden_no_ext_tsv",
+            "description": "File with no extension containing TSV format. Should detect as TSV via content (first line has tab).",
+            "setup_code": "import tempfile, os\ncontent = 'compound\\tlower\\tupper\\nGlucose\\t-10\\t100\\n'\ntmp = tempfile.NamedTemporaryFile(suffix='', mode='w', delete=False)\ntmp.write(content)\ntmp.close()",
+            "call_code": "entries = list(parse_exchange_file(tmp.name, default_compartment='c'))\nresult = entries",
+            "expected_output_signature": {
+              "return_value": [
+                {
+                  "compound": "Glucose",
+                  "lower": -10.0,
+                  "upper": 100.0
+                }
+              ],
+              "stdout_contains": [],
+              "file_artifacts": []
+            },
+            "extraction_method": "json",
+            "type": "hidden"
+          },
+          {
+            "case_id": "hidden_no_ext_yaml",
+            "description": "File with no extension containing YAML-like format. Should detect as YAML via content (first line has colon, no tab).",
+            "setup_code": "import tempfile, os\ncontent = 'Glucose:-10:100:cytosol\\n'\ntmp = tempfile.NamedTemporaryFile(suffix='', mode='w', delete=False)\ntmp.write(content)\ntmp.close()",
+            "call_code": "entries = list(parse_exchange_file(tmp.name, default_compartment='c'))\nresult = entries",
+            "expected_output_signature": {
+              "return_value": [
+                {
+                  "compound": "Glucose",
+                  "lower": -10.0,
+                  "upper": 100.0,
+                  "compartment": "cytosol"
+                }
+              ],
+              "stdout_contains": [],
+              "file_artifacts": []
+            },
+            "extraction_method": "json",
+            "type": "hidden"
+          },
+          {
+            "case_id": "hidden_ambiguous_fail",
+            "description": "File with .txt extension but content ambiguous (no tab, no colon). Should raise ParseError.",
+            "setup_code": "import tempfile, os\ncontent = 'some random content\\n'\ntmp = tempfile.NamedTemporaryFile(suffix='.txt', mode='w', delete=False)\ntmp.write(content)\ntmp.close()",
+            "call_code": "try:\n    entries = list(parse_exchange_file(tmp.name, default_compartment='c'))\n    result = {'error': False}\nexcept ParseError:\n    result = {'error': True}\nexcept Exception as e:\n    result = {'error': False, 'other_exception': True}",
+            "expected_output_signature": {
+              "return_value": {
+                "error": true
+              },
+              "stdout_contains": [],
+              "file_artifacts": []
+            },
+            "extraction_method": "json",
+            "type": "hidden",
+            "expect_exception": "ParseError"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Naive extension-only detection would treat .txt as TSV and thus fail on YAML content.",
+          "Ignoring content detection for no-extension files would raise ParseError incorrectly."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "C_spec_1",
+          "semantic_intent": "Prove that the function can correctly identify TSV format in a file with ambiguous extension using content (tab presence).",
+          "target_constraint": "The function must read the first line and detect tab for TSV.",
+          "expected_failure_mode": "Old seed behavior (extension-only) would treat .txt as TSV regardless of content, thus failing on a .txt file with YAML content.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Hidden test with .txt file containing YAML content; should parse as YAML."
+        },
+        {
+          "spec_id": "C_spec_2",
+          "semantic_intent": "Prove that the function raises ParseError when ambiguous extension content is neither tab nor colon.",
+          "target_constraint": "The function must raise ParseError for ambiguous/unsupported content.",
+          "expected_failure_mode": "Old seed behavior would treat any .txt file as TSV and attempt to parse, possibly yielding nothing or errors.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Hidden test with .txt file containing non-TSV/non-YAML content; should raise ParseError."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include at least one case where file extension is ambiguous (e.g., .txt or no extension) and content determines format.",
+        "Scaled executable cases must include at least one case where content is ambiguous and ParseError is raised."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

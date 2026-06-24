@@ -1,0 +1,26 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "tool_submit_final_code_uOvI8S5g5h4RQqs4ppC9",
+      "function": {
+        "name": "submit_final_code",
+        "arguments": "{\"code\":\"def parse_exchange_file(path, default_compartment):\\n    context = FilePathContext(path)\\n    fmt = resolve_format(None, context.filepath)\\n    \\n    if fmt == 'tsv':\\n        with context.open('r') as f:\\n            yield from parse_exchange_table_file(f)\\n    elif fmt == 'yaml':\\n        with context.open('r') as f:\\n            yield from parse_exchange_yaml_file(context, f, default_compartment)\\n    else:\\n        raise ParseError(f\\\"Could not determine file format for: {context.filepath}\\\")\\n\"}"
+      }
+    }
+  ],
+  "reasoning_details": [
+    {
+      "type": "reasoning.encrypted",
+      "data": "AY89a19R+yarYaVhn1JWppy6ddymn4Ild4uZo+EveiL/zIYnyaH4orh4JgmxSkg5bO8=",
+      "format": "google-gemini-v1",
+      "id": "tool_submit_final_code_uOvI8S5g5h4RQqs4ppC9",
+      "index": 0
+    }
+  ]
+}

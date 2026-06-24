@@ -1,0 +1,17 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "call_daBnJjHBrNHnDMqoLKJ9iYAq",
+      "function": {
+        "name": "submit_final_code",
+        "arguments": "{\"code\":\"def mapRow(this_row, header_dict, precursors_mapping, sequences_mapping, protein_mapping):\\n    # Extract peptide name and strip whitespace\\n    peptide_name = this_row[header_dict['FullPeptideName']].strip()\\n    \\n    # Split fragment annotations and remove empty entries\\n    transitions = list(dict.fromkeys(filter(None, (x.strip() for x in this_row[header_dict['aggr_Fragment_Annotation']].split(';')))))\\n    \\n    # Split precursor annotations and remove empty entries\\n    pr_transitions = list(dict.fromkeys(filter(None, (x.strip() for x in this_row[header_dict['aggr_prec_Fragment_Annotation']].split(';')))))\\n    \\n    # Early return if no transitions are present\\n    if not transitions:\\n        return\\n    \\n    # Read charge state and default to '0' if 'NA' or empty\\n    charge_state = this_row[header_dict['Charge']].strip() or '0'\\n    if charge_state == 'NA':\\n        charge_state = '0'\\n    \\n    # Build keys\\n    key = f'{peptide_name}/{charge_state}'\\n    key_pr = f'{peptide_name}/{charge_state}_pr'\\n    \\n    # Map transitions to precursors_mapping\\n    precursors_mapping[key] = transitions\\n    precursors_mapping[key_pr] = pr_transitions\\n    \\n    # Append keys to sequences_mapping\\n    if peptide_name not in sequences_mapping:\\n        sequences_mapping[peptide_name] = []\\n    sequences_mapping[peptide_name].extend([key, key_pr])\\n    \\n    # Append peptide_name to protein_mapping, avoiding duplicates\\n    protein_name = this_row[header_dict['ProteinName']].strip()\\n    if protein_name not in protein_mapping:\\n        protein_mapping[protein_name] = []\\n    if peptide_name not in protein_mapping[protein_name]:\\n        protein_mapping[protein_name].append(peptide_name)\\n\"}"
+      }
+    }
+  ]
+}

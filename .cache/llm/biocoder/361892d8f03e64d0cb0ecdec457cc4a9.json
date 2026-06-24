@@ -1,0 +1,120 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_case_overlap_with_penalties",
+      "description": "Main scaled seed case: overlapping reaction IDs with penalty dict override.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_509_M3_c_01",
+      "axis": "C",
+      "semantic_intent": "Test that overlapping reaction IDs are handled and penalties dict overrides earlier assignments.",
+      "target_constraint": "The function must apply penalties in order: db, tp, ex, then penalties dict. For overlapping IDs, the last set penalty wins.",
+      "expected_failure_mode": "If the function applies penalties in wrong order, the final weight for overlapping ID might be db_penalty instead of ex_penalty or penalties override.",
+      "setup_code": "model = DummyNativeModel()",
+      "call_code": "extended_model, weights = create_extended_model(\n    model,\n    db_penalty=5,\n    ex_penalty=2,\n    tp_penalty=3,\n    penalties={\"c1_db_rxn\": 10}\n)\nprint(\"Weights:\", weights)\nresult = {'weights': weights}",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Introduce overlapping reaction IDs across different reaction types to test correct penalty precedence."
+      ],
+      "expected_output_signature": {
+        "return_type": "dict",
+        "return_keys": [
+          "weights"
+        ],
+        "return_value": null,
+        "stdout_contains": [
+          "Weights: {'c2_db_rxn': 5, 'c1_db_rxn': 10, 'c1_e_tp': 3, 'e_ex': 2}"
+        ],
+        "stdout_regex": [],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "scaled_case_empty_compartments",
+      "description": "Model with empty compartments list; no database reactions should be added, overlapping exchange reaction still added.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_509_M3_a_02,env_medagentgym_train_509_M3_c_01",
+      "axis": "A,C",
+      "semantic_intent": "Test that the function handles empty compartments gracefully without adding database reactions, while still handling overlapping reaction IDs from exchange.",
+      "target_constraint": "The function must handle empty compartments list, skipping database reactions and returning only exchange and transport reaction weights with correct penalty assignment for overlapping IDs.",
+      "expected_failure_mode": "The function crashes with KeyError or AttributeError, or incorrectly includes database reactions, or fails to apply ex_penalty to overlapping reaction ID from exchange.",
+      "setup_code": "model = DummyNativeModel()\nmodel.compartments = []",
+      "call_code": "extended_model, weights = create_extended_model(\n    model,\n    db_penalty=5,\n    ex_penalty=2,\n    tp_penalty=3\n)\nprint(\"Weights:\", weights)\nresult = {'weights': weights}",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Ensure the function handles models with no compartments gracefully.",
+        "Introduce overlapping reaction IDs across different reaction types to test correct penalty precedence."
+      ],
+      "expected_output_signature": {
+        "return_type": "dict",
+        "return_keys": [
+          "weights"
+        ],
+        "return_value": null,
+        "stdout_contains": [
+          "Weights: {'c1_e_tp': 3, 'e_ex': 2, 'c1_db_rxn': 2}"
+        ],
+        "stdout_regex": [],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "scaled_case_empty_boundaries",
+      "description": "Model with empty compartment_boundaries; no transport reactions added, overlapping database reaction from exchange gets ex_penalty.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_509_M3_a_03,env_medagentgym_train_509_M3_c_01",
+      "axis": "A,C",
+      "semantic_intent": "Test that the function handles empty compartment_boundaries gracefully without adding transport reactions, while correctly applying penalty order for overlapping reaction IDs.",
+      "target_constraint": "The function must handle empty compartment_boundaries list, skipping transport reactions and returning only database and exchange reaction weights with correct penalty precedence for overlapping IDs.",
+      "expected_failure_mode": "The function crashes with IndexError or incorrectly includes transport reactions, or fails to override db_penalty with ex_penalty for overlapping ID.",
+      "setup_code": "model = DummyNativeModel()\nmodel.compartment_boundaries = []",
+      "call_code": "extended_model, weights = create_extended_model(\n    model,\n    db_penalty=5,\n    ex_penalty=2,\n    tp_penalty=3\n)\nprint(\"Weights:\", weights)\nresult = {'weights': weights}",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Ensure the function handles models with no compartment boundaries gracefully.",
+        "Introduce overlapping reaction IDs across different reaction types to test correct penalty precedence."
+      ],
+      "expected_output_signature": {
+        "return_type": "dict",
+        "return_keys": [
+          "weights"
+        ],
+        "return_value": null,
+        "stdout_contains": [
+          "Weights: {'c1_db_rxn': 2, 'c2_db_rxn': 5, 'e_ex': 2}"
+        ],
+        "stdout_regex": [],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "scaled_case_combined_empty_compartments_and_boundaries",
+      "description": "Combined: empty compartments, empty boundaries, and overlapping reaction IDs.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_509_M3_c_01,env_medagentgym_train_509_M3_a_02,env_medagentgym_train_509_M3_a_03",
+      "axis": "C,A",
+      "semantic_intent": "Check that the solution jointly satisfies empty compartments, empty boundaries, and overlapping IDs from exchange reactions.",
+      "target_constraint": "The solution must handle empty compartments and empty boundaries simultaneously, and correctly apply penalties for overlapping IDs (ex_penalty for c1_db_rxn from exchange).",
+      "expected_failure_mode": "The function crashes or incorrectly includes database or transport reactions, or assigns wrong penalty to overlapping ID.",
+      "setup_code": "model = DummyNativeModel()\nmodel.compartments = []\nmodel.compartment_boundaries = []",
+      "call_code": "extended_model, weights = create_extended_model(\n    model,\n    db_penalty=5,\n    ex_penalty=2,\n    tp_penalty=3\n)\nprint(\"Weights:\", weights)\nresult = {'weights': weights}",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Introduce overlapping reaction IDs across different reaction types to test correct penalty precedence.",
+        "Ensure the function handles models with no compartments gracefully.",
+        "Ensure the function handles models with no compartment boundaries gracefully."
+      ],
+      "expected_output_signature": {
+        "return_type": "dict",
+        "return_keys": [
+          "weights"
+        ],
+        "return_value": null,
+        "stdout_contains": [
+          "Weights: {'e_ex': 2, 'c1_db_rxn': 2}"
+        ],
+        "stdout_regex": [],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

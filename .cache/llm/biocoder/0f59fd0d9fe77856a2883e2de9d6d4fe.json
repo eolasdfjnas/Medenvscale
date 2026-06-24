@@ -1,0 +1,66 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Verify that concentration variable bounds are sourced from model.compound_bounds when present.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_388_M2_c_01",
+      "axis": "C",
+      "semantic_intent": "Verify that the function uses compound-specific bounds from the model when available.",
+      "target_constraint": "The function must access model.compound_bounds and apply the per-compound lower and upper bounds for xij variables.",
+      "expected_failure_mode": "Function hardcodes lower=-50 and upper=50 for all compounds, ignoring compound_bounds.",
+      "setup_code": "",
+      "call_code": "prob, v, zi, dgri, xij, compounds = make_tmfa_problem(MetabolicModel(), Solver('glpk'))\nprint(\"Namespaces:\", list(prob.namespaces.keys()))\nprint(\"Flux vars:\", v.vars)\nprint(\"Binary vars:\", zi.vars)\nprint(\"Gibbs vars:\", dgri.vars)\nprint(\"Concentration vars:\", xij.vars)\nprint(\"Compounds:\", compounds)\nresult = {'prob': prob, 'v': v, 'zi': zi, 'dgri': dgri, 'xij': xij, 'compounds': compounds}",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Increase computational complexity by requiring the function to read compound-specific bounds from the model instead of using hardcoded defaults."
+      ],
+      "expected_output_signature": {
+        "return_type": "tuple",
+        "return_keys": [
+          "prob",
+          "v",
+          "zi",
+          "dgri",
+          "xij",
+          "compounds"
+        ],
+        "stdout_contains": [
+          "Namespaces: ['flux', 'zi', 'dgri', 'xij']",
+          "Flux vars: {('R1',): {'lower': -10, 'upper': 100, 'type': 'Continuous'}, ('R2',): {'lower': 0, 'upper': 50, 'type': 'Continuous'}}",
+          "Binary vars: {('R1',): {'lower': 0, 'upper': 1, 'type': 'Binary'}, ('R2',): {'lower': 0, 'upper': 1, 'type': 'Binary'}}",
+          "Gibbs vars: {('R1',): {'lower': -1000, 'upper': 1000, 'type': 'Continuous'}, ('R2',): {'lower': -1000, 'upper': 1000, 'type': 'Continuous'}}",
+          "Concentration vars: {('A',): {'lower': -10, 'upper': 10, 'type': 'Continuous'}, ('B',): {'lower': -20, 'upper': 20, 'type': 'Continuous'}}",
+          "Compounds: ['A', 'B']"
+        ],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "scaled_coverage_fallback_bounds",
+      "description": "Verify that when model lacks compound_bounds attribute, concentration variable bounds fall back to default (-50,50).",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_388_M2_c_01",
+      "axis": "C",
+      "semantic_intent": "Verify fallback to default bounds when compound_bounds is missing.",
+      "target_constraint": "If the attribute does not exist or compound not in dictionary, use default (-50,50).",
+      "expected_failure_mode": "Function raises error or uses incorrect bounds when compound_bounds missing.",
+      "setup_code": "model_no_bounds = MetabolicModel()\ndel model_no_bounds.compound_bounds\nsolver = Solver('glpk')",
+      "call_code": "prob, v, zi, dgri, xij, compounds = make_tmfa_problem(model_no_bounds, solver)\nprint('Concentration vars:', xij.vars)\nresult = {'xij': xij}",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Increase computational complexity by requiring the function to read compound-specific bounds from the model instead of using hardcoded defaults."
+      ],
+      "expected_output_signature": {
+        "return_type": "dict",
+        "return_keys": [
+          "xij"
+        ],
+        "stdout_contains": [
+          "Concentration vars: {('A',): {'lower': -50, 'upper': 50, 'type': 'Continuous'}, ('B',): {'lower': -50, 'upper': 50, 'type': 'Continuous'}}"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

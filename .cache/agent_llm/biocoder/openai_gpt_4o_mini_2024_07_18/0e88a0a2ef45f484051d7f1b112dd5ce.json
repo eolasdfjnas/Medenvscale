@@ -1,0 +1,17 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "call_xuYBaE8DvLQRnGqveGFq13cW",
+      "function": {
+        "name": "validate_candidate_code",
+        "arguments": "{\"code\":\"import requests\\nimport pandas as pd\\nfrom requests_toolbelt.multipart.encoder import MultipartEncoder\\nfrom io import StringIO\\n\\n# Assume the solution function _get_num_matches(db, mzStr, adducts, tolerance=0.001) is available here.\\n\\ndef main():\\n    # Specify which LipidMaps database to query (e.g. 'GLYCOLIPIDS')\\n    db = 'GLYCOLIPIDS'\\n    # Create a string with one m/z value per line, including extra whitespace and blank lines\\n    mz_values = '  \\n100.0\\n  \\n200.0\\n\\n300.0\\n  '\\n    # Choose adducts of interest, including edge cases\\n    adducts = 'M+H,M+Na,,M+K,,'\\n    # Set mass tolerance in Daltons\\n    tolerance = 0.01\\n\\n    # Clean the m/z values by removing blank lines and leading/trailing whitespace\\n    mz_values_cleaned = '\\\\n'.join(line.strip() for line in mz_values.splitlines() if line.strip())\\n    # Clean the adducts by removing empty segments\\n    adducts_cleaned = ','.join(filter(None, adducts.split(',')))\\n\\n    # CALL THE SOLUTION FUNCTION HERE\\n    num_matches = _get_num_matches(db, mz_values_cleaned, adducts_cleaned, tolerance)\\n\\n    print(f'Number of unique m/z matches: {num_matches}')\\n\\nif __name__ == '__main__':\\n    main()\"}"
+      }
+    }
+  ]
+}

@@ -1,0 +1,253 @@
+{
+  "operator_instances": [
+    {
+      "axis": "V",
+      "operator_type": "add_verifier_coverage",
+      "operator_intensity": 2,
+      "transformation_goal": "Increase verification strength by adding multiple edge-case test scenarios covering different separators, field content, and encoding behavior.",
+      "rationale": "Base task only tests one valid and one invalid case. To ensure robustness, we need tests with alternative separators, extra separators, empty fields, special characters, and non-ASCII characters. The gold solution should pass all new tests.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {
+          "hidden_tests": [
+            {
+              "case_id": "hidden_test_sep_dash",
+              "description": "Test with '-' separator and valid read ID.",
+              "setup_code": "read_id = 'FLOW:1:2:3:4_CB-UMI'  # fields: FLOW:1:2:3:4, CB, UMI\nsep = '-'",
+              "call_code": "umi, cb = get_cell_umi_read_string(read_id, sep)\nresult = {'umi': umi, 'cb': cb}",
+              "expected_output_signature": {
+                "return_value": {
+                  "umi": "b'UMI'",
+                  "cb": "b'CB'"
+                },
+                "stdout_contains": [],
+                "file_artifacts": []
+              }
+            },
+            {
+              "case_id": "hidden_test_extra_sep",
+              "description": "Test with multiple separators in the read ID.",
+              "setup_code": "read_id = 'a_b_c_d_e_f_g_h_CB_UMI'\nsep = '_'",
+              "call_code": "umi, cb = get_cell_umi_read_string(read_id, sep)\nresult = {'umi': umi, 'cb': cb}",
+              "expected_output_signature": {
+                "return_value": {
+                  "umi": "b'UMI'",
+                  "cb": "b'CB'"
+                },
+                "stdout_contains": [],
+                "file_artifacts": []
+              }
+            },
+            {
+              "case_id": "hidden_test_special_chars",
+              "description": "Test with non-ASCII characters in barcode and UMI.",
+              "setup_code": "read_id = 'prefix_CB_é_UMI_ñ'\nsep = '_'",
+              "call_code": "umi, cb = get_cell_umi_read_string(read_id, sep)\nresult = {'umi': umi, 'cb': cb}",
+              "expected_output_signature": {
+                "return_value": {
+                  "umi": "b'\\\\xc3\\\\xb1'",
+                  "cb": "b'\\\\xc3\\\\xa9'"
+                },
+                "stdout_contains": [],
+                "file_artifacts": []
+              }
+            },
+            {
+              "case_id": "hidden_test_exactly_two_sep",
+              "description": "Test with exactly two separators (three fields).",
+              "setup_code": "read_id = 'prefix_CB_UMI'\nsep = '_'",
+              "call_code": "umi, cb = get_cell_umi_read_string(read_id, sep)\nresult = {'umi': umi, 'cb': cb}",
+              "expected_output_signature": {
+                "return_value": {
+                  "umi": "b'UMI'",
+                  "cb": "b'CB'"
+                },
+                "stdout_contains": [],
+                "file_artifacts": []
+              }
+            },
+            {
+              "case_id": "hidden_test_empty_field",
+              "description": "Test with empty barcode field (two separators with empty middle field).",
+              "setup_code": "read_id = 'prefix__UMI'  # note double underscore\nsep = '_'",
+              "call_code": "umi, cb = get_cell_umi_read_string(read_id, sep)\nresult = {'umi': umi, 'cb': cb}",
+              "expected_output_signature": {
+                "return_value": {
+                  "umi": "b'UMI'",
+                  "cb": "b''"
+                },
+                "stdout_contains": [],
+                "file_artifacts": []
+              }
+            },
+            {
+              "case_id": "hidden_test_invalid_less_than_two_sep",
+              "description": "Test read_id with only one separator (should raise ValueError).",
+              "setup_code": "read_id = 'only_one_sep'\nsep = '_'",
+              "call_code": "try:\n    get_cell_umi_read_string(read_id, sep)\n    result = {'error': 'no_error'}\nexcept ValueError:\n    result = {'error': 'ValueError'}",
+              "expected_output_signature": {
+                "return_value": {
+                  "error": "ValueError"
+                },
+                "stdout_contains": [],
+                "file_artifacts": []
+              }
+            }
+          ]
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          {
+            "type": "hidden_test_case",
+            "case_ids": [
+              "hidden_test_sep_dash",
+              "hidden_test_extra_sep",
+              "hidden_test_special_chars",
+              "hidden_test_exactly_two_sep",
+              "hidden_test_empty_field",
+              "hidden_test_invalid_less_than_two_sep"
+            ]
+          }
+        ],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "verifier_coverage_spec_1",
+          "semantic_intent": "Ensure the function correctly extracts UMI and cell barcode when using different separators.",
+          "target_constraint": "The function must handle any single-character separator and always return the last two fields as bytes.",
+          "expected_failure_mode": "Old behavior would fail if separator is hardcoded.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "hidden_test_sep_dash"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Hidden test with '-' separator."
+        },
+        {
+          "spec_id": "verifier_coverage_spec_2",
+          "semantic_intent": "Ensure the function correctly extracts the last two fields even when there are multiple separators.",
+          "target_constraint": "The function must ignore earlier separator occurrences and only consider the last two fields.",
+          "expected_failure_mode": "Old behavior might take first two fields or fail if not exactly three fields.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "hidden_test_extra_sep"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Hidden test with many separators."
+        },
+        {
+          "spec_id": "verifier_coverage_spec_3",
+          "semantic_intent": "Ensure the function correctly encodes non-ASCII characters to UTF-8 bytes.",
+          "target_constraint": "The function must encode the UMI and cell barcode fields as bytes using UTF-8.",
+          "expected_failure_mode": "Old behavior might not encode or use a different encoding.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "hidden_test_special_chars"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Hidden test with non-ASCII characters."
+        },
+        {
+          "spec_id": "verifier_coverage_spec_4",
+          "semantic_intent": "Ensure the function works when there are exactly two separators (three fields).",
+          "target_constraint": "The function must handle the minimal case of two separators.",
+          "expected_failure_mode": "Old behavior might mis-index if assuming more fields.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "hidden_test_exactly_two_sep"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Hidden test with exactly two separators."
+        },
+        {
+          "spec_id": "verifier_coverage_spec_5",
+          "semantic_intent": "Ensure the function can handle an empty barcode field.",
+          "target_constraint": "The function must return empty bytes for an empty field.",
+          "expected_failure_mode": "Old behavior might raise an error or return unexpected value.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "hidden_test_empty_field"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Hidden test with empty barcode."
+        },
+        {
+          "spec_id": "verifier_coverage_spec_6",
+          "semantic_intent": "Ensure the function raises ValueError when there are fewer than two separators.",
+          "target_constraint": "The function must raise ValueError for insufficient separators.",
+          "expected_failure_mode": "Old behavior might raise IndexError or return wrong value.",
+          "test_template_type": "exception_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "hidden_test_invalid_less_than_two_sep"
+          },
+          "expected_behavior": {
+            "kind": "exception_match",
+            "mode": "exception_type",
+            "exception_type": "ValueError"
+          },
+          "test_case_description": "Hidden test with only one separator expecting ValueError."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new verification requirements introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,188 @@
+{
+  "operator_instances": [
+    {
+      "axis": "V",
+      "operator_type": "add_alternative_distribution_case",
+      "operator_intensity": 1,
+      "transformation_goal": "Add a scaled executable test case that uses differently shaped work distributions and verifies the output format and approximate numerical accuracy.",
+      "rationale": "Increases verification coverage by testing with a varied input data regime (different mean and size) while preserving the core task. This ensures the model's implementation generalizes beyond the seed case.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {
+          "scaled_oracle_cases": [
+            {
+              "case_id": "scaled_alternative_dist",
+              "description": "Test with different work distributions: forward mean=2.0, reverse mean=-2.0, size=2000.",
+              "setup_code": "np.random.seed(123)\nw_F = np.random.normal(loc=2.0, scale=1.0, size=2000)\nw_R = np.random.normal(loc=-2.0, scale=1.0, size=2000)",
+              "call_code": "results = bar(w_F, w_R)\nprint(f\"Free energy difference ΔF = {results['Delta_f']:.3f} ± {results['dDelta_f']:.3f} kT\")\nresult = results",
+              "expected_output_signature": {
+                "return_value": {
+                  "Delta_f": 1.963,
+                  "dDelta_f": 0.024
+                },
+                "stdout_contains": [
+                  "Free energy difference ΔF = 1.963 ± 0.024 kT"
+                ],
+                "file_artifacts": []
+              },
+              "extraction_method": "rule_based",
+              "validated_against_ground_truth": false,
+              "assumptions": []
+            }
+          ]
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_v_spec_1",
+          "semantic_intent": "Verify that the code correctly computes free energy difference for a new set of work distributions (different mean, smaller sample size).",
+          "target_constraint": "The model must output the correct free energy and uncertainty in the expected format for arbitrary Gaussian work distributions.",
+          "expected_failure_mode": "Model might hardcode seed values or produce incorrect numerical results for different input parameters.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_alternative_dist"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Verification case with alternative work distribution inputs to test generalization."
+        }
+      ],
+      "output_requirements": [
+        "Must produce correct Delta_f and dDelta_f for given w_F and w_R."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "V",
+      "operator_type": "add_edge_case_empty_arrays",
+      "operator_intensity": 1,
+      "transformation_goal": "Add a scaled executable test case with empty input arrays to verify that the code handles edge cases without crashing, and produces appropriate output (e.g., NaN or near-zero values).",
+      "rationale": "Enhances verification robustness by testing an edge case (empty arrays) that may cause division by zero or infinite loops. The model must handle this gracefully, and the verifier should check the output format and numeric tolerance.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {
+          "scaled_oracle_cases": [
+            {
+              "case_id": "scaled_empty_arrays",
+              "description": "Test with empty work arrays (size 0). The bar function should return 0.0 with 0.0 uncertainty.",
+              "setup_code": "w_F = np.array([])\nw_R = np.array([])",
+              "call_code": "results = bar(w_F, w_R)\nprint(f\"Free energy difference ΔF = {results['Delta_f']:.3f} ± {results['dDelta_f']:.3f} kT\")\nresult = results",
+              "expected_output_signature": {
+                "return_value": {
+                  "Delta_f": 0.0,
+                  "dDelta_f": 0.0
+                },
+                "stdout_contains": [
+                  "Free energy difference ΔF = 0.000 ± 0.000 kT"
+                ],
+                "file_artifacts": []
+              },
+              "extraction_method": "rule_based",
+              "validated_against_ground_truth": false,
+              "assumptions": []
+            }
+          ]
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_v_spec_2",
+          "semantic_intent": "Verify that the code handles empty input arrays without crashing and returns zero free energy and uncertainty.",
+          "target_constraint": "The model must not assume non-empty arrays. The bar function should safely handle edge case where no work values are provided.",
+          "expected_failure_mode": "Model might cause division by zero, infinite loop, or raise an exception when arrays are empty.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_empty_arrays"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Edge case with empty work arrays to check robustness."
+        }
+      ],
+      "output_requirements": [
+        "Must produce output without raising an exception; output should display zero values."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

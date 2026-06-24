@@ -1,0 +1,165 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "data_complexity_spaces",
+      "operator_intensity": 1,
+      "transformation_goal": "Increase input complexity by requiring the function to correctly extract tar archives whose filenames contain spaces or special characters.",
+      "rationale": "The seed task only tests a simple filename. In real biomedical data analysis, filenames often contain spaces or special characters. The function should not break due to shell interpretation issues.",
+      "state_updates": {
+        "visible_state_patch": {
+          "context": "import os\nimport tarfile\nimport tempfile\nfrom subprocess import check_call, CalledProcessError\n\nclass GenipeError(Exception):\n    pass\n\n<<insert solution here>>\n\ndef main():\n    with tempfile.TemporaryDirectory() as tmp_dir:\n        # Original test: simple filename\n        source_dir = os.path.join(tmp_dir, 'source')\n        os.mkdir(source_dir)\n        test_file = os.path.join(source_dir, 'hello.txt')\n        with open(test_file, 'w') as f:\n            f.write('Hello, world!')\n        tar_path = os.path.join(tmp_dir, 'archive.tar')\n        with tarfile.open(tar_path, 'w') as tar:\n            tar.add(source_dir, arcname='source')\n        extract_dir = os.path.join(tmp_dir, 'dest')\n        os.mkdir(extract_dir)\n        untar_file(extract_dir, tar_path)\n        extracted_file = os.path.join(extract_dir, 'source', 'hello.txt')\n        assert os.path.isfile(extracted_file), 'File was not extracted correctly.'\n        print('Extraction succeeded:', open(extracted_file).read())\n        \n        # Additional test: filename with space\n        source_dir2 = os.path.join(tmp_dir, 'source2')\n        os.mkdir(source_dir2)\n        test_file2 = os.path.join(source_dir2, 'hello world.txt')\n        with open(test_file2, 'w') as f:\n            f.write('Spaces in filename')\n        tar_path2 = os.path.join(tmp_dir, 'archive2.tar')\n        with tarfile.open(tar_path2, 'w') as tar:\n            tar.add(source_dir2, arcname='source2')\n        extract_dir2 = os.path.join(tmp_dir, 'dest2')\n        os.mkdir(extract_dir2)\n        untar_file(extract_dir2, tar_path2)\n        extracted_file2 = os.path.join(extract_dir2, 'source2', 'hello world.txt')\n        assert os.path.isfile(extracted_file2), 'File with spaces was not extracted correctly.'\n        print('Extraction with spaces succeeded:', open(extracted_file2).read())\n\nif __name__ == '__main__':\n    main()"
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [
+          {
+            "check_type": "file_exists",
+            "file_pattern": "*/source2/hello world.txt",
+            "description": "The extracted file with spaces must exist."
+          }
+        ],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Using shell=True or os.system would break with spaces in filename."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_1",
+          "semantic_intent": "Test that extraction works when the tar archive contains a file with a space in its name.",
+          "target_constraint": "The function must successfully extract a file named 'hello world.txt' from a tar archive without errors.",
+          "expected_failure_mode": "If the function uses shell=True, the command may parse the space as argument separator, failing to find the file or extracting incorrectly.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "tar archive with spaced filename"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Create a tar archive containing a file with a space in its name, extract it using untar_file, and verify the file exists with correct content."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a test with a tar archive containing a file with a space in its name."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "adversarial_no_shell",
+      "operator_intensity": 1,
+      "transformation_goal": "Add robustness requirement that the function must not use shell=True or os.system to avoid shell injection vulnerabilities.",
+      "rationale": "A common shortcut is to use a shell command, which can lead to security issues and break with special characters. The function should adhere to safe subprocess practices.",
+      "state_updates": {
+        "visible_state_patch": {
+          "context": "import os\nimport tarfile\nimport tempfile\nfrom subprocess import check_call, CalledProcessError\n\nclass GenipeError(Exception):\n    pass\n\n<<insert solution here>>\n\ndef main():\n    with tempfile.TemporaryDirectory() as tmp_dir:\n        source_dir = os.path.join(tmp_dir, 'source')\n        os.mkdir(source_dir)\n        test_file = os.path.join(source_dir, 'hello.txt')\n        with open(test_file, 'w') as f:\n            f.write('Hello, world!')\n        tar_path = os.path.join(tmp_dir, 'archive.tar')\n        with tarfile.open(tar_path, 'w') as tar:\n            tar.add(source_dir, arcname='source')\n        extract_dir = os.path.join(tmp_dir, 'dest')\n        os.mkdir(extract_dir)\n        untar_file(extract_dir, tar_path)\n        extracted_file = os.path.join(extract_dir, 'source', 'hello.txt')\n        assert os.path.isfile(extracted_file), 'File was not extracted correctly.'\n        print('Extraction succeeded:', open(extracted_file).read())\n\nif __name__ == '__main__':\n    main()"
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_type": "static_analysis",
+            "description": "Check that the function does not use shell=True or os.system.",
+            "check": "forbidden_patterns",
+            "patterns": [
+              "shell=True",
+              "os.system"
+            ],
+            "failure_message": "Using shell=True or os.system is not allowed for robustness."
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [
+          {
+            "check_type": "pattern_absence",
+            "pattern": "shell\\s*=\\s*True",
+            "message": "Avoid shell=True in subprocess calls."
+          },
+          {
+            "check_type": "pattern_absence",
+            "pattern": "os\\.system",
+            "message": "Avoid using os.system."
+          }
+        ],
+        "expected_failure_modes": [
+          "If the function uses shell=True, the hidden static test will fail."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_a_spec_1",
+          "semantic_intent": "Verify that the function does not rely on shell interpretation for the tar command, preventing shell injection.",
+          "target_constraint": "The function must use subprocess with a list argument, not a string with shell=True.",
+          "expected_failure_mode": "The static check will detect and reject any usage of shell=True or os.system.",
+          "test_template_type": "static_check",
+          "input_variant": {
+            "kind": "code_static",
+            "value": "function source code"
+          },
+          "expected_behavior": {
+            "kind": "static_check_pass"
+          },
+          "test_case_description": "Analyze the submitted function source code for forbidden patterns (shell=True, os.system). The test passes if none are found."
+        }
+      ],
+      "output_requirements": [
+        "Include a hidden static test that rejects shell=True or os.system usage."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

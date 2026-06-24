@@ -1,0 +1,16 @@
+{
+  "role": "assistant",
+  "content": "",
+  "reasoning_content": "I see the source. The original draws the label at `self.end_y_position` (which would be the bottom of the chromosome). To draw above, I should use `self.start_y_position` or slightly above it.\n\nLet me also look at the `draw` method to understand the coordinate system better, particularly where `start_y_position` and `end_y_position` are set.",
+  "tool_calls": [
+    {
+      "index": 0,
+      "id": "call_00_JdcUkTR7lvkm3IHnRAt92809",
+      "type": "function",
+      "function": {
+        "name": "run_custom_test",
+        "arguments": "{\"code\": \"import inspect\\nimport Bio.Graphics.BasicChromosome as BC\\n# Get the full Chromosome class source including the __init__ method\\nsrc = inspect.getsource(BC.Chromosome)\\n# Print just the __init__ method\\nlines = src.split('\\\\n')\\nfor i, line in enumerate(lines):\\n    if 'def __init__' in line:\\n        for j in range(i, min(i+40, len(lines))):\\n            print(lines[j])\\n        break\", \"test_snippet\": \"pass\"}"
+      }
+    }
+  ]
+}

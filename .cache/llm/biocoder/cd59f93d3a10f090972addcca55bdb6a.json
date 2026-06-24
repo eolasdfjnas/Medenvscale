@@ -1,0 +1,84 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Normal operation with valid N_k as in seed, covering concatenation and implicit validation of legitimate N_k values.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_683_M3_c_01, env_medagentgym_train_683_M3_v_02",
+      "axis": "C, V",
+      "semantic_intent": "Verify that the function correctly concatenates samples for valid N_k (non-negative, <= N_max) and produces the expected 2D array.",
+      "target_constraint": "Given valid N_k, output must equal column-wise concatenation of selected slices; N_k values must be non-negative and ≤ N_max (this case uses valid values).",
+      "expected_failure_mode": "A solution that does not validate N_k may still pass this case; but the expected solution must validate (the test does not trigger validation error).",
+      "setup_code": "",
+      "call_code": "import numpy as np\nK, L, N_max = 3, 4, 5\nkln = np.arange(K * L * N_max).reshape(K, L, N_max)\nN_k = np.array([2, 4, 3], dtype=int)\nu_kn = kln_to_kn(kln, N_k, cleanup=True)\nprint(\"Resulting shape:\", u_kn.shape)\nprint(\"Resulting array:\\n\", u_kn)\nresult = u_kn",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Add validation constraint that N_k values must be non-negative and ≤ N_max, raising ValueError otherwise.",
+        "Add comprehensive hidden tests for normal operation with various array sizes and N_k values, including N_k=None.",
+        "Scaled executable cases must pass validation tests for N_k.",
+        "Scaled executable cases must include normal operation tests."
+      ],
+      "expected_output_signature": {
+        "return_type": "numpy.ndarray",
+        "return_value": "array([[ 0.,  1., 20., 21., 22., 23., 40., 41., 42.],\n       [ 5.,  6., 25., 26., 27., 28., 45., 46., 47.],\n       [10., 11., 30., 31., 32., 33., 50., 51., 52.],\n       [15., 16., 35., 36., 37., 38., 55., 56., 57.]])",
+        "stdout_contains": [
+          "Resulting shape: (4, 9)",
+          "Resulting array:",
+          "[[ 0.  1. 20. 21. 22. 23. 40. 41. 42.]",
+          "[ 5.  6. 25. 26. 27. 28. 45. 46. 47.]",
+          "[10. 11. 30. 31. 32. 33. 50. 51. 52.]",
+          "[15. 16. 35. 36. 37. 38. 55. 56. 57.]]"
+        ],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "coverage_validation",
+      "description": "Invalid N_k values (negative and exceeding N_max) must raise ValueError.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_683_M3_c_01",
+      "axis": "C",
+      "semantic_intent": "Verify that the function validates N_k and raises ValueError for out-of-range values.",
+      "target_constraint": "If N_k contains a value < 0 or > N_max, the function must raise ValueError.",
+      "expected_failure_mode": "Weak solution without validation will not raise error and thus fail this test.",
+      "setup_code": "",
+      "call_code": "import numpy as np\n# Test negative N_k\nK, L, N_max = 2, 3, 4\nkln = np.arange(K*L*N_max).reshape(K, L, N_max)\nN_k_neg = np.array([-1, 2], dtype=int)\ntry:\n    kln_to_kn(kln, N_k_neg)\n    assert False, \"Should have raised ValueError for negative N_k\"\nexcept ValueError:\n    pass\n# Test N_k > N_max\nN_k_exceed = np.array([5, 2], dtype=int)\ntry:\n    kln_to_kn(kln, N_k_exceed)\n    assert False, \"Should have raised ValueError for N_k > N_max\"\nexcept ValueError:\n    pass\nprint(\"Validation tests passed\")\nresult = None",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Add validation constraint that N_k values must be non-negative and ≤ N_max, raising ValueError otherwise.",
+        "Scaled executable cases must pass validation tests for N_k."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [
+          "Validation tests passed"
+        ],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "coverage_edge_cases",
+      "description": "Edge cases: single group, single feature, single sample, zero samples per group, and cleanup flag.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_683_M3_v_03",
+      "axis": "V",
+      "semantic_intent": "Verify correct handling of minimal dimensions and zero-sample groups.",
+      "target_constraint": "Function must correctly handle K=1, L=1, N_max=1, N_k=0 entries, and cleanup flag without error.",
+      "expected_failure_mode": "Weak solution may fail on edge cases like zero samples or single dimensions.",
+      "setup_code": "",
+      "call_code": "import numpy as np\n# Single group\nK, L, N_max = 1, 4, 5\nkln = np.arange(K*L*N_max).reshape(K, L, N_max)\nN_k = np.array([3])\nresult = kln_to_kn(kln, N_k, cleanup=False)\nexpected = kln[0, :, :3]\nassert np.array_equal(result, expected), \"Single group failed\"\n# Single feature\nK, L, N_max = 2, 1, 3\nkln = np.arange(K*L*N_max).reshape(K, L, N_max)\nN_k = np.array([2, 2])\nresult = kln_to_kn(kln, N_k, cleanup=False)\nexpected = np.concatenate([kln[0, :, :2], kln[1, :, :2]], axis=1)\nassert np.array_equal(result, expected), \"Single feature failed\"\n# Single sample\nK, L, N_max = 2, 3, 1\nkln = np.arange(K*L*N_max).reshape(K, L, N_max)\nN_k = np.array([1, 1])\nresult = kln_to_kn(kln, N_k, cleanup=False)\nexpected = np.concatenate([kln[0], kln[1]], axis=1)\nassert np.array_equal(result, expected), \"Single sample failed\"\n# Zero samples\nK, L, N_max = 3, 2, 4\nkln = np.arange(K*L*N_max).reshape(K, L, N_max)\nN_k = np.array([2, 0, 3])\nresult = kln_to_kn(kln, N_k, cleanup=False)\nexpected = np.concatenate([kln[0, :, :2], kln[2, :, :3]], axis=1)\nassert np.array_equal(result, expected), \"Zero samples failed\"\n# Cleanup flag\nK, L, N_max = 2, 3, 2\nkln = np.arange(K*L*N_max).reshape(K, L, N_max)\nN_k = np.array([2, 1])\nresult = kln_to_kn(kln, N_k, cleanup=True)\nexpected = np.concatenate([kln[0, :, :2], kln[1, :, :1]], axis=1)\nassert np.array_equal(result, expected), \"Cleanup failed\"\nprint(\"All edge case tests passed\")\nresult = None",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Add hidden tests for edge cases: single group, single feature, single sample, zero samples per group, and verify cleanup flag does not cause errors.",
+        "Scaled executable cases must include edge case tests."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [
+          "All edge case tests passed"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

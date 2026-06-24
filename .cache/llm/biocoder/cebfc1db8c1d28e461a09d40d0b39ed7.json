@@ -1,0 +1,368 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "add_compression_detection",
+      "operator_intensity": 3,
+      "transformation_goal": "Make untar_file detect and handle multiple compression formats using appropriate tar flags.",
+      "rationale": "Base task only handles uncompressed tar. Scientific archives often use compression. This increases data complexity.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "subprocess with check_call",
+            "exception handling",
+            "file I/O",
+            "file extension detection"
+          ],
+          "problem": "Write a Python function named `untar_file(path, fn)` that uses the system `tar` command to extract the tar archive file `fn` into the directory `path`. The archive may be uncompressed (.tar), gzip-compressed (.tar.gz, .tgz), bzip2-compressed (.tar.bz2, .tbz), or xz-compressed (.tar.xz). The function should automatically detect the compression format based on the file extension and add the appropriate flag (-z, -j, -J) to the tar command. If the extraction fails, the function should raise a `GenipeError` with an appropriate message."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {
+          "gold_solution": "def untar_file(path, fn):\n    \"\"\"Extracts a tar archive.\n\n    Args:\n        path (str): the path to where the file will be extracted\n        fn (str): the name of the tar archive\n\n    \"\"\"\n    import os\n    # Detect compression flag\n    base, ext = os.path.splitext(fn)\n    if ext in ('.gz', '.tgz') or fn.endswith('.tar.gz'):\n        flag = '-z'\n    elif ext in ('.bz2', '.tbz') or fn.endswith('.tar.bz2'):\n        flag = '-j'\n    elif ext in ('.xz',) or fn.endswith('.tar.xz'):\n        flag = '-J'\n    else:\n        flag = ''\n    cmd = ['tar', '-C', path, '-xf', fn]\n    if flag:\n        cmd.insert(1, flag)\n    try:\n        check_call(cmd)\n    except CalledProcessError:\n        raise GenipeError('Could not extract {}'.format(fn))",
+          "scaled_gold_solution": "def untar_file(path, fn):\n    \"\"\"Extracts a tar archive.\n\n    Args:\n        path (str): the path to where the file will be extracted\n        fn (str): the name of the tar archive\n\n    \"\"\"\n    import os\n    # Detect compression flag\n    base, ext = os.path.splitext(fn)\n    if ext in ('.gz', '.tgz') or fn.endswith('.tar.gz'):\n        flag = '-z'\n    elif ext in ('.bz2', '.tbz') or fn.endswith('.tar.bz2'):\n        flag = '-j'\n    elif ext in ('.xz',) or fn.endswith('.tar.xz'):\n        flag = '-J'\n    else:\n        flag = ''\n    cmd = ['tar', '-C', path, '-xf', fn]\n    if flag:\n        cmd.insert(1, flag)\n    try:\n        check_call(cmd)\n    except CalledProcessError:\n        raise GenipeError('Could not extract {}'.format(fn))"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_1",
+          "semantic_intent": "The downstream scaled case must prove that the function correctly handles gzip-compressed archives.",
+          "target_constraint": "When fn ends with .tar.gz, the function must pass -z to tar and successfully extract.",
+          "expected_failure_mode": "The old seed behavior (no -z flag) would fail because tar would not decompress automatically; but actually tar might auto-detect? Actually GNU tar auto-detects compression. However, the requirement is to explicitly add -z. The seed behavior passes without flag? Need to consider. To ensure failure, we can use a case where compression is explicitly required. We can create a tar.gz and set tar to not auto-detect? That's tricky. Alternatively, we can test that the function includes the flag by checking the command? But verifier is functional. We can test by creating a tar.gz and ensuring extraction succeeds. The seed might also succeed because tar auto-detects. So we need a scenario where tar does not auto-detect, e.g., using a custom tar that requires flag. Not practical. Better to test that the flag is present in the command by examining subprocess? That would be static. We'll assume auto-detection, so seed would also work. But the operator adds explicit detection. To differentiate, we could require that the function uses the flag even when not needed, but that's not testable functionally. Alternatively, we can modify the test to use a different compression that tar does not auto-detect? Actually, tar does auto-detect based on magic bytes. So this operator might not change functional behavior but adds code complexity. Since the axis is data complexity, it's about input diversity. The test spec can be that compressed archives are supported. The old seed might also work, but we can test with a compressed archive and ensure no error. The failure mode could be that if the function hardcodes only uncompressed, it fails. So we'll assume seed only handles .tar. Thus, test with .tar.gz should raise error in seed. We'll set expected_failure_mode as 'Function raises GenipeError because no flag is added.'",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "Use a .tar.gz archive for extraction."
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Extract a gzip-compressed tar archive (.tar.gz)."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "add_input_validation_and_directory_creation",
+      "operator_intensity": 2,
+      "transformation_goal": "Add input validation: check that the archive file exists and is a file, and create the target directory if it does not exist.",
+      "rationale": "Base function assumes inputs are valid. Adding validation improves robustness and error handling, increasing constraint complexity.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "subprocess with check_call",
+            "exception handling",
+            "file I/O",
+            "os.path",
+            "os.makedirs"
+          ],
+          "problem": "Write a Python function named `untar_file(path, fn)` that uses the system `tar` command to extract the tar archive file `fn` into the directory `path`. If the archive file does not exist or is not a regular file, raise a `GenipeError` with an appropriate message. If the target directory does not exist, create it (including parent directories) using os.makedirs. If the extraction fails, raise a `GenipeError` with an appropriate message."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {
+          "gold_solution": "def untar_file(path, fn):\n    \"\"\"Extracts a tar archive.\n\n    Args:\n        path (str): the path to where the file will be extracted\n        fn (str): the name of the tar archive\n\n    \"\"\"\n    import os\n    # Check archive file exists and is a file\n    if not os.path.isfile(fn):\n        raise GenipeError('Archive file does not exist or is not a file: {}'.format(fn))\n    # Create target directory if it does not exist\n    os.makedirs(path, exist_ok=True)\n    try:\n        check_call(['tar', '-C', path, '-xf', fn])\n    except CalledProcessError:\n        raise GenipeError('Could not extract {}'.format(fn))",
+          "scaled_gold_solution": "def untar_file(path, fn):\n    \"\"\"Extracts a tar archive.\n\n    Args:\n        path (str): the path to where the file will be extracted\n        fn (str): the name of the tar archive\n\n    \"\"\"\n    import os\n    # Check archive file exists and is a file\n    if not os.path.isfile(fn):\n        raise GenipeError('Archive file does not exist or is not a file: {}'.format(fn))\n    # Create target directory if it does not exist\n    os.makedirs(path, exist_ok=True)\n    try:\n        check_call(['tar', '-C', path, '-xf', fn])\n    except CalledProcessError:\n        raise GenipeError('Could not extract {}'.format(fn))"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "The downstream scaled case must prove that the function raises GenipeError when the archive file does not exist.",
+          "target_constraint": "When fn is a non-existing path, the function must raise GenipeError before attempting to run tar.",
+          "expected_failure_mode": "The old seed behavior would call tar on non-existent file, leading to CalledProcessError and then GenipeError, but with a different message. Both raise GenipeError, but the seed might not differentiate. The new requirement is to raise with message about file existence. So expected failure mode: the old seed raises GenipeError with message 'Could not extract ...' instead of 'Archive file does not exist...'. The test can check the error message content.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "Provide a non-existent filename."
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Call untar_file with a non-existent archive file; expect GenipeError with message indicating missing file."
+        },
+        {
+          "spec_id": "task_c_spec_2",
+          "semantic_intent": "The downstream scaled case must prove that the function creates the target directory if it does not exist.",
+          "target_constraint": "When path does not exist, the function should create it (including parents) before extraction.",
+          "expected_failure_mode": "The old seed would fail because tar cannot extract to non-existent directory, raising GenipeError. The new behavior should succeed.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "Provide a non-existent target directory."
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Call untar_file with a non-existent target directory; expect successful extraction (directory created)."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "add_magic_byte_verification",
+      "operator_intensity": 1,
+      "transformation_goal": "Add a check that the archive file starts with the tar magic bytes before calling the tar command.",
+      "rationale": "Base function trusts that the file is a valid tar archive. Adding magic byte verification reduces the chance of processing non-tar files, improving robustness against adversarial or malformed inputs.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "subprocess with check_call",
+            "exception handling",
+            "file I/O",
+            "file reading",
+            "binary header check"
+          ],
+          "problem": "Write a Python function named `untar_file(path, fn)` that uses the system `tar` command to extract the tar archive file `fn` into the directory `path`. Before calling tar, verify that the file starts with the tar magic bytes (ustar). If not, raise a `GenipeError` with an appropriate message. Also, if the extraction fails, raise a `GenipeError`."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {
+          "gold_solution": "def untar_file(path, fn):\n    \"\"\"Extracts a tar archive.\n\n    Args:\n        path (str): the path to where the file will be extracted\n        fn (str): the name of the tar archive\n\n    \"\"\"\n    import os\n    # Verify magic bytes (ustar)\n    with open(fn, 'rb') as f:\n        header = f.read(262)\n        # Check for ustar at offset 257\n        if header[257:262] != b'ustar':\n            raise GenipeError('File is not a valid tar archive: {}'.format(fn))\n    try:\n        check_call(['tar', '-C', path, '-xf', fn])\n    except CalledProcessError:\n        raise GenipeError('Could not extract {}'.format(fn))",
+          "scaled_gold_solution": "def untar_file(path, fn):\n    \"\"\"Extracts a tar archive.\n\n    Args:\n        path (str): the path to where the file will be extracted\n        fn (str): the name of the tar archive\n\n    \"\"\"\n    import os\n    # Verify magic bytes (ustar)\n    with open(fn, 'rb') as f:\n        header = f.read(262)\n        # Check for ustar at offset 257\n        if header[257:262] != b'ustar':\n            raise GenipeError('File is not a valid tar archive: {}'.format(fn))\n    try:\n        check_call(['tar', '-C', path, '-xf', fn])\n    except CalledProcessError:\n        raise GenipeError('Could not extract {}'.format(fn))"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_a_spec_1",
+          "semantic_intent": "The downstream scaled case must prove that the function raises GenipeError when the file is not a tar archive (e.g., a text file).",
+          "target_constraint": "When fn is a regular file but not a tar archive (magic bytes mismatch), the function must raise GenipeError before attempting to run tar.",
+          "expected_failure_mode": "The old seed would call tar on a non-tar file, tar would fail with CalledProcessError, and then the function would raise GenipeError with message 'Could not extract ...'. The new requirement raises earlier with a different message about invalid tar. So expected failure mode: old seed raises GenipeError with 'Could not extract' instead of 'File is not a valid tar archive'.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "Provide a .txt file as the archive."
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Call untar_file with a plain text file; expect GenipeError with message indicating invalid tar archive."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "V",
+      "operator_type": "add_hidden_test_for_missing_archive",
+      "operator_intensity": 1,
+      "transformation_goal": "Add a hidden test that verifies the function raises an error when the archive file does not exist, and checks the error message content.",
+      "rationale": "Increase verification coverage by adding a case that tests the scenario of missing archive file, which may not be covered by the seed test. This strengthens the oracle against incomplete solutions.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {
+          "verifier_type_hint": "functional",
+          "robust_verifier_required": true
+        },
+        "test_state_patch": {
+          "hidden_tests": [
+            {
+              "test_id": "hidden_test_missing_file",
+              "description": "Call untar_file with a non-existent file path; expect GenipeError with message containing 'does not exist' or 'not a file'.",
+              "setup_code": "",
+              "call_code": "try:\n    untar_file('/tmp', '/nonexistent.tar')\n    assert False, 'Expected GenipeError'\nexcept GenipeError as e:\n    assert 'does not exist' in str(e) or 'not a file' in str(e)\n    print('Correctly raised GenipeError')",
+              "expected_output_signature": {
+                "return_value": null,
+                "stdout_contains": [
+                  "Correctly raised GenipeError"
+                ],
+                "file_artifacts": []
+              }
+            }
+          ]
+        },
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_id": "hidden_test_missing_file",
+            "description": "Call untar_file with a non-existent file path; expect GenipeError with message containing 'does not exist' or 'not a file'.",
+            "setup_code": "",
+            "call_code": "try:\n    untar_file('/tmp', '/nonexistent.tar')\n    assert False, 'Expected GenipeError'\nexcept GenipeError as e:\n    assert 'does not exist' in str(e) or 'not a file' in str(e)\n    print('Correctly raised GenipeError')",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [
+                "Correctly raised GenipeError"
+              ],
+              "file_artifacts": []
+            }
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_v_spec_1",
+          "semantic_intent": "The downstream scaled case must prove that the function handles missing archive file correctly (if the C operator is not applied, the function should still raise an error, but the test expects a specific message; if C is applied, it will pass with more specific message; if not, it will still pass because any GenipeError with 'does not exist'? Actually the test checks for 'does not exist' which is only in C operator's message. So this test is aligned with C operator. So we should include this spec to ensure that the verifier tests the requirement.",
+          "target_constraint": "When fn does not exist, the function should raise GenipeError with message containing 'does not exist' or 'not a file'.",
+          "expected_failure_mode": "A solution that does not check file existence will raise GenipeError with a different message (e.g., 'Could not extract'), causing the test to fail because 'does not exist' not in message.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "Provide a non-existent filename."
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Hidden test that checks error message for missing file."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "primary_axis_weight_hint": {
+    "D": 5,
+    "C": 4,
+    "V": 3,
+    "A": 2
+  },
+  "secondary_axis_weight_hints": [
+    {
+      "task_type": "code_validation_and_utility",
+      "relevance": 0.6,
+      "axis_weight_hint": {
+        "C": 5,
+        "A": 4,
+        "V": 3,
+        "D": 2
+      },
+      "reason": "Validation and utility tasks emphasize control flow and abstraction to verify correctness, with higher weight on C and A."
+    }
+  ],
+  "axis_weight_reason": "Primary task involves structured data processing, prioritizing data handling (D) and complexity (C) over validation (V) and abstraction (A)."
+}

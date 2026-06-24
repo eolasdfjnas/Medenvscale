@@ -1,0 +1,18 @@
+{
+  "scaled_executable_gold_code": "import logging\nimport multiprocessing as mp\n\ndef _system_call(command):\n    # Dummy system call implementation for testing\n    stdout = f\"Executed command: {command}\"\n    stderr = \"\"\n    return (stdout, stderr, 0)\n\ndef deblur_system_call(params, input_fp):\n    \"\"\"Build deblur command for subprocess.\n\n    Parameters\n    ----------\n    params: list of str\n        parameter settings to pass to deblur CLI\n    input_fp : str\n        name of the input fasta file to deblur\n\n    Returns\n    -------\n    stdout: string\n        process output directed to standard output\n    stderr: string\n        process output directed to standard error\n    return_value: integer\n        return code from process\n\n    \"\"\"\n    logger = logging.getLogger(__name__)\n    logger.debug('[%s] deblur system call params %s, input_fp %s' % (mp.\n        current_process().name, params, input_fp))\n    script_name = 'deblur'\n    script_subprogram = 'workflow'\n    command = [script_name, script_subprogram, '--seqs-fp', input_fp,\n        '--is-worker-thread', '--keep-tmp-files']\n    command.extend(params)\n    logger.debug('[%s] running command %s' % (mp.current_process().name,\n        command))\n    return _system_call(command)\n\ndef main():\n    logging.basicConfig(level=logging.DEBUG)\n    # Create a dummy FASTA file for testing\n    input_fp = 'test_sequences.fasta'\n    with open(input_fp, 'w') as f:\n        f.write(\">seq1\\nACTG\\n>seq2\\nTGCA\\n\")\n    # Example parameters for deblur\n    params = ['--min-size', '50']\n    stdout, stderr, returncode = deblur_system_call(params, input_fp)\n    print('STDOUT:', stdout)\n    print('STDERR:', stderr)\n    print('Return code:', returncode)\n    # Test with special characters in path\n    input_fp_special = 'my sequences.fasta'\n    with open(input_fp_special, 'w') as f:\n        f.write(\">seq1\\nACTG\\n>seq2\\nTGCA\\n\")\n    stdout2, stderr2, returncode2 = deblur_system_call(params, input_fp_special)\n    print('STDOUT2:', stdout2)\n    print('STDERR2:', stderr2)\n    print('Return code2:', returncode2)\n\nif __name__ == '__main__':\n    main()",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Scaled task adds requirement to handle file paths with special characters (spaces). The function already correctly builds a list, so the code is the same as seed but with an updated main to demonstrate the special path test. However, the operator indicates seed gold is incompatible due to data semantics change.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_838_M2_d_01"
+  ],
+  "covered_requirements": [
+    "Scaled executable cases must include a hidden test with 'my sequences.fasta' path to verify correct command construction."
+  ],
+  "implementation_notes": [
+    "The function uses a list to build the command, preserving the input_fp as a single element even if it contains spaces or special characters."
+  ],
+  "assumptions": []
+}

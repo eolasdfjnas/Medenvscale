@@ -1,0 +1,46 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main_combined",
+      "description": "Combined scaled oracle case: ensures get_default_error_profile returns a new list object on each call, returns correct values, and writes the correct file content.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_841_M3_c_01, env_medagentgym_train_841_M3_v_02",
+      "axis": "C,V",
+      "semantic_intent": "Prove that the function returns a distinct list object each invocation, that the returned list matches the exact expected values, and that the JSON file is correctly written.",
+      "target_constraint": "The function must return a new list object on each call to prevent aliasing. The returned list must be exactly [1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005] and the JSON file written must contain the same list.",
+      "expected_failure_mode": "If the function returns a global list reference, identity check fails. If values are incorrect or file write is wrong, assertions fail.",
+      "setup_code": "",
+      "call_code": "profile1 = get_default_error_profile()\nprofile2 = get_default_error_profile()\nassert profile1 is not profile2, \"Function should return a new list each call\"\nexpected = [1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005]\nassert profile2 == expected, f\"Profile mismatch: {profile2}\"\nwith open(\"error_profile.json\", \"w\") as f:\n    json.dump(profile2, f)\nwith open(\"error_profile.json\", \"r\") as f:\n    loaded = json.load(f)\nassert loaded == expected, f\"File content mismatch: {loaded}\"\nprint(\"Default Illumina error profile:\", profile2)\nprint(\"Profile saved successfully to error_profile.json\")\nresult = profile2",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Ensure get_default_error_profile returns a new list object on each call, preventing aliasing issues.",
+        "Add thorough verification of the returned profile content and file output."
+      ],
+      "expected_output_signature": {
+        "return_value": [
+          1,
+          0.06,
+          0.02,
+          0.02,
+          0.01,
+          0.005,
+          0.005,
+          0.005,
+          0.001,
+          0.001,
+          0.001,
+          0.0005
+        ],
+        "stdout_contains": [
+          "Default Illumina error profile: [1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005]",
+          "Profile saved successfully to error_profile.json"
+        ],
+        "file_artifacts": [
+          {
+            "path": "error_profile.json"
+          }
+        ]
+      }
+    }
+  ]
+}

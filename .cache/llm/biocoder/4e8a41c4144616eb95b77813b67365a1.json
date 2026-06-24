@@ -1,0 +1,247 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "multiline_values",
+      "operator_intensity": 1,
+      "transformation_goal": "Add multiline values and special characters to the configuration data to test the serialize function's handling of such content.",
+      "rationale": "Real-world INI files often contain multiline values, e.g., descriptions or notes. The serialize function must correctly write continuation lines with indentation. This operator increases data complexity by including such values in the input config.",
+      "state_updates": {
+        "test_state_patch": {
+          "add_case": {
+            "case_id": "multiline_case",
+            "setup_code": "config = configparser.ConfigParser()\nconfig['General'] = {\n    'version': '1.0',\n    'enabled': 'yes',\n    'description': 'Main configuration\\nThis is a multiline value'\n}\nconfig['User'] = {\n    'name': 'Alice\\nSmith',\n    'email': 'alice@example.com'\n}\npath = 'test_config.ini'",
+            "call_code": "result = serialize(config, path)\nif os.path.exists(path):\n    with open(path, 'r') as f:\n        content = f.read()\n    print('Configuration file content:')\n    print(content)\nelse:\n    print('Failed to create configuration file.')",
+            "expected_output_signature": {
+              "stdout_contains": [
+                "Configuration file content:",
+                "[General]",
+                "version = 1.0",
+                "enabled = yes",
+                "description = Main configuration",
+                "\tThis is a multiline value",
+                "[User]",
+                "name = Alice",
+                "\tSmith",
+                "email = alice@example.com"
+              ],
+              "file_artifacts": [
+                {
+                  "path": "test_config.ini"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "multiline_spec",
+          "semantic_intent": "Prove that the serialize function correctly outputs multiline values with proper indentation.",
+          "target_constraint": "The written INI file must contain continuation lines (indented by tab) for multiline values, and reading the file back with configparser must parse the value correctly including the newline.",
+          "expected_failure_mode": "If the serialize function writes the value as a single line (without continuation), the file will not be valid INI for multiline values, or the value will be truncated.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_multiline_case"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Configuration with multiline values in two sections."
+        }
+      ],
+      "output_requirements": [
+        "The serialized file must preserve multiline values with continuation lines."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "D",
+      "operator_type": "large_configuration",
+      "operator_intensity": 1,
+      "transformation_goal": "Increase the number of sections and options to test the serialize function's ability to handle large configurations efficiently.",
+      "rationale": "Large configurations with many sections and options are common in scientific software. The function must scale without errors and produce correct output. This operator adds data complexity by enlarging the input.",
+      "state_updates": {
+        "test_state_patch": {
+          "add_case": {
+            "case_id": "large_config_case",
+            "setup_code": "config = configparser.ConfigParser()\nsections = ['Section{}'.format(i) for i in range(10)]\nfor sec in sections:\n    config[sec] = {'key{}'.format(j): 'value{}'.format(j) for j in range(5)}\npath = 'large_config.ini'",
+            "call_code": "result = serialize(config, path)\nif os.path.exists(path):\n    with open(path, 'r') as f:\n        content = f.read()\n    print('Configuration file content:')\n    print(content)\nelse:\n    print('Failed to create configuration file.')",
+            "expected_output_signature": {
+              "stdout_contains": [
+                "Configuration file content:",
+                "[Section0]",
+                "key0 = value0"
+              ],
+              "file_artifacts": [
+                {
+                  "path": "large_config.ini"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "large_config_spec",
+          "semantic_intent": "Prove that the serialize function can write a configuration with many sections and options without crashing or omitting data.",
+          "target_constraint": "The output file must contain all sections and options, and the file should be valid INI that can be parsed back.",
+          "expected_failure_mode": "If the function has a limit on number of sections or options, it may fail or produce incomplete output.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_large_config_case"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Configuration with 10 sections each with 5 options."
+        }
+      ],
+      "output_requirements": [
+        "The serialize function must handle any number of sections and options without failure."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "V",
+      "operator_type": "roundtrip_verification",
+      "operator_intensity": 1,
+      "transformation_goal": "Add a verifier that checks the written file can be read back into an equivalent ConfigParser object, ensuring lossless serialization.",
+      "rationale": "Verification that the output file is valid and can be parsed back is critical. This operator strengthens the oracle by adding an executable test that performs a roundtrip check.",
+      "state_updates": {
+        "verifier_state_patch": {
+          "add_hidden_test": {
+            "test_id": "roundtrip_test",
+            "code": "config_original = configparser.ConfigParser()\nconfig_original['General'] = {'version': '1.0', 'enabled': 'yes'}\nconfig_original['User'] = {'name': 'Alice', 'email': 'alice@example.com'}\npath = 'test_config.ini'\nserialize(config_original, path)\nconfig_loaded = configparser.ConfigParser()\nconfig_loaded.read(path)\nassert config_loaded['General']['version'] == '1.0'\nassert config_loaded['General']['enabled'] == 'yes'\nassert config_loaded['User']['name'] == 'Alice'\nassert config_loaded['User']['email'] == 'alice@example.com'",
+            "type": "file_output"
+          }
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_id": "roundtrip_test",
+            "code": "config_original = configparser.ConfigParser()\nconfig_original['General'] = {'version': '1.0', 'enabled': 'yes'}\nconfig_original['User'] = {'name': 'Alice', 'email': 'alice@example.com'}\npath = 'test_config.ini'\nserialize(config_original, path)\nconfig_loaded = configparser.ConfigParser()\nconfig_loaded.read(path)\nassert config_loaded['General']['version'] == '1.0'\nassert config_loaded['General']['enabled'] == 'yes'\nassert config_loaded['User']['name'] == 'Alice'\nassert config_loaded['User']['email'] == 'alice@example.com'"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "roundtrip_spec",
+          "semantic_intent": "Prove that the serialized file can be parsed back to an identical config structure.",
+          "target_constraint": "After calling serialize, reading the file with configparser must produce the same key-value pairs as the original config in each section.",
+          "expected_failure_mode": "If the serialize function writes the file with incorrect formatting (e.g., extra spaces, missing newlines), the parse may fail or produce different values.",
+          "test_template_type": "oracle_case",
+          "input_variant": {
+            "kind": "oracle_output_match",
+            "value": "roundtrip_test"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "exact"
+          },
+          "test_case_description": "Roundtrip check: serialize then read back and compare."
+        }
+      ],
+      "output_requirements": [
+        "The serialized INI file must be valid and parseable by configparser."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

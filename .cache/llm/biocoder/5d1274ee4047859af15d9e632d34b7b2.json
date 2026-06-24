@@ -1,0 +1,33 @@
+{
+  "primary_axis_weight_hint": {
+    "D": 3,
+    "C": 6,
+    "A": 5,
+    "V": 4
+  },
+  "secondary_axis_weight_hints": [
+    {
+      "task_type": "structured_data_processing",
+      "relevance": 0.8,
+      "axis_weight_hint": {
+        "D": 6,
+        "C": 5,
+        "A": 3,
+        "V": 4
+      },
+      "reason": "The task involves constructing namespaces and processing model data, emphasizing data structure manipulation and parsing. Priority order D > C > V > A reflects need for data model handling (D), followed by code structure (C), validation (V), and automation (A)."
+    },
+    {
+      "task_type": "numerical_computation",
+      "relevance": 0.8,
+      "axis_weight_hint": {
+        "D": 4,
+        "C": 6,
+        "A": 3,
+        "V": 5
+      },
+      "reason": "The task requires linear programming setup with bounds and constraints, emphasizing numerical optimization. Priority order C > V > D > A reflects core computational logic (C), validation of constraints (V), data handling (D), and automation (A)."
+    }
+  ],
+  "axis_weight_reason": "Primary task code_validation_and_utility prioritizes code structure (C) highest for correct function implementation, then automation (A) for reusable utility, validation (V) for correctness checks, and data (D) last. Weights C=6, A=5, V=4, D=3 follow given priority order with top-1 >=5 and top-2 >=4."
+}

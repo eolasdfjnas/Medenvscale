@@ -1,0 +1,11 @@
+{
+  "scaled_executable_gold_code": "import pandas as pd\n\ndef read_text(infile):\n    rows = []\n    with open(infile, 'r') as f:\n        for line in f:\n            line = line.strip()\n            if not line:\n                continue\n            parts = line.split()\n            chrom_rest = parts[0]\n            chrom, rest = chrom_rest.split(':')\n            start, end = rest.split('-')\n            gene = parts[1] if len(parts) > 1 else ''\n            rows.append((chrom, int(start), int(end), gene))\n    df = pd.DataFrame(rows, columns=['chromosome', 'start', 'end', 'gene'])\n    df['gene'] = df['gene'].replace('', '-')\n    return str(df)\n",
+  "repair_summary": "Changed return type from DataFrame to str by converting DataFrame to string representation. Fixed whitespace handling by stripping lines and splitting on whitespace. Preserved empty file handling (returns empty DataFrame string).",
+  "covered_operator_ids": [
+    "env_medagentgym_train_295_M2_v_01"
+  ],
+  "covered_requirements": [
+    "Scaled executable cases must verify empty file handling and whitespace tolerance."
+  ],
+  "remaining_risks": []
+}

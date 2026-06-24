@@ -1,0 +1,35 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main_combined",
+      "description": "Combined test covering missing optional columns, malformed data, dedup constraint, and whitespace in column names.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_835_M4_d_01,env_medagentgym_train_835_M4_d_02,env_medagentgym_train_835_M4_c_03,env_medagentgym_train_835_M4_a_04",
+      "axis": "D, C, A",
+      "semantic_intent": "The function should handle missing optional columns, malformed annotations, dedup on repeated row processing, and whitespace in column names.",
+      "target_constraint": "When header_dict contains whitespace in keys, missing optional columns (aggr_prec_Fragment_Annotation and Charge), and a row has empty fragment annotation (single semicolon) that leads to early return, and the same normal row is processed twice, the mappings should reflect correct defaults (charge '0', empty pr_transitions), no duplicates in sequences_mapping, and column names should be stripped for lookup.",
+      "expected_failure_mode": "If function does not strip whitespace, it will miss columns; if it does not check for missing columns, KeyError; if it does not dedup, duplicates appear; if it does not handle empty annotation early return, it may incorrectly process.",
+      "setup_code": "header = [' FullPeptideName ', ' aggr_Fragment_Annotation ', 'ProteinName']  # whitespace and missing optional columns\nrow1 = ['PEPTIDE1', ';', 'P99999']  # empty fragment annotation -> early return\nrow2 = ['PEPTIDE2', 'b1;b2;', 'P12345']  # normal row\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping = {}\nprotein_mapping = {}\n\ndef mapRow(this_row, header_dict, precursors_mapping, sequences_mapping, protein_mapping):\n    # Normalize header_dict keys by stripping whitespace\n    norm_header = {k.strip(): v for k, v in header_dict.items()}\n    if 'FullPeptideName' in norm_header:\n        peptide_name = this_row[norm_header['FullPeptideName']]\n        transitions = []\n        pr_transitions = []\n        if 'aggr_Fragment_Annotation' in norm_header:\n            transitions = this_row[norm_header['aggr_Fragment_Annotation']].split(';')\n        if 'aggr_prec_Fragment_Annotation' in norm_header:\n            pr_transitions = this_row[norm_header['aggr_prec_Fragment_Annotation']].split(';')\n        if len(transitions) == 0:\n            return\n        if len(transitions[-1]) == 0:\n            transitions = transitions[:-1]\n        if len(pr_transitions) > 0 and len(pr_transitions[-1]) == 0:\n            pr_transitions = pr_transitions[:-1]\n        charge_state = '0'\n        if 'Charge' in norm_header:\n            charge_state = this_row[norm_header['Charge']]\n        if charge_state == 'NA' or charge_state == '':\n            charge_state = '0'\n        key = peptide_name + '/' + charge_state\n        prkey = peptide_name + '/' + charge_state + '_pr'\n        precursors_mapping[key] = transitions\n        precursors_mapping[prkey] = pr_transitions\n        # Dedup for sequences_mapping\n        mapped_precursors = sequences_mapping.get(peptide_name, [])\n        if key not in mapped_precursors:\n            mapped_precursors.append(key)\n        if prkey not in mapped_precursors:\n            mapped_precursors.append(prkey)\n        sequences_mapping[peptide_name] = mapped_precursors\n        if 'ProteinName' in norm_header:\n            protein_name = this_row[norm_header['ProteinName']]\n            tmp = protein_mapping.get(protein_name, [])\n            if peptide_name not in tmp:\n                tmp.append(peptide_name)\n            protein_mapping[protein_name] = tmp",
+      "call_code": "mapRow(row1, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nmapRow(row2, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nmapRow(row2, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nprint('Precursors Mapping:', precursors_mapping)\nprint('Sequences Mapping:', sequences_mapping)\nprint('Protein Mapping:', protein_mapping)",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Add a test case where optional columns are missing and verify no error occurs.",
+        "Add test cases with malformed data and verify correct handling.",
+        "Add a test case that calls mapRow twice with identical row and verifies uniqueness.",
+        "Add test case with whitespace in column names and verify correct parsing."
+      ],
+      "expected_output_signature": {
+        "return_type": null,
+        "return_keys": null,
+        "return_value": null,
+        "stdout_contains": [
+          "Precursors Mapping: {'PEPTIDE2/0': ['b1', 'b2'], 'PEPTIDE2/0_pr': []}",
+          "Sequences Mapping: {'PEPTIDE2': ['PEPTIDE2/0', 'PEPTIDE2/0_pr']}",
+          "Protein Mapping: {'P12345': ['PEPTIDE2']}"
+        ],
+        "stdout_regex": [],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

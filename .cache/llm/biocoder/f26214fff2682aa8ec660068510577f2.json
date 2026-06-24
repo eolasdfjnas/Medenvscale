@@ -1,0 +1,265 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "comment_preservation_requirement",
+      "operator_intensity": 1,
+      "transformation_goal": "Require that the serialize function preserves comments from the ConfigParserWithComments object.",
+      "rationale": "The seed task mentions ConfigParserWithComments but uses standard ConfigParser. To increase data complexity, the config object should contain comments that must be written to the INI file.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "file I/O",
+            "configparser library usage",
+            "comment preservation",
+            "basic Python programming"
+          ]
+        },
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "filename": "test_config.ini",
+              "content": "; General section\n[General]\nversion = 1.0\nenabled = yes\n; User section\n[User]\nname = Alice\nemail = alice@example.com\n"
+            }
+          ]
+        },
+        "verifier_state_patch": {
+          "verifier_type_hint": "execution and file content check with comment preservation validation"
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [
+          {
+            "file_path": "test_config.ini",
+            "check_type": "exact_content",
+            "expected_content": "; General section\n[General]\nversion = 1.0\nenabled = yes\n; User section\n[User]\nname = Alice\nemail = alice@example.com\n"
+          }
+        ],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Loss of comments in output file"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_comment_preservation",
+          "semantic_intent": "Ensure that the serialize function writes comments from the config object to the INI file.",
+          "target_constraint": "The output file must contain the exact comments as in the input config object.",
+          "expected_failure_mode": "The output file content matches the standard ConfigParser.write which does not preserve comments.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "config_with_comments"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "file_content_exact_match"
+          },
+          "test_case_description": "Create a ConfigParserWithComments object with comments in both sections and verify that serialize writes them verbatim."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must verify that comments are preserved in the output file."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "D",
+      "operator_type": "multi_line_value_requirement",
+      "operator_intensity": 1,
+      "transformation_goal": "Require that the serialize function correctly handles multi-line values in the config object.",
+      "rationale": "Increasing data complexity by including options with multi-line values, which require proper formatting in the INI file (continuation lines).",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "file I/O",
+            "configparser library usage",
+            "multi-line value handling",
+            "basic Python programming"
+          ]
+        },
+        "data_state_patch": {
+          "resource_manifest": []
+        },
+        "verifier_state_patch": {
+          "verifier_type_hint": "execution and file content check with multi-line value validation"
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [
+          {
+            "file_path": "test_config.ini",
+            "check_type": "regex_contains",
+            "expected_pattern": "message = line1\\n line2"
+          }
+        ],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Multi-line value collapsed into single line"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_multiline_value",
+          "semantic_intent": "Ensure that options with multi-line values are written as continuation lines in the INI file.",
+          "target_constraint": "A value containing newlines should be written with a leading space on continuation lines.",
+          "expected_failure_mode": "Standard ConfigParser.write writes multi-line values correctly by default, but if the user uses open+write they might break.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "config_with_multiline"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "file_content_regex"
+          },
+          "test_case_description": "Add a section 'Log' with option 'message' set to 'line1\\nline2' and verify that the output file contains 'message = line1\\n line2'."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a test with multi-line values."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "V",
+      "operator_type": "verifier_strengthening_exact_content_and_return",
+      "operator_intensity": 1,
+      "transformation_goal": "Strengthen verification by adding exact content and return value checks to the oracle tests.",
+      "rationale": "Increase verification complexity to ensure the solution passes rigorous checks on file content, stdout, and return value.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "verifier_state_patch": {
+          "verifier_type_hint": "execution and file content check with exact match and return value validation"
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [
+          {
+            "check_id": "return_value_none",
+            "type": "return_value",
+            "expected": null
+          },
+          {
+            "check_id": "stdout_exact",
+            "type": "stdout",
+            "expected": "Configuration file content:\n[General]\nversion = 1.0\nenabled = yes\n\n[User]\nname = Alice\nemail = alice@example.com\n"
+          },
+          {
+            "check_id": "file_sha256",
+            "type": "file_sha256",
+            "path": "test_config.ini",
+            "expected": "df4ad2409d0f7d96f39d5dae4f2fb105d0ba7ca4fa251262e6f98cd52c620fab"
+          }
+        ],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Incorrect return value",
+          "Deviation in stdout",
+          "File hash mismatch"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_v_spec_exact_oracle",
+          "semantic_intent": "Ensure that the solution produces exactly the expected stdout, file content, and return value.",
+          "target_constraint": "The serialize function must return None, print the exact stdout, and produce a file with the exact SHA256 hash.",
+          "expected_failure_mode": "Any deviation in output or side effects is caught.",
+          "test_template_type": "execution_and_validation",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "seed_case_main"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "exact"
+          },
+          "test_case_description": "Replay the canonical main flow and verify stdout, file hash, and return value exactly."
+        }
+      ],
+      "output_requirements": [
+        "The verifier must check exact stdout, file SHA256, and return value None."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

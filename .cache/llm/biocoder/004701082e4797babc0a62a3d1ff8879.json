@@ -1,0 +1,157 @@
+{
+  "operator_instances": [
+    {
+      "axis": "V",
+      "operator_type": "add_edge_case_oracles",
+      "operator_intensity": 2,
+      "transformation_goal": "Increase verification coverage by adding executable test cases for edge conditions: missing columns, empty fragment/precursor annotations, NA/empty charge, and duplicate peptide names in the same protein.",
+      "rationale": "The seed case only tests a standard row. To ensure robustness, the verifier must check that the function correctly handles missing or malformed data, which are common in real proteomics CSV files. This operator raises the verification complexity from a single happy-path to multiple edge cases.",
+      "state_updates": {
+        "test_state_patch": {
+          "new_hidden_tests": [],
+          "new_validated_cases": []
+        },
+        "verifier_state_patch": {
+          "verifier_type_hint": "unit_test",
+          "verifier_spec": {
+            "num_hidden_tests": 4,
+            "test_generation_mode": "rule_based"
+          }
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_id": "v_edge_1",
+            "description": "Empty fragment annotations and NA charge",
+            "input": "row = ['PEPTIDEA', '', 'p1;', 'NA', 'P99999']",
+            "expected_behavior": "transitions = [], pr_transitions = ['p1']; charge = '0'; no return; keys 'PEPTIDEA/0' and 'PEPTIDEA/0_pr'; sequences_mapping updated; protein_mapping updated."
+          },
+          {
+            "test_id": "v_edge_2",
+            "description": "Missing aggr_Fragment_Annotation column",
+            "input": "header without 'aggr_Fragment_Annotation'",
+            "expected_behavior": "transitions = []; pr_transitions = []; charge = '2'; return immediately because transitions empty."
+          },
+          {
+            "test_id": "v_edge_3",
+            "description": "Empty charge string",
+            "input": "row = ['PEPTIDEB', 'b1;b2;', ';', '', 'P88888']",
+            "expected_behavior": "charge defaulted to '0'; pr_transitions = [''] after split, then remove trailing empty? Actually ';' split gives ['', ''], so after removing last empty if condition, pr_transitions becomes ['']; key 'PEPTIDEB/0' and 'PEPTIDEB/0_pr'."
+          },
+          {
+            "test_id": "v_edge_4",
+            "description": "Duplicate peptide in same protein",
+            "input": "first call: row1 = ['PEPTIDE', 'b1;', 'p1;', '2', 'PROT']; second call: row2 = ['PEPTIDE', 'b2;', 'p2;', '2', 'PROT']",
+            "expected_behavior": "protein_mapping['PROT'] should contain 'PEPTIDE' only once (no duplicate)."
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Old seed behavior would fail because it does not handle missing columns or empty annotations correctly."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "v_spec_1",
+          "semantic_intent": "Ensure mapRow correctly handles empty fragment annotations and NA/empty charge by defaulting to '0' and not returning early.",
+          "target_constraint": "When fragment annotations are empty but precursor annotations exist, the function should not return early; it should proceed with empty transitions list. NA charge defaults to '0'.",
+          "expected_failure_mode": "Without proper handling, the old seed would return early when transitions is empty, ignoring precursor annotations, or would use 'NA' as charge key.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "row_variant",
+            "value": "empty_frag_with_precursor_and_NA_charge_row"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Row with empty fragment annotation, non-empty precursor annotation, and 'NA' charge."
+        },
+        {
+          "spec_id": "v_spec_2",
+          "semantic_intent": "Ensure mapRow gracefully handles missing 'aggr_Fragment_Annotation' column by treating transitions as empty and returning early.",
+          "target_constraint": "If the header dict does not contain 'aggr_Fragment_Annotation', the function should still extract peptide name and then return immediately because transitions are empty.",
+          "expected_failure_mode": "Old seed might attempt to access header_dict['aggr_Fragment_Annotation'] and cause KeyError, or fail to return early.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "header_variant",
+            "value": "header_missing_fragment_annotation"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Header without 'aggr_Fragment_Annotation' column."
+        },
+        {
+          "spec_id": "v_spec_3",
+          "semantic_intent": "Ensure mapRow correctly handles empty charge string by defaulting to '0' and the key generation uses '0'.",
+          "target_constraint": "When charge is an empty string, it should be treated as '0'.",
+          "expected_failure_mode": "Old seed might use empty string as charge state, creating keys like 'PEPTIDEB/' which would be incorrect.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "row_variant",
+            "value": "empty_charge_row"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Row with empty charge string."
+        },
+        {
+          "spec_id": "v_spec_4",
+          "semantic_intent": "Ensure mapRow avoids duplicate peptide entries in the protein_mapping list when the same peptide appears in multiple rows for the same protein.",
+          "target_constraint": "If the same peptide name is processed twice for the same protein, it should be appended only once.",
+          "expected_failure_mode": "Old seed might append duplicate peptide names, leading to duplicates in protein_mapping.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "multi_row_variant",
+            "value": "two_rows_same_peptide_same_protein"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Two rows with identical peptide name and protein; protein_mapping should contain peptide only once."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must verify that mapRow returns correctly for rows with empty fragment annotations, missing columns, NA/empty charge, and duplicate peptide entries.",
+        "Each edge case must be implemented as a separate hidden test case.",
+        "The verifier must check both the correctness of mappings and the absence of exceptions."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "verification_strength": "increased",
+        "test_coverage": "edge_cases_added"
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

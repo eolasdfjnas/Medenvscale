@@ -1,0 +1,17 @@
+{
+  "scaled_executable_gold_code": "def get_cell_umi_read_string(read_id, sep='_'):\n    if isinstance(read_id, bytes):\n        read_id = read_id.decode('utf-8')\n    parts = read_id.rsplit(sep, maxsplit=2)\n    if len(parts) < 3:\n        raise ValueError('Read ID must contain at least two separators')\n    p0, p1, p2 = parts\n    # Determine UMI field\n    if p2.startswith('UMI'):\n        # Normal case: last part is the full UMI\n        umi_field = p2\n        cb_field = p1\n    else:\n        # UMI spans last two parts (p1 starts with UMI)\n        if not p1.startswith('UMI'):\n            raise ValueError('Invalid UMI: ' + p1)\n        umi_field = p1 + sep + p2\n        # Extract CB from p0 (last occurrence of 'CB' to end)\n        idx = p0.rfind('CB')\n        if idx == -1:\n            raise ValueError('Invalid cell barcode: ' + p0)\n        cb_field = p0[idx:]\n    # Validate UMI: must start with 'UMI', remainder only A,C,G,T,_\n    if not umi_field.startswith('UMI'):\n        raise ValueError('Invalid UMI: ' + umi_field)\n    umi_remainder = umi_field[3:]\n    if not all(c in 'ACGT_' for c in umi_remainder):\n        raise ValueError('Invalid UMI: ' + umi_field)\n    # Validate CB: must start with 'CB'\n    if not cb_field.startswith('CB'):\n        raise ValueError('Invalid cell barcode: ' + cb_field)\n    return umi_field.encode('utf-8'), cb_field.encode('utf-8')",
+  "repair_summary": "Fixed the handling of separator within UMI/CB fields by adjusting the reconstruction logic after rsplit(maxsplit=2). Now correctly extracts UMI and CB fields even when they contain the separator, using fallback to combine last two parts when the last part does not start with 'UMI'.",
+  "covered_operator_ids": [
+    "env_medagentgym_train_879_M3_d_01",
+    "env_medagentgym_train_879_M3_d_02",
+    "env_medagentgym_train_879_M3_c_03",
+    "env_medagentgym_train_879_M3_c_04"
+  ],
+  "covered_requirements": [
+    "Scaled executable cases must include at least one test where separator appears within the last two fields.",
+    "Scaled executable cases must include at least one test with bytes input.",
+    "Scaled executable cases must include tests for invalid UMI and invalid cell barcode (e.g., too short, invalid characters).",
+    "Scaled executable cases must include a test that explicitly checks the order of the returned tuple."
+  ],
+  "remaining_risks": []
+}

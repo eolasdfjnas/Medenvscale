@@ -1,0 +1,10 @@
+{
+  "primary_axis_weight_hint": {
+    "D": 5,
+    "C": 4,
+    "V": 3,
+    "A": 2
+  },
+  "secondary_axis_weight_hints": [],
+  "axis_weight_reason": "Primary task type structured_data_processing emphasizes data structure handling (D) and code completion (C) for parsing and outputting reaction objects; verification is functional test, less concerned with variable usage or action flow."
+}

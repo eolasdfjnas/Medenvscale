@@ -1,0 +1,26 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "vbevo1wq",
+      "function": {
+        "name": "submit_final_code",
+        "arguments": "{\"code\":\"def _get_num_matches(db, mzStr, adducts, tolerance):\\n    import requests\\n    import pandas as pd\\n    from io import StringIO\\n\\n    # Clean input mzStr: remove empty lines, non-numeric lines, and whitespace\\n    lines = mzStr.splitlines()\\n    valid_mzs = []\\n    for line in lines:\\n        line = line.strip()\\n        if not line:\\n            continue\\n        try:\\n            float(line)\\n            valid_mzs.append(line)\\n        except ValueError:\\n            continue\\n    \\n    if not valid_mzs:\\n        return 0\\n    \\n    cleaned_mz_str = \\\"\\\\n\\\".join(valid_mzs)\\n    \\n    # Clean adducts: handle extra spaces\\n    adduct_list = [a.strip() for a in adducts.split(',') if a.strip()]\\n    \\n    # LipidMaps Bulk Search URL\\n    url = \\\"https://www.lipidmaps.org/tools/ms/lmsd_search_bulk.php\\\"\\n    \\n    # Prepare form data\\n    payload = {\\n        'database': db,\\n        'input_type': 'mz',\\n        'mz_list': cleaned_mz_str,\\n        'tolerance': str(tolerance),\\n        'adducts[]': adduct_list,\\n        'output': 'csv'\\n    }\\n    \\n    try:\\n        # Perform the request\\n        response = requests.post(url, data=payload, timeout=30)\\n        if response.status_code != 200:\\n            return 0\\n            \\n        csv_data = response.text\\n        # Handle cases where no matches are found or response is empty\\n        if not csv_data or \\\"No matches found\\\" in csv_data or \\\"No records found\\\" in csv_data:\\n            return 0\\n            \\n        # Parse CSV response\\n        df = pd.read_csv(StringIO(csv_data))\\n        if df.empty:\\n            return 0\\n            \\n        # Robust column detection for the input m/z value\\n        # The server might return 'Input Mass', 'Input m/z', etc.\\n        target_cols = ['input mass', 'input m/z', 'input_m/z', 'input_mass', 'm/z', 'query m/z']\\n        match_col = None\\n        for col in df.columns:\\n            if col.lower() in target_cols:\\n                match_col = col\\n                break\\n        \\n        if match_col:\\n            # Count unique input m/z values that yielded at least one match\\n            # This handles multiple rows (multiple adducts/lipids) for the same input m/z\\n            return df[match_col].nunique()\\n        else:\\n            # If no specific column found but rows exist, we can't reliably count unique inputs\\n            # However, in standard LipidMaps CSVs, one of the above columns is present.\\n            return 0\\n            \\n    except Exception:\\n        # Gracefully handle network or parsing errors\\n        return 0\\n\\n# Call the function in the main context\\n_get_num_matches(db, mz_values, adducts, tolerance)\\n\"}"
+      }
+    }
+  ],
+  "reasoning_details": [
+    {
+      "type": "reasoning.encrypted",
+      "data": "EjQKMgEMOdbHJMD9qrSU/FVpGtvVM61NJYMUJ5J/9yN3l4hVIqvei/j//jGMAn2P8RuqjOGg",
+      "format": "google-gemini-v1",
+      "id": "vbevo1wq",
+      "index": 0
+    }
+  ]
+}

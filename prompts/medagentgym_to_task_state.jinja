@@ -1,0 +1,41 @@
+Turn the MedAgentGym executable task into a structured environment state for agent training.
+Task instruction: {{ question }}
+Expected answer: {{ answer_text }}
+Clinical topic: {{ clinical_topic }}
+Primary task type: {{ task_type }}
+Task family: {{ task_family }}
+System prompt: {{ system_prompt }}
+Resource files: {{ resource_files }}
+Return JSON only with this exact schema:
+{
+  "patient_state": {
+    "task_summary": "<short task summary>",
+    "task_family": "<task family>",
+    "resource_files": ["<resource 1>", "<resource 2>"],
+    "starter_code_present": <true_or_false>,
+    "access_tier": "<open|restricted>",
+    "risk_level": "<R1-R5>"
+  },
+  "clinical_context": {
+    "domain": "<medical domain>",
+    "primary_task_type": "<primary task type>",
+    "secondary_task_types": ["<optional secondary task type>"],
+    "question_origin": "medagentgym_seed",
+    "execution_mode": "code_agent",
+    "task_family": "<task family>",
+    "constraints": ["<constraint 1>", "<constraint 2>"]
+  },
+  "evidence_state": {
+    "known_facts": ["<fact 1>", "<fact 2>"],
+    "resource_manifest": ["<resource 1>", "<resource 2>"],
+    "missing_information": ["<missing item 1>", "<missing item 2>"]
+  },
+  "gold_state": {
+    "correct_answer": "<best solution summary>",
+    "recommended_action": "<what a strong agent should do>",
+    "must_include": ["<must include 1>", "<must include 2>"],
+    "risk_level": "<R1-R5>",
+    "verifier_reference": {}
+  },
+  "user_prompt": "<agent-facing task prompt>"
+}

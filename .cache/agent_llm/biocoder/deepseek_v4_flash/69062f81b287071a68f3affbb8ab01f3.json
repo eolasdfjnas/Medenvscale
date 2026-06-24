@@ -1,0 +1,16 @@
+{
+  "role": "assistant",
+  "content": "",
+  "reasoning_content": "Let me try to find the module in the Python path.",
+  "tool_calls": [
+    {
+      "index": 0,
+      "id": "call_00_QG1Po5RDWKMkbXrd8quT1953",
+      "type": "function",
+      "function": {
+        "name": "run_custom_test",
+        "arguments": "{\"code\": \"import sys\\nprint(sys.path[:5])\\n\", \"test_snippet\": \"print(\\\"hello\\\")\"}"
+      }
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Transformed seed case to verify thermodynamic constraints and internal LP problem structure.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_388_M3_c_01,env_medagentgym_train_388_M3_v_02",
+      "axis": "C,V",
+      "semantic_intent": "Prove that the function correctly adds thermodynamic constraints (dgri <= 1000*(1-zi)) and that the verifier checks internal LP problem state including constraint count and variable definitions.",
+      "target_constraint": "For each reaction, the problem must include a linear constraint dgri <= 1000 * (1 - zi) with M=1000.",
+      "expected_failure_mode": "Seed behavior (without thermodynamic constraints) would fail constraint count check and constraint form check.",
+      "setup_code": "model = MetabolicModel()\nsolver = Solver('glpk')",
+      "call_code": "prob, v, zi, dgri, xij, compounds = make_tmfa_problem(model, solver)\nprint(\"Namespaces:\", list(prob.namespaces.keys()))\nprint(\"Flux vars:\", v.vars)\nprint(\"Binary vars:\", zi.vars)\nprint(\"Gibbs vars:\", dgri.vars)\nprint(\"Concentration vars:\", xij.vars)\nprint(\"Compounds:\", compounds)\nresult = {'prob': prob, 'v': v, 'zi': zi, 'dgri': dgri, 'xij': xij, 'compounds': compounds}",
+      "assertion_code": "assert len(prob.constraints) == len(model.reactions) + len(model.compounds), f\"Expected {len(model.reactions)+len(model.compounds)} constraints, got {len(prob.constraints)}\"\nmass_balance_count = len(model.compounds)\nfor i, rxn in enumerate(model.reactions):\n    expr = str(prob.constraints[mass_balance_count + i].expr)\n    assert 'dgri' in expr and 'zi' in expr, f\"Thermodynamic constraint for {rxn} does not contain dgri or zi\"",
+      "covered_requirements": [
+        "The function must now add a thermodynamic constraint for each reaction: dgri <= 1000 * (1 - zi). Ensure the scaled case checks this.",
+        "The verifier must execute object state assertions that validate the internal structure of the returned problem, constraints, and variable definitions."
+      ],
+      "expected_output_signature": {
+        "return_type": "dict",
+        "return_keys": [
+          "prob",
+          "v",
+          "zi",
+          "dgri",
+          "xij",
+          "compounds"
+        ],
+        "return_value": {
+          "prob": "<Problem>",
+          "v": "<Namespace>",
+          "zi": "<Namespace>",
+          "dgri": "<Namespace>",
+          "xij": "<Namespace>",
+          "compounds": [
+            "A",
+            "B"
+          ]
+        },
+        "stdout_contains": [
+          "Namespaces: ['flux', 'zi', 'dgri', 'xij']",
+          "Flux vars: {('R1',): {'lower': -10, 'upper': 100, 'type': 'Continuous'}, ('R2',): {'lower': 0, 'upper': 50, 'type': 'Continuous'}}",
+          "Binary vars: {('R1',): {'lower': 0, 'upper': 1, 'type': 'Binary'}, ('R2',): {'lower': 0, 'upper': 1, 'type': 'Binary'}}",
+          "Gibbs vars: {('R1',): {'lower': -1000, 'upper': 1000, 'type': 'Continuous'}, ('R2',): {'lower': -1000, 'upper': 1000, 'type': 'Continuous'}}",
+          "Concentration vars: {('A',): {'lower': -50, 'upper': 50, 'type': 'Continuous'}, ('B',): {'lower': -50, 'upper': 50, 'type': 'Continuous'}}",
+          "Compounds: ['A', 'B']"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

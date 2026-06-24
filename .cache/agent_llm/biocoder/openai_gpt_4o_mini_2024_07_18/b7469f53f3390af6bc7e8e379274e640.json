@@ -1,0 +1,6 @@
+{
+  "role": "assistant",
+  "content": "```python\ndef deblur_system_call(params, input_fp):\n    command = ['deblur', 'workflow', '--is-worker-thread', '--keep-tmp-files']\n    \n    # Append params to the command\n    command.extend(params)\n    \n    # Add the input file path as a single element\n    command.append(input_fp)\n    \n    # Log the full command\n    logging.debug(f\"Executing command: {' '.join(command)}\")\n    \n    # Call the system command\n    return _system_call(command)\n```",
+  "refusal": null,
+  "reasoning": null
+}

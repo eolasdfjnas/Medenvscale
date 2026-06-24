@@ -1,0 +1,89 @@
+{
+  "operator_instances": [
+    {
+      "axis": "C",
+      "operator_type": "validate_flux_bounds_constraint",
+      "operator_intensity": 1,
+      "transformation_goal": "Add a constraint that each parsed entry must satisfy lower <= upper, raising a ValueError if violated.",
+      "rationale": "Introduces a computational constraint (flux bound validation) that the function must enforce, increasing the difficulty of correct implementation beyond simple format detection.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "In metabolic modeling, exchange reactions are often defined in files that list metabolites and their allowable flux bounds. Write a function `parse_exchange_file(path, default_compartment)` that reads an exchange file (either TSV or YAML) and yields each compound entry as a dictionary with keys 'compound', 'lower', 'upper', and, for YAML, a 'compartment'. The file format should be auto-detected: if TSV, use `parse_exchange_table_file(f)`; if YAML, use `parse_exchange_yaml_file(context, f, default_compartment)`. Raise a `ParseError` if the format cannot be determined. Additionally, ensure that for each parsed entry, the lower bound is less than or equal to the upper bound; if not, raise a `ValueError` with an appropriate message."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "type": "exception",
+            "description": "Parses a TSV file with an invalid entry where lower > upper and expects ValueError",
+            "setup_code": "import tempfile, os\nwith tempfile.NamedTemporaryFile(mode='w', suffix='.tsv', delete=False) as f:\n    f.write('compound\\tlower\\tupper\\n')\n    f.write('BadMet\\t10\\t0\\n')\n    f.write('GoodMet\\t-5\\t5\\n')\n    path = f.name",
+            "call_code": "try:\n    for _ in parse_exchange_file(path, default_compartment='c'):\n        pass\n    result = 'no_error'\nexcept ValueError as e:\n    result = 'value_error'\nfinally:\n    os.unlink(path)",
+            "expected": "value_error"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "The function silently yields entries with reversed bounds",
+          "The function does not raise ValueError for invalid bounds"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "Prove that the function validates flux bounds and rejects entries with lower > upper.",
+          "target_constraint": "The function must raise ValueError if any parsed entry has lower > upper.",
+          "expected_failure_mode": "Old seed behavior would yield the entry without validation, so it would pass through invalid bounds.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "TSV file with one entry having lower > upper"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Scaled case that feeds a TSV file containing an entry with lower=10, upper=0 and expects a ValueError."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include at least one case with invalid flux bounds that triggers a ValueError."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "new_constraint": "Flux bound validation (lower <= upper)"
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

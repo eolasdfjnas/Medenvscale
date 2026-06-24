@@ -1,0 +1,32 @@
+{
+  "scaled_executable_gold_code": "from statistics import median\n\ndef median_absolute_deviation(data):\n    med = median(data)\n    deviations = [abs(x - med) for x in data]\n    return median(deviations)\n\ndef compute_probs(datalist: list) -> (list, list):\n    \"\"\"\n    Computes the probabilities for fragments with at least 100 pairs supporting it and that are at least 10 median\n    deviations from the median.\n    :param datalist: A list of fragments with counts (may contain None, numeric strings, or other types)\n    :return: A list of values that meet the criteria (sorted ascending) and a list of their associated probabilities\n    \"\"\"\n    FILTER_MINREADS = 100\n    FILTER_MEDDEV_M = 10\n    # Clean the input: keep only numeric values, convert numeric strings, ignore None and non-numeric\n    cleaned = []\n    for item in datalist:\n        if item is None:\n            continue\n        if isinstance(item, str):\n            try:\n                num = int(item)\n                cleaned.append(num)\n            except ValueError:\n                continue\n        elif isinstance(item, (int, float)):\n            cleaned.append(item)\n        # else ignore other types\n    if not cleaned:\n        return [], []\n    med = median(cleaned)\n    mad = median_absolute_deviation(cleaned)\n    # Use unique values from cleaned to iterate, but we need counts from cleaned\n    unique_vals = set(cleaned)\n    values = []\n    probabilities = []\n    for item in unique_vals:\n        if 0 < item <= med + FILTER_MEDDEV_M * mad:\n            count = cleaned.count(item)\n            if count >= FILTER_MINREADS:\n                values.append(item)\n                probabilities.append(count)\n    # Sort values and align probabilities\n    sorted_pairs = sorted(zip(values, probabilities), key=lambda x: x[0])\n    if sorted_pairs:\n        values, probabilities = zip(*sorted_pairs)\n        values = list(values)\n        probabilities = list(probabilities)\n    else:\n        values = []\n        probabilities = []\n    # Compute probabilities as relative frequencies\n    count_sum = sum(probabilities)\n    if count_sum > 0:\n        probabilities = [n / count_sum for n in probabilities]\n    return values, probabilities\n\ndef main():\n    # Sample list of fragment lengths observed from paired-end reads (includes None and mixed types)\n    datalist = [8]*100 + [None]*5 + ['10']*60 + [12]*30\n    # Compute filtered fragment lengths and their probabilities\n    values, probs = compute_probs(datalist)\n    print(\"Selected fragment lengths:\", values)\n    print(\"Their probabilities:\", probs)\n\nif __name__ == \"__main__\":\n    main()",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Scaled task requires handling of None, mixed types (numeric strings), zero MAD, and sorted output. Seed solution did not handle these robustly.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_811_M3_d_01",
+    "env_medagentgym_train_811_M3_d_02",
+    "env_medagentgym_train_811_M3_c_03",
+    "env_medagentgym_train_811_M3_c_04"
+  ],
+  "covered_requirements": [
+    "Make the function robust to missing values (None) in the input list by ignoring them.",
+    "Make the function handle non-integer values (e.g., strings representing numbers or other objects) by filtering them out or converting them appropriately.",
+    "Ensure the function computes correctly when all data values are identical (MAD=0).",
+    "Ensure the function returns the filtered fragment lengths in ascending order."
+  ],
+  "implementation_notes": [
+    "The input list is cleaned by skipping None, converting numeric strings to int, and ignoring non-numeric strings.",
+    "MAD is computed on the cleaned numeric list.",
+    "The condition item <= med + 10 * MAD works correctly when MAD=0.",
+    "Output values are sorted in ascending order, with probabilities aligned.",
+    "The function returns a tuple (list, list) as required."
+  ],
+  "assumptions": [
+    "Input may contain None, strings that represent integers, and other types; only valid integers/floats are processed.",
+    "Count of each unique value is computed from the cleaned list.",
+    "Probabilities sum to 1 (or may be empty if no values qualify)."
+  ]
+}

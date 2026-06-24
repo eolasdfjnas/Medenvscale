@@ -1,0 +1,175 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "add_file_existence_check",
+      "operator_intensity": 1,
+      "transformation_goal": "Add validation that input_fp file exists and is non-empty before building the command.",
+      "rationale": "Increase data complexity by requiring input file validation, which is a common real-world requirement.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Write a Python function named deblur_system_call that builds a Deblur CLI command to deblur a FASTA file. The function should take two arguments: params (a list of strings representing additional command-line options) and input_fp (a string path to the input FASTA file). It must construct a command list invoking 'deblur workflow' with flags '--is-worker-thread' and '--keep-tmp-files', append all items in params, log the full command via Python's logging module, and invoke it via a helper function _system_call. Additionally, the function must call `_system_call` only if the input file exists and is not empty; otherwise, it should raise FileNotFoundError. The function should return the stdout, stderr, and return code from _system_call (if called)."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {
+          "gold_solution": "def deblur_system_call(params, input_fp):\n    import os\n    if not os.path.isfile(input_fp) or os.path.getsize(input_fp) == 0:\n        raise FileNotFoundError(f\"Input file {input_fp} does not exist or is empty.\")\n    logger = logging.getLogger(__name__)\n    logger.debug('[%s] deblur system call params %s, input_fp %s' % (mp.current_process().name, params, input_fp))\n    script_name = 'deblur'\n    script_subprogram = 'workflow'\n    command = [script_name, script_subprogram, '--seqs-fp', input_fp, '--is-worker-thread', '--keep-tmp-files']\n    command.extend(params)\n    logger.debug('[%s] running command %s' % (mp.current_process().name, command))\n    return _system_call(command)"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          "If input_fp does not exist, deblur_system_call must raise FileNotFoundError."
+        ],
+        "new_hidden_tests": [
+          {
+            "test_id": "hidden_test_missing_file",
+            "setup": "import tempfile, os; input_fp = 'nonexistent.fasta'; params = []",
+            "call": "try: deblur_system_call(params, input_fp); assert False except FileNotFoundError: pass",
+            "expected": "exception raised"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Seed solution does not check file existence and would proceed with dummy _system_call."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "D_spec_1",
+          "semantic_intent": "Prove that the function validates input file existence.",
+          "target_constraint": "The function must raise an exception if the input file does not exist or is empty.",
+          "expected_failure_mode": "Old seed solution would attempt to build command with missing file and not raise an error.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "input_fp='nonexistent.fasta'"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "exception"
+          },
+          "test_case_description": "Call deblur_system_call with a non-existent input file path; expect FileNotFoundError."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a case where input_fp is missing and check exception."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "remove_conflicting_params",
+      "operator_intensity": 1,
+      "transformation_goal": "Ensure function removes any existing '--seqs-fp' flag from params to prevent duplication.",
+      "rationale": "Increase robustness by preventing duplicate flags that could cause command failure.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Write a Python function named deblur_system_call that builds a Deblur CLI command to deblur a FASTA file. The function should take two arguments: params (a list of strings representing additional command-line options) and input_fp (a string path to the input FASTA file). It must construct a command list invoking 'deblur workflow' with flags '--is-worker-thread' and '--keep-tmp-files', append all items in params, log the full command via Python's logging module, and invoke it via a helper function _system_call. The function must check the input file existence (as in previous requirement). Additionally, if params already contains '--seqs-fp', remove that flag and its value before appending to avoid duplicate flags. The function should return the stdout, stderr, and return code from _system_call."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {
+          "gold_solution": "def deblur_system_call(params, input_fp):\n    import os\n    if not os.path.isfile(input_fp) or os.path.getsize(input_fp) == 0:\n        raise FileNotFoundError(f\"Input file {input_fp} does not exist or is empty.\")\n    logger = logging.getLogger(__name__)\n    logger.debug('[%s] deblur system call params %s, input_fp %s' % (mp.current_process().name, params, input_fp))\n    script_name = 'deblur'\n    script_subprogram = 'workflow'\n    # Remove any existing --seqs-fp flag from params\n    cleaned_params = []\n    i = 0\n    while i < len(params):\n        if params[i] == '--seqs-fp':\n            i += 2  # skip the flag and its value\n        else:\n            cleaned_params.append(params[i])\n            i += 1\n    command = [script_name, script_subprogram, '--seqs-fp', input_fp, '--is-worker-thread', '--keep-tmp-files']\n    command.extend(cleaned_params)\n    logger.debug('[%s] running command %s' % (mp.current_process().name, command))\n    return _system_call(command)"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          "If params contains '--seqs-fp', the final command must contain exactly one '--seqs-fp' (the one added by the function)."
+        ],
+        "new_hidden_tests": [
+          {
+            "test_id": "hidden_test_duplicate_seqs_fp",
+            "setup": "import tempfile, os; input_fp = 'test.fasta'; open(input_fp, 'w').close(); params = ['--seqs-fp', 'other.fasta', '--min-size', '50']",
+            "call": "stdout, stderr, ret = deblur_system_call(params, input_fp); assert 'other.fasta' not in stdout and 'test.fasta' in stdout",
+            "expected": "stdout contains 'test.fasta' and not 'other.fasta'"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Seed solution simply extends params, leading to duplicate '--seqs-fp' flags."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "A_spec_1",
+          "semantic_intent": "Prove that the function removes conflicting '--seqs-fp' flag from params.",
+          "target_constraint": "If params already contains '--seqs-fp', the function must remove it to avoid duplication.",
+          "expected_failure_mode": "Old seed solution would keep the duplicate flag, causing potential command failure.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "params=['--seqs-fp', 'other.fasta']"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "specific_string_in_stdout",
+            "value": "test.fasta"
+          },
+          "test_case_description": "Pass params with '--seqs-fp' set to a different file; the function should use input_fp and not the one in params."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a case where params contains '--seqs-fp' and verify it is removed."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

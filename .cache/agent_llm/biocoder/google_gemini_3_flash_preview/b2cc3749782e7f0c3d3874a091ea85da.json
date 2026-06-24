@@ -1,0 +1,26 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "tool_submit_final_code_EH1Dow2Jm0xH4srPuK6k",
+      "function": {
+        "name": "submit_final_code",
+        "arguments": "{\"code\":\"def parse_theta_results(fname):\\n    \\\"\\\"\\\"\\n    Parses a THetA results file with columns NLL, mu, C, and p*.\\n    Handles multiple tumor fractions, placeholders, and consistency checks.\\n    \\\"\\\"\\\"\\n    placeholders = {'NA', '?', '.', 'na', 'none', 'null', ''}\\n\\n    def to_float(val):\\n        if val is None or val.strip().lower() in placeholders:\\n            return None\\n        try:\\n            return float(val)\\n        except ValueError:\\n            return None\\n\\n    def to_int(val):\\n        if val is None or val.strip().lower() in placeholders:\\n            return None\\n        try:\\n            # Handle cases like '2.0'\\n            return int(float(val))\\n        except ValueError:\\n            return None\\n\\n    with open(fname, 'r') as f:\\n        lines = [line.strip() for line in f if line.strip()]\\n\\n    if not lines:\\n        return None\\n\\n    # Assume first line is header, second line is data\\n    if len(lines) < 2:\\n        # If only header or empty, return defaults or handle as needed\\n        # Based on requirements, we expect at least one data line\\n        return None\\n\\n    data_line = lines[1]\\n    parts = data_line.split('\\\\t')\\n    \\n    # Ensure we have 4 columns, padding with empty strings if missing\\n    while len(parts) < 4:\\n        parts.append('')\\n\\n    raw_nll, raw_mu, raw_c, raw_pstar = parts\\n\\n    # Parse NLL\\n    nll = to_float(raw_nll)\\n\\n    # Parse mu\\n    mu_vals = [v.strip() for v in raw_mu.split(',') if v.strip()]\\n    if not mu_vals:\\n        mu_normal = None\\n        mu_tumors = []\\n    else:\\n        mu_normal = to_float(mu_vals[0])\\n        mu_tumors = [to_float(v) for v in mu_vals[1:]]\\n\\n    # Parse C\\n    # C is colon-separated groups. Each group represents states for tumors.\\n    c_groups = [g.strip() for g in raw_c.split(':') if g.strip()]\\n    parsed_c = []\\n    for g in c_groups:\\n        # Each group might be a single value or comma-separated if multiple tumors\\n        sub_vals = [v.strip() for v in g.split(',')]\\n        parsed_c.append([to_int(v) for v in sub_vals])\\n\\n    # Parse p*\\n    # p* is comma-separated list of probabilities\\n    p_vals = [v.strip() for v in raw_pstar.split(',') if v.strip()]\\n    # Requirement: p* must be a list of one inner list\\n    parsed_pstar = [[to_float(v) for v in p_vals]] if p_vals else []\\n\\n    # Consistency Checks\\n    num_tumors = len(mu_tumors)\\n    \\n    # Check C consistency: each group in C must have length equal to num_tumors\\n    for group in parsed_c:\\n        if len(group) != num_tumors:\\n            raise ValueError(f\\\"Consistency error: Number of tumor fractions ({num_tumors}) \\\"\\n                             f\\\"does not match number of states in C group ({len(group)}).\\\")\\n\\n    # Requirement: p* must be a list of one inner list of four floats (if provided)\\n    # Note: The prompt says \\\"p* must be a list of one inner list of four floats\\\", \\n    # but also says \\\"handle missing values\\\". We follow the logic of the specific test cases.\\n    \\n    return {\\n        'NLL': nll,\\n        'mu_normal': mu_normal,\\n        'mu_tumors': mu_tumors,\\n        'C': parsed_c,\\n        'p*': parsed_pstar\\n    }\\n\"}"
+      }
+    }
+  ],
+  "reasoning_details": [
+    {
+      "type": "reasoning.encrypted",
+      "data": "AY89a1+11n1xudQCj0uoi3uOBpHwfQDMZSTQd8E6lEqgqgCf+DEmh9JK+YqFhKZ4Vxg=",
+      "format": "google-gemini-v1",
+      "id": "tool_submit_final_code_EH1Dow2Jm0xH4srPuK6k",
+      "index": 0
+    }
+  ]
+}

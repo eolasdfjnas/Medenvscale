@@ -1,0 +1,30 @@
+{
+  "scaled_executable_gold_code": "import sys\nimport types\nimport json\nimport pandas as pd\nimport networkx as nx\n\n# Default macsypy module for testing (will be overridden by setup_code)\nmacsypy = types.SimpleNamespace(__version__=\"1.2.3\",\n                                solution=types.SimpleNamespace(nx=nx),\n                                __citation__=\"Doe et al., 2023\")\n\ndef get_version_message(format='text'):\n    # Determine package name dynamically\n    pkg_name = getattr(macsypy, '__name__', 'Macsyfinder')\n    pkg_version = macsypy.__version__  # may raise AttributeError if missing\n\n    # Build library versions\n    py_vers = sys.version.rstrip()\n    nx_vers = None\n    if hasattr(macsypy, 'solution') and hasattr(macsypy.solution, 'nx'):\n        nx_vers = macsypy.solution.nx.__version__\n    pd_vers = pd.__version__\n\n    # Citation handling\n    citation = getattr(macsypy, '__citation__', None)\n    if citation is not None and callable(citation):\n        citation = citation()\n    if citation is None:\n        citation = ''\n\n    if format == 'text':\n        lines = [f\"{pkg_name} {pkg_version}\"]\n        lines.append(\"using:\")\n        lines.append(f\"- Python {py_vers}\")\n        if nx_vers is not None:\n            lines.append(f\"- NetworkX {nx_vers}\")\n        lines.append(f\"- Pandas {pd_vers}\")\n        lines.append(\"\")\n        lines.append(\"MacsyFinder is distributed under the terms of the GNU General Public License (GPLv3).\")\n        lines.append(\"See the COPYING file for details.\")\n        lines.append(\"\")\n        lines.append(\"If you use this software please cite:\")\n        if citation:\n            lines.append(citation)\n        else:\n            lines.append(\"\")\n        lines.append(\"and don't forget to cite models used:\")\n        lines.append(\"macsydata cite <model>\")\n        return \"\\n\".join(lines)\n    elif format == 'json':\n        data = {}\n        data[pkg_name] = pkg_version\n        data['python'] = py_vers\n        if nx_vers is not None:\n            data['networkx'] = nx_vers\n        data['pandas'] = pd_vers\n        data['citation'] = citation\n        return json.dumps(data)\n    else:\n        raise ValueError(\"format must be 'text' or 'json'\")\n\ndef main():\n    msg = get_version_message()\n    print(msg)\n    # Verify expected contents\n    assert \"Macsyfinder 1.2.3\" in msg\n    assert \"- Python\" in msg\n    assert \"- NetworkX\" in msg\n    assert \"- Pandas\" in msg\n    assert \"If you use this software please cite\" in msg\n\nif __name__ == \"__main__\":\n    main()\n",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Added optional 'format' parameter, dynamic package name retrieval, graceful handling of missing/callable citation and missing solution attribute.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_611_M4_d_01",
+    "env_medagentgym_train_611_M4_c_02",
+    "env_medagentgym_train_611_M4_a_03",
+    "env_medagentgym_train_611_M4_v_04"
+  ],
+  "covered_requirements": [
+    "Increase input complexity by requiring the function to gracefully handle missing or optional attributes in the macsypy module.",
+    "Add a computation constraint: the function must accept an optional parameter 'format' ('text' or 'json') returning different output structures.",
+    "Increase adversarial robustness by requiring the function to dynamically retrieve package display names instead of hardcoding 'Macsyfinder', 'NetworkX', 'Pandas'.",
+    "Strengthen the verifier with multiple robust oracle cases, including edge conditions, exception handling, and file output checks."
+  ],
+  "implementation_notes": [
+    "The package display name is dynamically retrieved via getattr(macsypy, '__name__', 'Macsyfinder').",
+    "The function accepts optional 'text' or 'json' format; JSON output includes all required keys.",
+    "Missing or callable __citation__ is handled gracefully.",
+    "Missing solution attribute causes NetworkX line to be omitted in text and key omitted in JSON."
+  ],
+  "assumptions": [
+    "The global macsypy object may be replaced by setup_code; function relies on runtime attributes.",
+    "Fallback package name is 'Macsyfinder' to maintain backward compatibility with seed cases."
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "scaled_executable_gold_code": "import os\n\nclass ConfigParserWithComments:\n    def __init__(self):\n        self.sections = {}\n        self.comments = {}\n\n    def add_section(self, section, comment=None):\n        self.sections[section] = {}\n        if comment:\n            self.comments[section] = comment\n\n    def set(self, section, option, value):\n        self.sections[section][option] = value\n\n    def write(self, file):\n        for section in self.sections:\n            if section in self.comments:\n                file.write(self.comments[section] + '\\n')\n            file.write('[' + section + ']\\n')\n            for option, value in self.sections[section].items():\n                if '\\n' in value:\n                    lines = value.split('\\n')\n                    file.write(option + ' = ' + lines[0] + '\\n')\n                    for line in lines[1:]:\n                        file.write(' ' + line + '\\n')\n                else:\n                    file.write(option + ' = ' + value + '\\n')\n            file.write('\\n')\n\ndef serialize(config, path):\n    with open(path, 'w') as file:\n        config.write(file)\n\ndef main():\n    config = ConfigParserWithComments()\n    config.add_section('General', '; General section')\n    config.set('General', 'version', '1.0')\n    config.set('General', 'enabled', 'yes')\n    config.set('General', 'description', 'line1\\nline2')\n    config.add_section('User', '; User section')\n    config.set('User', 'name', 'Alice')\n    config.set('User', 'email', 'alice@example.com')\n\n    path = 'test_config.ini'\n    serialize(config, path)\n\n    if os.path.exists(path):\n        with open(path, 'r') as f:\n            content = f.read()\n        print('Configuration file content:')\n        print(content)\n    else:\n        print('Failed to create configuration file.')\n\nif __name__ == '__main__':\n    main()\n",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "The seed task used standard ConfigParser; the scaled task requires a custom ConfigParserWithComments class to preserve comments and handle multi-line values. The serialize function is unchanged but must work with the new class. The main function is updated to create a config with comments and multi-line values.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_644_M3_d_01",
+    "env_medagentgym_train_644_M3_d_02",
+    "env_medagentgym_train_644_M3_v_03"
+  ],
+  "covered_requirements": [
+    "Require that the serialize function preserves comments from the ConfigParserWithComments object.",
+    "Require that the serialize function correctly handles multi-line values in the config object.",
+    "The verifier must check exact stdout, file SHA256, and return value None."
+  ],
+  "implementation_notes": [
+    "Defined a minimal ConfigParserWithComments class that supports add_section, set, and write methods, preserving comments and formatting multi-line values with continuation lines.",
+    "The serialize function remains the same as the seed: opens the file for writing and calls config.write.",
+    "The main function creates a configuration with comments and a multi-line value, writes it to 'test_config.ini', then reads and prints the content, matching the expected oracle case output."
+  ],
+  "assumptions": []
+}

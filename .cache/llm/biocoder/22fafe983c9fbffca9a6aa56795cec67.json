@@ -1,0 +1,39 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Comprehensive test covering all scaled constraints: whitespace handling, variable field counts, multi-character separators, field length constraints, max_umi_len truncation, and empty field detection.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_879_M4_d_01,env_medagentgym_train_879_M4_c_02,env_medagentgym_train_879_M4_a_03",
+      "axis": "D,C,A",
+      "semantic_intent": "Verify that the function correctly handles all newly added constraints including whitespace stripping, variable field counts, multi-character separators, minimum field length of 2, max_umi_len truncation, and raises ValueError on empty fields.",
+      "target_constraint": "Function must strip whitespace from read_id before processing, handle any number of fields, support multi-character separators, enforce minimum field length of 2 for both UMI and barcode, truncate UMI via max_umi_len parameter, and raise ValueError on empty fields due to consecutive or trailing separators.",
+      "expected_failure_mode": "Old seed solution fails on trailing whitespace (does not strip), short fields (does not enforce length), max_umi_len (no parameter), and empty fields (does not check).",
+      "setup_code": "read_id_good = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB10123_UMIACTGGA'\nread_id_bad = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001'\nread_id_whitespace = '  NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB10123_UMIACTGGA  '\nread_id_multi_field = 'A_B_C_CB1_UMI1'\nread_id_multi_sep = 'A--B--C'\nsep_multi = '--'\nread_id_short = 'A_B_C'\nread_id_long_umi = 'prefix_CB_UMIABCDEFGHIJKLMN'\nread_id_empty = 'A__B'\nread_id_trail = 'A_B_'\nsep_default = '_'",
+      "call_code": "# Test 1: standard good read (should succeed)\numi, cb = get_cell_umi_read_string(read_id_good, sep_default)\nprint(\"Test1 - UMI bytes:\", umi, \"Cell barcode bytes:\", cb)\n\n# Test 2: insufficient fields (should raise ValueError)\ntry:\n    get_cell_umi_read_string(read_id_bad, sep_default)\n    print(\"Test2 - No error\")\nexcept ValueError as e:\n    print(\"Test2 - Error raised:\")\n\n# Test 3: whitespace (should succeed after strip)\numi3, cb3 = get_cell_umi_read_string(read_id_whitespace, sep_default)\nprint(\"Test3 - UMI bytes:\", umi3, \"Cell barcode bytes:\", cb3)\n\n# Test 4: multi-field (should extract last two)\numi4, cb4 = get_cell_umi_read_string(read_id_multi_field, sep_default)\nprint(\"Test4 - UMI bytes:\", umi4, \"Cell barcode bytes:\", cb4)\n\n# Test 5: multi-char separator\numi5, cb5 = get_cell_umi_read_string(read_id_multi_sep, sep_multi)\nprint(\"Test5 - UMI bytes:\", umi5, \"Cell barcode bytes:\", cb5)\n\n# Test 6: short fields (should raise ValueError)\ntry:\n    get_cell_umi_read_string(read_id_short, sep_default)\n    print(\"Test6 - No error\")\nexcept ValueError as e:\n    print(\"Test6 - Error raised:\")\n\n# Test 7: max_umi_len truncation\numi7, cb7 = get_cell_umi_read_string(read_id_long_umi, sep_default, max_umi_len=5)\nprint(\"Test7 - UMI bytes:\", umi7, \"Cell barcode bytes:\", cb7)\n\n# Test 8: consecutive separators (empty field) should raise ValueError\ntry:\n    get_cell_umi_read_string(read_id_empty, sep_default)\n    print(\"Test8 - No error\")\nexcept ValueError as e:\n    print(\"Test8 - Error raised:\")\n\n# Test 9: trailing separator (empty last field) should raise ValueError\ntry:\n    get_cell_umi_read_string(read_id_trail, sep_default)\n    print(\"Test9 - No error\")\nexcept ValueError as e:\n    print(\"Test9 - Error raised:\")\n\nresult = {'tests_completed': True}",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must cover whitespace handling, variable field counts, and insufficient fields.",
+        "Scaled executable cases must check field length constraints, multi-char separators, and max_umi_len parameter.",
+        "Scaled executable cases must include tests with consecutive separators and trailing separators yielding empty fields."
+      ],
+      "expected_output_signature": {
+        "return_value": {
+          "tests_completed": true
+        },
+        "stdout_contains": [
+          "Test1 - UMI bytes: b'UMIACTGGA' Cell barcode bytes: b'CB10123'",
+          "Test2 - Error raised:",
+          "Test3 - UMI bytes: b'UMIACTGGA' Cell barcode bytes: b'CB10123'",
+          "Test4 - UMI bytes: b'UMI1' Cell barcode bytes: b'CB1'",
+          "Test5 - UMI bytes: b'C' Cell barcode bytes: b'B'",
+          "Test6 - Error raised:",
+          "Test7 - UMI bytes: b'UMIAB' Cell barcode bytes: b'CB'",
+          "Test8 - Error raised:",
+          "Test9 - Error raised:"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

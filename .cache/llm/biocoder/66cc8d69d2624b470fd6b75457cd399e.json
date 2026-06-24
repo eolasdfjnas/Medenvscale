@@ -1,0 +1,23 @@
+{
+  "scaled_executable_gold_code": "import os\nimport tarfile\nimport tempfile\nfrom subprocess import check_call, CalledProcessError\n\nclass GenipeError(Exception):\n    pass\n\ndef untar_file(path, fn):\n    \"\"\"Extracts a tar archive.\n\n    Args:\n        path (str): the path to where the file will be extracted\n        fn (str): the name of the tar archive\n\n    \"\"\"\n    try:\n        check_call(['tar', '-C', path, '-xf', fn])\n    except CalledProcessError:\n        raise GenipeError('Could not extract {}'.format(fn))\n",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "The scaled task requires handling of filenames with spaces and prohibits shell=True; the original solution already satisfies these by using subprocess with list arguments, but we regenerate to explicitly include the requirements.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_255_M3_d_01",
+    "env_medagentgym_train_255_M3_a_02"
+  ],
+  "covered_requirements": [
+    "Handle scaled input/data variants from the oracle cases.",
+    "Add robustness requirement that the function must not use shell=True or os.system to avoid shell injection vulnerabilities.",
+    "Scaled executable cases must include a test with a tar archive containing a file with a space in its name.",
+    "Include a hidden static test that rejects shell=True or os.system usage."
+  ],
+  "implementation_notes": [
+    "The function uses subprocess.check_call with a list of arguments, inherently avoiding shell injection and correctly handling spaces in filenames.",
+    "The GenipeError exception is raised on extraction failure."
+  ],
+  "assumptions": []
+}

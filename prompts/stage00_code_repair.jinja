@@ -1,0 +1,44 @@
+You are repairing a BioCoder executable sample so it can run successfully and preserve the original task intent.
+
+Return JSON only.
+
+Task problem:
+{{ problem }}
+
+Function or class signature:
+{{ signature }}
+
+Context code:
+{{ context }}
+
+Reference solution:
+{{ solution }}
+
+Current executable code:
+{{ current_code }}
+
+Failure reason:
+{{ failure_reason }}
+
+Observed stdout:
+{{ stdout }}
+
+Observed stderr:
+{{ stderr }}
+
+Runtime error:
+{{ runtime_error }}
+
+Repair requirements:
+1. Preserve the task semantics and public API.
+2. Keep the executable sample behavior so the script can still be run directly.
+3. Do not remove the example invocation unless it is replaced by an equivalent runnable example.
+4. Do not hardcode outputs just to satisfy the sample.
+5. Return complete Python code.
+6. If the script already computes the example result but does not expose it, it is acceptable to assign it to `answer` or print it.
+
+Return a valid JSON object with exactly these fields:
+{
+  "repaired_code": "<complete repaired Python code>",
+  "repair_summary": "<brief summary of the repair>"
+}

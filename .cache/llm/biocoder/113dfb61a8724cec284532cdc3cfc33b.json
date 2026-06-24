@@ -1,0 +1,95 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "add_malformed_input_lines",
+      "operator_intensity": 1,
+      "transformation_goal": "Introduce non-numeric and empty lines in the m/z input string to test robustness of input parsing.",
+      "rationale": "The original task assumes clean numeric m/z values. Adding malformed lines (e.g., 'abc', '12.3.4', '') forces the solution to handle parsing errors and count only valid numeric inputs. This increases data complexity without changing the core query logic.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "input validation",
+            "exception handling"
+          ]
+        },
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "name": "malformed_mz_values",
+              "type": "string",
+              "description": "m/z values with malformed lines"
+            }
+          ]
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import requests\nimport pandas as pd\nfrom requests_toolbelt.multipart.encoder import MultipartEncoder\nfrom io import StringIO\n# Assume the solution function _get_num_matches(db, mzStr, adducts, tolerance=0.001) is available here.\ndef main():\n    # Specify which LipidMaps database to query (e.g. 'GLYCOLIPIDS')\n    db = 'GLYCOLIPIDS'\n    # Create a string with one m/z value per line, including some malformed lines\n    mz_values = '100.0\\nabc\\n200.0\\n12.3.4\\n300.0\\n'\n    # Choose adducts of interest\n    adducts = 'M+H,M+Na'\n    # Set mass tolerance in Daltons\n    tolerance = 0.01\n\n    # CALL THE SOLUTION FUNCTION HERE\n    num_matches = <<insert solution here>>\n\n    print(f'Number of unique m/z matches: {num_matches}')\n\nif __name__ == '__main__':\n    main()"
+        },
+        "gold_state_patch": {
+          "scaled_gold_solution": "def _get_num_matches(db, mzStr, adducts, tolerance=0.001):\n    \"\"\"Return the number of matches for the selected database and\n    parameters.\n\n    Keyword Arguments:\n        db        -- LIPID MAPS' database\n        mzStr     -- string with one m/z per line (text file alike)\n        adducts   -- list of adducts separated by commas\n        tolerance -- mass tolerance in Daltons (+/- to each m/z)\n                     [default: 0.001]\n    \"\"\"\n    mpData = MultipartEncoder(fields={'CHOICE': db, 'ion': adducts, 'file':\n        ('file', StringIO(mzStr), 'text/plain'), 'tol': str(tolerance),\n        'sort': 'DELTA'})\n    try:\n        response = requests.post(LIPIDMAPS_URL, data=mpData, headers={\n            'Content-Type': mpData.content_type})\n    except:\n        raise Exception(\n            'Connection error with the database. Please check your network and try again after a few minutes.'\n            )\n    if len(response.text) == 0:\n        return 0\n    else:\n        matches = pandas.read_csv(StringIO(response.text), sep='\\t', engine\n            ='python', index_col=False)\n        if matches.empty:\n            return 0\n        else:\n            return len(matches['Input Mass'].unique())"
+        },
+        "verifier_state_patch": {
+          "verifier_type_hint": "functional"
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_malformed_input",
+          "semantic_intent": "Prove that the solution gracefully handles malformed input lines (non-numeric) without crashing and only counts valid numeric m/z values.",
+          "target_constraint": "The function should ignore non-numeric lines and empty lines, processing only valid floating point numbers.",
+          "expected_failure_mode": "Old seed behavior that naively passes all lines to the API would likely cause server error or incorrect counts.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "malformed_mz_values"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant",
+            "oracle_info": "The output count should match the number of unique valid m/z values that have matches, ignoring malformed lines."
+          },
+          "test_case_description": "Provide an input string with a mix of valid and invalid lines (e.g., '100.0', 'abc', '200.0', '12.3.4', '300.0', '') and verify that the function returns the count of unique valid m/z matches."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement introduced by this operator.",
+        "The solution must be robust to malformed input lines."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

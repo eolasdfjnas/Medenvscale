@@ -1,0 +1,22 @@
+{
+  "scaled_executable_gold_code": "import requests\nimport pandas as pd\nfrom io import StringIO\nfrom requests_toolbelt.multipart.encoder import MultipartEncoder\n\nLIPIDMAPS_URL = \"https://www.lipidmaps.org/ms/rest/ms_search/\"\n\ndef _get_num_matches(db, mzStr, adducts, tolerance=0.001):\n    \"\"\"Return the number of matches for the selected database and\n    parameters.\n\n    Keyword Arguments:\n        db        -- LIPID MAPS' database\n        mzStr     -- string with one m/z per line (text file alike)\n        adducts   -- list of adducts separated by commas\n        tolerance -- mass tolerance in Daltons (+/- to each m/z)\n                     [default: 0.001]\n    \"\"\"\n    # Filter out invalid lines: keep only lines that can be parsed as float\n    lines = mzStr.splitlines()\n    valid_lines = []\n    for line in lines:\n        line = line.strip()\n        if line == '':\n            continue\n        try:\n            float(line)\n            valid_lines.append(line)\n        except ValueError:\n            continue\n    # Reconstruct the m/z string with only valid numeric values\n    filtered_mzStr = '\\n'.join(valid_lines)\n    \n    # If no valid lines, return 0\n    if not valid_lines:\n        return 0\n    \n    # Prepare multipart form data using MultipartEncoder\n    mpData = MultipartEncoder(\n        fields={\n            'CHOICE': db,\n            'ion': adducts,\n            'file': ('file', StringIO(filtered_mzStr), 'text/plain'),\n            'tol': str(tolerance),\n            'sort': 'DELTA'\n        }\n    )\n    try:\n        response = requests.post(LIPIDMAPS_URL, data=mpData, headers={'Content-Type': mpData.content_type})\n    except:\n        raise Exception(\n            'Connection error with the database. Please check your network and try again after a few minutes.'\n        )\n    if len(response.text) == 0:\n        return 0\n    else:\n        matches = pd.read_csv(StringIO(response.text), sep='\\t', engine='python', index_col=False)\n        if matches.empty:\n            return 0\n        else:\n            # Try to use 'Input Mass' column; fallback to first column if not present\n            try:\n                unique_masses = matches['Input Mass'].unique()\n            except KeyError:\n                unique_masses = matches.iloc[:, 0].unique()\n            return len(unique_masses)\n\ndef main():\n    # Specify which LipidMaps database to query (e.g. 'GLYCOLIPIDS')\n    db = 'GLYCOLIPIDS'\n    # Create a string with one m/z value per line, including some malformed lines\n    mz_values = '100.0\\nabc\\n200.0\\n12.3.4\\n300.0\\n'\n    # Choose adducts of interest\n    adducts = 'M+H,M+Na'\n    # Set mass tolerance in Daltons\n    tolerance = 0.01\n\n    # CALL THE SOLUTION FUNCTION HERE\n    num_matches = _get_num_matches(db, mz_values, adducts, tolerance)\n\n    print(f'Number of unique m/z matches: {num_matches}')\n\nif __name__ == '__main__':\n    main()",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "The solution was modified to handle malformed input lines (non-numeric and empty) by filtering only valid float-convertible lines before processing, as required by the D-axis operator.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_764_M2_d_01"
+  ],
+  "covered_requirements": [
+    "Scaled executable cases must expose the new requirement introduced by this operator.",
+    "The solution must be robust to malformed input lines."
+  ],
+  "implementation_notes": [
+    "Parsing mzStr line by line, stripping whitespace, skipping empty lines, and attempting float conversion to keep only valid numeric strings.",
+    "Reconstructing the m/z input string from valid lines before passing to the API.",
+    "If no valid lines are present, returns 0 early.",
+    "Preserved original API call logic and error handling."
+  ],
+  "assumptions": []
+}

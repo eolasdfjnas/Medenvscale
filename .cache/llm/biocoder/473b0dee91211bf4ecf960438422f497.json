@@ -1,0 +1,124 @@
+{
+  "operator_instances": [
+    {
+      "axis": "C",
+      "operator_type": "compound_bound_introduction",
+      "operator_intensity": 1,
+      "transformation_goal": "Increase computational complexity by requiring the function to read compound-specific bounds from the model instead of using hardcoded defaults.",
+      "rationale": "The original task uses default bounds for all compounds. To make it more realistic, we add a data attribute to the model that provides per-compound bounds, and the function must handle this, including fallback defaults. This adds conditional logic and data extraction.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "Python programming",
+            "understanding of metabolic models",
+            "LP solver usage",
+            "conditional logic"
+          ]
+        },
+        "data_state_patch": {
+          "resource_manifest": [],
+          "modifications": {
+            "MetabolicModel": {
+              "__init__": "self.compound_bounds = {'A': (-10, 10), 'B': (-20, 20)}"
+            }
+          }
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_patch": {
+            "find": "class MetabolicModel:\n    def __init__(self):\n        # Define two irreversible reactions R1 and R2\n        self.reactions = ['R1', 'R2']\n        # Bounds for each reaction\n        self.limits = {'R1': (-10, 100), 'R2': (0, 50)}\n        # Two compounds A and B\n        self.compounds = ['A', 'B']\n        # Stoichiometric matrix entries: (compound, reaction) -> coefficient\n        self.matrix = {\n            ('A', 'R1'): -1,\n            ('B', 'R1'):  1,\n            ('A', 'R2'):  2,\n            ('B', 'R2'): -2\n        }",
+            "replace_with": "class MetabolicModel:\n    def __init__(self):\n        # Define two irreversible reactions R1 and R2\n        self.reactions = ['R1', 'R2']\n        # Bounds for each reaction\n        self.limits = {'R1': (-10, 100), 'R2': (0, 50)}\n        # Two compounds A and B\n        self.compounds = ['A', 'B']\n        # Stoichiometric matrix entries: (compound, reaction) -> coefficient\n        self.matrix = {\n            ('A', 'R1'): -1,\n            ('B', 'R1'):  1,\n            ('A', 'R2'):  2,\n            ('B', 'R2'): -2\n        }\n        # Per-compound bounds for concentration variables\n        self.compound_bounds = {'A': (-10, 10), 'B': (-20, 20)}"
+          }
+        },
+        "gold_state_patch": {
+          "gold_solution_modification": {
+            "find": "        xij.define([convert_to_unicode(str(cp))], lower=-50, upper=50,\n            types=lp.VariableType.Continuous)",
+            "replace_with": "        if hasattr(mm_irreversible, 'compound_bounds') and cp in mm_irreversible.compound_bounds:\n            lb, ub = mm_irreversible.compound_bounds[cp]\n        else:\n            lb, ub = -50, 50\n        xij.define([convert_to_unicode(str(cp))], lower=lb, upper=ub,\n            types=lp.VariableType.Continuous)"
+          }
+        },
+        "verifier_state_patch": {
+          "verifier_type_hint": "unit_test",
+          "new_hidden_tests": [
+            {
+              "test_id": "hidden_test_compound_bounds",
+              "description": "Check that xij variables use compound-specific bounds when available.",
+              "setup_code": "model_with_bounds = MetabolicModel()\nsolver = Solver('glpk')",
+              "call_code": "prob, v, zi, dgri, xij, compounds = make_tmfa_problem(model_with_bounds, solver)\nexpected_lower_A = -10\nexpected_upper_A = 10\nexpected_lower_B = -20\nexpected_upper_B = 20\nassert xij.vars[('A',)]['lower'] == expected_lower_A, f\"xij['A'] lower bound mismatch\"\nassert xij.vars[('A',)]['upper'] == expected_upper_A\nassert xij.vars[('B',)]['lower'] == expected_lower_B\nassert xij.vars[('B',)]['upper'] == expected_upper_B\n# Also test fallback if compound not in bounds\nmodel_no_bounds = MetabolicModel()\ndel model_no_bounds.compound_bounds\nprob2, v2, zi2, dgri2, xij2, compounds2 = make_tmfa_problem(model_no_bounds, solver)\nassert xij2.vars[('A',)]['lower'] == -50, \"Fallback lower bound failed\"\nassert xij2.vars[('A',)]['upper'] == 50",
+              "expected_failure_modes": [
+                "xij bounds remain hardcoded -50,50"
+              ]
+            }
+          ]
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_id": "hidden_test_compound_bounds",
+            "description": "Check that xij variables use compound-specific bounds when available.",
+            "setup_code": "model_with_bounds = MetabolicModel()\nsolver = Solver('glpk')",
+            "call_code": "prob, v, zi, dgri, xij, compounds = make_tmfa_problem(model_with_bounds, solver)\nexpected_lower_A = -10\nexpected_upper_A = 10\nexpected_lower_B = -20\nexpected_upper_B = 20\nassert xij.vars[('A',)]['lower'] == expected_lower_A, f\"xij['A'] lower bound mismatch\"\nassert xij.vars[('A',)]['upper'] == expected_upper_A\nassert xij.vars[('B',)]['lower'] == expected_lower_B\nassert xij.vars[('B',)]['upper'] == expected_upper_B\n# Also test fallback if compound not in bounds\nmodel_no_bounds = MetabolicModel()\ndel model_no_bounds.compound_bounds\nprob2, v2, zi2, dgri2, xij2, compounds2 = make_tmfa_problem(model_no_bounds, solver)\nassert xij2.vars[('A',)]['lower'] == -50, \"Fallback lower bound failed\"\nassert xij2.vars[('A',)]['upper'] == 50",
+            "expected_failure_modes": [
+              "xij bounds remain hardcoded -50,50"
+            ]
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "xij bounds remain hardcoded -50,50"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "Verify that the function uses compound-specific bounds from the model when available, falling back to defaults.",
+          "target_constraint": "The function must access model.compound_bounds and apply the per-compound lower and upper bounds for xij variables; if the attribute does not exist or compound not in dictionary, use default (-50,50).",
+          "expected_failure_mode": "Function hardcodes lower=-50 and upper=50 for all compounds, ignoring compound_bounds.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "model_with_bounds = MetabolicModel()"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant",
+            "criteria": "xij.vars[compound]['lower'] == model.compound_bounds[compound][0] and xij.vars[compound]['upper'] == model.compound_bounds[compound][1] for compounds in model.compound_bounds; for compounds not in dictionary, fallback to -50 and 50."
+          },
+          "test_case_description": "Create a MetabolicModel with compound_bounds set to {'A': (-10,10), 'B': (-20,20)}. Run make_tmfa_problem and verify xij variable bounds match. Also test removal of attribute to verify fallback."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement: concentration variable bounds should be sourced from model.compound_bounds if present."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

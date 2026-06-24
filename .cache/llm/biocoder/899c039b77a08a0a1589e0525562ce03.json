@@ -1,0 +1,41 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Test that function handles None values, mixed types (converting numeric strings), zero MAD (since majority of deviations are zero), and returns sorted values.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_811_M3_d_01,env_medagentgym_train_811_M3_d_02,env_medagentgym_train_811_M3_c_03,env_medagentgym_train_811_M3_c_04",
+      "axis": "D,C",
+      "semantic_intent": "The function should ignore None, convert numeric strings to integers, ignore non-numeric strings, correctly compute probabilities when MAD=0, and return sorted fragment lengths.",
+      "target_constraint": "Input contains None values, numeric strings, non-numeric strings; output must be sorted list of values that meet count and MAD condition.",
+      "expected_failure_mode": "A naive solution may crash on None or strings, or not sort output, or mishandle zero MAD.",
+      "setup_code": "",
+      "call_code": "datalist = [8]*100 + [None]*50 + ['10']*60 + ['abc']*20 + [12]*30\nvalues, probs = compute_probs(datalist)\nresult = {'values': values, 'probs': probs}",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must include at least one test with None values to ensure they are ignored.",
+        "Scaled executable cases must include at least one test with mixed types to ensure proper handling.",
+        "Scaled executable cases must include at least one test with identical values to ensure correct handling of zero MAD.",
+        "Scaled executable cases must include at least one test that checks the order of the returned values."
+      ],
+      "expected_output_signature": {
+        "return_type": "tuple",
+        "return_keys": [
+          "values",
+          "probs"
+        ],
+        "return_value": {
+          "values": [
+            8
+          ],
+          "probs": [
+            1.0
+          ]
+        },
+        "stdout_contains": [],
+        "stdout_regex": [],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

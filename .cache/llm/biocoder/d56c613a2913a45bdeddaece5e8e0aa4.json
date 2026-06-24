@@ -1,0 +1,341 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "content_based_format_detection",
+      "operator_intensity": 1,
+      "transformation_goal": "Require format detection by content when file extension is missing or unrecognized.",
+      "rationale": "The seed implementation relies solely on file extension, which is not robust. Adding content-based detection increases data handling complexity.",
+      "state_updates": {
+        "task_state_patch": {
+          "output_requirements": [
+            "If the file extension is not .tsv/.txt/.yaml/.yml, the function must attempt format detection by content before raising ParseError."
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_id": "tsv_without_extension",
+            "description": "TSV file with no recognized extension, content should be detected as TSV and parsed successfully.",
+            "setup_code": "create_file('data.txt', 'compound\\tlower\\tupper\\nGlucose\\t-10\\t100\\n')",
+            "call_code": "result = list(parse_exchange_file('data.txt', default_compartment='c'))",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout": "",
+              "file_artifacts": []
+            },
+            "expected_behavior": "success",
+            "expected_result": [
+              {
+                "compound": "Glucose",
+                "lower": -10.0,
+                "upper": 100.0
+              }
+            ]
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "D_spec_1",
+          "semantic_intent": "Verify that parse_exchange_file can detect TSV format by content when file extension is missing.",
+          "target_constraint": "When file extension is not .tsv/.txt/.yaml/.yml, the function must attempt to detect format by reading the first line.",
+          "expected_failure_mode": "The seed implementation would raise ParseError because resolve_format returns None.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "TSV content in a file without recognized extension"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "A TSV file named 'data.txt' with correct header and data should be parsed successfully."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the requirement for content-based format detection."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "duplicate_compound_detection",
+      "operator_intensity": 1,
+      "transformation_goal": "Require detection of duplicate compound entries and raise ParseError.",
+      "rationale": "Exchange files should have unique compound names. Adding duplicate detection enforces data integrity and increases algorithmic complexity.",
+      "state_updates": {
+        "task_state_patch": {
+          "output_requirements": [
+            "If any compound name appears more than once in the file, raise ParseError."
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_id": "duplicate_compound",
+            "description": "TSV file with two lines having the same compound name 'Glucose', should raise ParseError.",
+            "setup_code": "create_file('dup.tsv', 'compound\\tlower\\tupper\\nGlucose\\t-10\\t100\\nGlucose\\t0\\t50\\n')",
+            "call_code": "try:\n    list(parse_exchange_file('dup.tsv', default_compartment='c'))\n    result = 'no error'\nexcept ParseError:\n    result = 'ParseError'",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout": "",
+              "file_artifacts": []
+            },
+            "expected_behavior": "exception",
+            "expected_result": "ParseError"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "C_spec_1",
+          "semantic_intent": "Verify that parse_exchange_file raises ParseError when a compound appears more than once.",
+          "target_constraint": "The function must track seen compounds and raise ParseError on duplicates.",
+          "expected_failure_mode": "The seed implementation yields all entries without checking duplicates, so it would succeed, not raise error.",
+          "test_template_type": "error_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "TSV file with duplicate compound"
+          },
+          "expected_behavior": {
+            "kind": "exception",
+            "exception_type": "ParseError"
+          },
+          "test_case_description": "A TSV file with duplicate 'Glucose' entries should cause ParseError."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the requirement for duplicate detection."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "adversarial_input_robustness",
+      "operator_intensity": 3,
+      "transformation_goal": "Add robustness against malformed lines and mislabeled file extensions.",
+      "rationale": "The seed implementation silently skips malformed lines and uses extension-only detection. Adding strict validation and content detection prevents shortcuts and increases adversarial robustness.",
+      "state_updates": {
+        "task_state_patch": {
+          "output_requirements": [
+            "If a TSV file has a line with fewer or more than 3 tab-separated fields, raise ParseError.",
+            "If a YAML file has a line with fewer than 3 colon-separated fields, raise ParseError.",
+            "If the file extension is misleading (e.g., .txt but contains YAML), the function must correctly parse based on content."
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_id": "tsv_malformed_line",
+            "description": "TSV file with a line missing a field should raise ParseError.",
+            "setup_code": "create_file('bad.tsv', 'compound\\tlower\\tupper\\nGlucose\\t-10\\n')",
+            "call_code": "try:\n    list(parse_exchange_file('bad.tsv', default_compartment='c'))\n    result = 'no error'\nexcept ParseError:\n    result = 'ParseError'",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout": "",
+              "file_artifacts": []
+            },
+            "expected_behavior": "exception",
+            "expected_result": "ParseError"
+          },
+          {
+            "test_id": "yaml_malformed_line",
+            "description": "YAML file with a line having only 2 colon-separated fields should raise ParseError.",
+            "setup_code": "create_file('bad.yaml', 'Glucose:-10\\n')",
+            "call_code": "try:\n    list(parse_exchange_file('bad.yaml', default_compartment='c'))\n    result = 'no error'\nexcept ParseError:\n    result = 'ParseError'",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout": "",
+              "file_artifacts": []
+            },
+            "expected_behavior": "exception",
+            "expected_result": "ParseError"
+          },
+          {
+            "test_id": "misleading_extension",
+            "description": "YAML content in a .txt file (which extension suggests TSV) should be correctly parsed as YAML.",
+            "setup_code": "create_file('data.txt', 'Glucose:-10:100:cytosol\\n')",
+            "call_code": "result = list(parse_exchange_file('data.txt', default_compartment='c'))",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout": "",
+              "file_artifacts": []
+            },
+            "expected_behavior": "success",
+            "expected_result": [
+              {
+                "compound": "Glucose",
+                "lower": -10.0,
+                "upper": 100.0,
+                "compartment": "cytosol"
+              }
+            ]
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "A_spec_1",
+          "semantic_intent": "Verify that parse_exchange_file raises ParseError for malformed TSV lines.",
+          "target_constraint": "Any TSV line that does not have exactly 3 tab-separated fields must raise ParseError.",
+          "expected_failure_mode": "The seed implementation silently skips malformed lines, so it would not raise an error.",
+          "test_template_type": "error_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "TSV file with a line missing a field"
+          },
+          "expected_behavior": {
+            "kind": "exception",
+            "exception_type": "ParseError"
+          },
+          "test_case_description": "A TSV file with a line having only 2 fields should cause ParseError."
+        },
+        {
+          "spec_id": "A_spec_2",
+          "semantic_intent": "Verify that parse_exchange_file raises ParseError for malformed YAML lines.",
+          "target_constraint": "Any YAML line that does not have at least 3 colon-separated fields must raise ParseError.",
+          "expected_failure_mode": "The seed implementation silently skips malformed lines, so it would not raise an error.",
+          "test_template_type": "error_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "YAML file with a line having only 2 fields"
+          },
+          "expected_behavior": {
+            "kind": "exception",
+            "exception_type": "ParseError"
+          },
+          "test_case_description": "A YAML file with a line having only 2 fields should cause ParseError."
+        },
+        {
+          "spec_id": "A_spec_3",
+          "semantic_intent": "Verify that parse_exchange_file uses content-based detection when extension is misleading.",
+          "target_constraint": "If file extension suggests one format but content is another, function must detect correctly based on content.",
+          "expected_failure_mode": "The seed implementation uses extension only, so it would treat .txt as TSV and fail, or produce incorrect output.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "YAML content in a .txt file"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "A file named 'data.txt' containing YAML-formatted data should be parsed correctly as YAML."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the robustness requirements against malformed lines and mislabeled extensions."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

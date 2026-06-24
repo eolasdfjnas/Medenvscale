@@ -1,0 +1,114 @@
+{
+  "operator_instances": [
+    {
+      "axis": "C",
+      "operator_type": "add_big_m_constraints",
+      "operator_intensity": 1,
+      "transformation_goal": "Add requirement to impose big-M constraints linking flux and binary reaction indicator variables.",
+      "rationale": "Increases computation complexity (C) by adding standard TMFA inequality constraints that enforce v_i <= upper_i * zi_i and v_i >= lower_i * zi_i, which the gold solution currently omits. This requires extending the environment to support inequality constraints.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {
+          "Expression": {
+            "__le__": "def __le__(self, other):\n    return InequalityConstraint(self, '<=', other)",
+            "__ge__": "def __ge__(self, other):\n    return InequalityConstraint(self, '>=', other)"
+          },
+          "Problem": {
+            "add_inequality": "def add_inequality(self, expr):\n    self.constraints.append(expr)"
+          },
+          "InequalityConstraint": "class InequalityConstraint:\n    def __init__(self, lhs, sense, rhs):\n        self.lhs = lhs\n        self.sense = sense\n        self.rhs = rhs"
+        },
+        "visible_state_patch": {
+          "problem": "In Python, write a function make_tmfa_problem(mm_irreversible, solver) that, given an irreversible metabolic model and a linear programming solver, constructs a thermodynamics-based metabolic flux analysis (TMFA) problem. The function should create four namespaces of variables: continuous flux variables (v), binary reaction indicator variables (zi), continuous Gibbs free energy variables (dgri), and continuous concentration variables (xij). It must add each variable with appropriate default lower and upper bounds, impose mass balance constraints for each compound in the model, and additionally impose big-M constraints for each reaction: v_i <= upper_i * zi_i and v_i >= lower_i * zi_i. Finally, return the LP problem object, the four namespaces, and the list of compounds."
+        },
+        "gold_state_patch": {
+          "gold_solution": "def make_tmfa_problem(mm_irreversible, solver):\n    \"\"\"Make a flux balance problem with TMFA related variables\"\"\"\n    prob = solver.create_problem()\n    if solver._properties['name'] == 'gurobi':\n        prob.integrality_tolerance.value = 1e-09\n        logger.warning(\n            'Gurobi supports minimum integrality tolerance of 1e-9. This may affect the results from this simulation'\n            )\n    elif solver._properties['name'] == 'glpk':\n        prob.integrality_tolerance.value = 1e-21\n    else:\n        prob.integrality_tolerance.value = 0\n    v = prob.namespace(name='flux')\n    zi = prob.namespace(name='zi')\n    dgri = prob.namespace(name='dgri')\n    xij = prob.namespace(name='xij')\n    for reaction in mm_irreversible.reactions:\n        lower, upper = mm_irreversible.limits[reaction]\n        v.define([reaction], lower=lower, upper=upper, types=lp.\n            VariableType.Continuous)\n        zi.define([reaction], lower=int(0), upper=int(1), types=lp.\n            VariableType.Binary)\n        dgri.define([reaction], lower=-1000, upper=1000, types=lp.\n            VariableType.Continuous)\n        # big-M constraints\n        prob.add_inequality(v(reaction) <= upper * zi(reaction))\n        prob.add_inequality(v(reaction) >= lower * zi(reaction))\n    massbalance_lhs = {compound: Expression() for compound in mm_irreversible.compounds}\n    for spec, value in iteritems(mm_irreversible.matrix):\n        compound, reaction_id = spec\n        massbalance_lhs[compound] += v(reaction_id) * value\n    for compound, lhs in iteritems(massbalance_lhs):\n        prob.add_linear_constraints(lhs == 0)\n    cp_list = []\n    for cp in mm_irreversible.compounds:\n        cp_list.append(convert_to_unicode(str(cp)))\n        xij.define([convert_to_unicode(str(cp))], lower=-50, upper=50,\n            types=lp.VariableType.Continuous)\n    return prob, v, zi, dgri, xij, cp_list"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          {
+            "type": "constraint_count",
+            "description": "Total constraints should be at least (mass_balance + 2 * num_reactions).",
+            "expected": 6,
+            "tolerance": 0
+          },
+          {
+            "type": "constraint_check",
+            "description": "Check that inequality constraints involve v and zi for each reaction.",
+            "check": "exists constraint with sense '<=' and lhs containing 'flux' and rhs containing 'zi'",
+            "target": true
+          }
+        ],
+        "new_hidden_tests": [
+          {
+            "case_id": "hidden_big_m_check",
+            "setup_code": "model = MetabolicModel()\nsolver = Solver('glpk')",
+            "call_code": "prob, v, zi, dgri, xij, compounds = make_tmfa_problem(model, solver)\nconstraints = prob.constraints\n# Count inequality constraints\nineqs = [c for c in constraints if hasattr(c, 'sense') and c.sense in ('<=','>=')]\nassert len(ineqs) == len(model.reactions)*2, f'Expected {len(model.reactions)*2} inequalities, got {len(ineqs)}'",
+            "expected_output_signature": {
+              "stdout_contains": [],
+              "return_value": null,
+              "exception": null
+            }
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Missing big-M constraints will result in fewer constraints",
+          "Constraints must use the inequality method with correct sense"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "c_spec_big_m",
+          "semantic_intent": "Verify that the function imposes big-M constraints linking each flux variable to its binary indicator.",
+          "target_constraint": "For each reaction i, constraints v_i - upper_i * zi_i <= 0 and v_i - lower_i * zi_i >= 0 must be present.",
+          "expected_failure_mode": "Seed behavior (without big-M) would have fewer constraints and missing inequalities.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "same as seed"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "gold_behavior"
+          },
+          "test_case_description": "Run make_tmfa_problem on the seed model and confirm the problem object contains the expected inequality constraints."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must prove that the big-M constraints are correctly added for each reaction."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

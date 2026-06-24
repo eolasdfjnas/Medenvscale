@@ -1,0 +1,17 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "call_KaOxS5ucKvLevDEjC63K5Tf5",
+      "function": {
+        "name": "validate_candidate_code",
+        "arguments": "{\"code\":\"import os\\n\\ndef parse_theta_results(fname):\\n    with open(fname, 'r') as f:\\n        lines = f.readlines()\\n        header = lines[0].strip().split('\\\\t')\\n        values = lines[1].strip().split('\\\\t')\\n\\n    nll = float(values[0])\\n    mu = list(map(float, values[1].split(',')))\\n    c = list(map(int, values[2].split(':')))\\n    p_star = [float(x) if x.replace('.', '', 1).isdigit() else None for x in values[3].split(',')]\\n\\n    return {\\n        'NLL': nll,\\n        'mu_normal': mu[0],\\n        'mu_tumors': mu[1:],\\n        'C': c,\\n        'p*': p_star\\n    }\"}"
+      }
+    }
+  ]
+}

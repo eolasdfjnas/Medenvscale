@@ -1,0 +1,17 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "call_eAMtsQDhk0sYMIfmnlQHR0Eo",
+      "function": {
+        "name": "get_task_context",
+        "arguments": "{}"
+      }
+    }
+  ]
+}

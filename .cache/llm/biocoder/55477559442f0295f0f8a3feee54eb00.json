@@ -1,0 +1,54 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Verify that parse_reaction_file handles missing equation fields and duplicate reaction IDs in both TSV and YAML formats by skipping bad records and printing warnings (to stderr), producing clean output lists.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_436_M2_c_01,env_medagentgym_train_436_M2_c_02",
+      "axis": "C",
+      "semantic_intent": "When TSV or YAML reaction files contain records with missing 'equation' fields or duplicate 'id' values, the parser must either skip the offending record (with a warning) or raise a ValueError. This case validates that the parser skips such records and returns only valid, unique reactions.",
+      "target_constraint": "For TSV/YAML records with missing equation (empty or absent), the parser must skip them and emit a warning. For duplicate reaction IDs, the parser must keep the first occurrence and skip subsequent duplicates with a warning. The parsed output must contain only complete, unique reactions.",
+      "expected_failure_mode": "A weak solution either includes malformed records (empty equation) or duplicate entries in the output, or crashes without handling the constraint gracefully.",
+      "setup_code": "import os\n\n# Create sample TSV reaction file with missing equation and duplicate ID\ntsv_content = \"\"\"reaction_id\\tequation\nr1\\tA -> B\nr2\\tB -> C\nr3\\t\nr1\\tA -> B duplicate\n\"\"\"\nwith open('sample_reactions.tsv', 'w') as f:\n    f.write(tsv_content)\n\n# Create sample YAML reaction file with missing equation and duplicate ID\nyaml_content = \"\"\"- id: r4\n  equation: D -> E\n- id: r5\n  equation:\n- id: r4\n  equation: D -> E duplicate\n\"\"\"\nwith open('sample_reactions.yaml', 'w') as f:\n    f.write(yaml_content)",
+      "call_code": "parsed_tsv = list(parse_reaction_file('sample_reactions.tsv'))\nparsed_yaml = list(parse_reaction_file('sample_reactions.yaml'))\nprint(\"Parsed TSV reactions:\")\nfor rxn in parsed_tsv:\n    print(rxn)\nprint(\"Parsed YAML reactions:\")\nfor rxn in parsed_yaml:\n    print(rxn)\nresult = {'parsed_tsv': parsed_tsv, 'parsed_yaml': parsed_yaml}",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Add constraint that reaction records in TSV and YAML files may optionally have a missing 'equation' field; the parser must detect this and either skip the record with a warning or raise a specific exception, rather than producing a malformed output.",
+        "Add constraint that reaction files may contain duplicate reaction IDs; the parser must detect duplicates and either skip duplicates (keeping first occurrence) or raise a specific exception (e.g., ValueError)."
+      ],
+      "expected_output_signature": {
+        "return_type": "dict",
+        "return_keys": [
+          "parsed_tsv",
+          "parsed_yaml"
+        ],
+        "return_value": {
+          "parsed_tsv": [
+            {
+              "id": "r1",
+              "equation": "A -> B"
+            },
+            {
+              "id": "r2",
+              "equation": "B -> C"
+            }
+          ],
+          "parsed_yaml": [
+            {
+              "id": "r4",
+              "equation": "D -> E"
+            }
+          ]
+        },
+        "stdout_contains": [
+          "Parsed TSV reactions:",
+          "{'id': 'r1', 'equation': 'A -> B'}",
+          "{'id': 'r2', 'equation': 'B -> C'}",
+          "Parsed YAML reactions:",
+          "{'id': 'r4', 'equation': 'D -> E'}"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

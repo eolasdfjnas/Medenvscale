@@ -1,0 +1,224 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "add_input_variations",
+      "operator_intensity": 1,
+      "transformation_goal": "Introduce variations in input file formatting to test robustness of parsing to whitespace inconsistencies and chromosome name case.",
+      "rationale": "Real genomic data files often have irregular spacing and varied chromosome naming conventions. This operator adds lines with leading/trailing whitespace, multiple spaces, tabs, and case variations to ensure the parser handles these without errors.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Write a Python function named read_text that reads a file where each line contains genomic coordinates in the format \"chrom:start-end\", optionally followed by a gene symbol or a REF>ALT annotation, and returns a pandas DataFrame with columns ['chromosome', 'start', 'end', 'gene']. Missing gene annotations should be replaced with '-'. Coordinate positions are 1-based. The input file may contain lines with irregular whitespace (leading/trailing spaces, multiple spaces, tabs) and chromosome names may appear in different cases or without the 'chr' prefix."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "d1_input_variations",
+          "semantic_intent": "Verify that read_text can correctly parse lines with irregular whitespace (leading/trailing spaces, multiple spaces, tabs) and chromosome names in different cases (uppercase, lowercase, without 'chr' prefix).",
+          "target_constraint": "The function should still produce a DataFrame with correct columns, with chromosome names as they appear in the file (after stripping leading/trailing whitespace), start and end integers, and gene annotation replaced with '-' if missing.",
+          "expected_failure_mode": "A naive implementation that assumes consistent whitespace and only 'chr' prefix may fail to parse lines with leading spaces or case variations.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Input file contains lines like: '  chr1:100-200 geneA', 'CHR1:300-400', '1:500-600 REF>ALT'. Expected output should include these rows with chromosome values 'chr1', 'CHR1', '1', etc."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include an input file with at least four lines covering leading spaces, trailing spaces, multiple spaces, tabs, and chromosome name case variations."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": false,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": false,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "add_constraint_skip_invalid",
+      "operator_intensity": 1,
+      "transformation_goal": "Add a constraint that lines with start > end (invalid coordinates) should be skipped.",
+      "rationale": "Genomic coordinates should have start <= end. In real data, occasional inverted coordinates may appear. The function should handle these gracefully by excluding them to maintain data integrity.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Write a Python function named read_text that reads a file where each line contains genomic coordinates in the format \"chrom:start-end\", optionally followed by a gene symbol or a REF>ALT annotation, and returns a pandas DataFrame with columns ['chromosome', 'start', 'end', 'gene']. Missing gene annotations should be replaced with '-'. Coordinate positions are 1-based. The input file may contain lines with irregular whitespace (leading/trailing spaces, multiple spaces, tabs) and chromosome names may appear in different cases or without the 'chr' prefix. If the start coordinate is greater than the end coordinate, the line should be skipped and not included in the DataFrame."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {
+          "gold_solution": "def read_text(infile):\n    \"\"\"Text coordinate format: \"chr:start-end\", one per line.\n\n    Or sometimes: \"chrom:start-end gene\" or \"chrom:start-end REF>ALT\"\n\n    Coordinate indexing is assumed to be from 1.\n    \"\"\"\n    parse_line = report_bad_line(from_label)\n    with as_handle(infile, 'r') as handle:\n        rows = []\n        for line in handle:\n            parsed = parse_line(line)\n            if parsed[1] <= parsed[2]:  # start <= end\n                rows.append(parsed)\n    table = pd.DataFrame.from_records(rows, columns=['chromosome', 'start',\n        'end', 'gene'])\n    table['gene'] = table['gene'].replace('', '-')\n    return table"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "c1_skip_invalid",
+          "semantic_intent": "Verify that read_text skips lines where start > end.",
+          "target_constraint": "Lines with start > end should be omitted from the DataFrame.",
+          "expected_failure_mode": "A naive implementation that does not check coordinate order will include the invalid row.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Input file contains a line 'chr1:200-100 geneBad' where start > end. The output should not include this row."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include an input line with start > end to test skipping."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": false,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "add_constraint_sort_output",
+      "operator_intensity": 1,
+      "transformation_goal": "Add requirement to sort the DataFrame by chromosome (alphabetically) and then by start (ascending).",
+      "rationale": "For consistency in downstream analysis, the output should be sorted by genomic coordinates. This adds a computation step.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Write a Python function named read_text that reads a file where each line contains genomic coordinates in the format \"chrom:start-end\", optionally followed by a gene symbol or a REF>ALT annotation, and returns a pandas DataFrame with columns ['chromosome', 'start', 'end', 'gene']. Missing gene annotations should be replaced with '-'. Coordinate positions are 1-based. The input file may contain lines with irregular whitespace (leading/trailing spaces, multiple spaces, tabs) and chromosome names may appear in different cases or without the 'chr' prefix. If the start coordinate is greater than the end coordinate, the line should be skipped and not included in the DataFrame. The DataFrame should be sorted by chromosome (alphabetically) and then by start coordinate (ascending) before returning."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {
+          "gold_solution": "def read_text(infile):\n    \"\"\"Text coordinate format: \"chr:start-end\", one per line.\n\n    Or sometimes: \"chrom:start-end gene\" or \"chrom:start-end REF>ALT\"\n\n    Coordinate indexing is assumed to be from 1.\n    \"\"\"\n    parse_line = report_bad_line(from_label)\n    with as_handle(infile, 'r') as handle:\n        rows = []\n        for line in handle:\n            parsed = parse_line(line)\n            if parsed[1] <= parsed[2]:  # start <= end\n                rows.append(parsed)\n    table = pd.DataFrame.from_records(rows, columns=['chromosome', 'start',\n        'end', 'gene'])\n    table['gene'] = table['gene'].replace('', '-')\n    table.sort_values(['chromosome', 'start'], inplace=True)\n    return table"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "c2_sort_output",
+          "semantic_intent": "Verify that read_text returns DataFrame sorted by chromosome (alphabetically) and then by start.",
+          "target_constraint": "The output DataFrame should be sorted; for example, 'chr1:100-200' before 'chr1:200-300' and 'chr10:...' after 'chr2:...' because alphabetical ordering.",
+          "expected_failure_mode": "A naive implementation that does not sort will output rows in file order.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Input file contains lines out of order, e.g., 'chr2:300-400', 'chr1:100-200', 'chr10:500-600'. Expected output should be sorted: 'chr1:100-200', 'chr10:500-600', 'chr2:300-400' (alphabetical)."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include an input file with lines in non-sorted order to test sorting."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": false,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

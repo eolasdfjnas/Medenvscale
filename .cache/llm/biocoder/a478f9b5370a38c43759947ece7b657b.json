@@ -1,0 +1,562 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "handle_missing_or_corrupt_archive",
+      "operator_intensity": 2,
+      "transformation_goal": "Add requirement for the function to handle cases where the archive file does not exist or is corrupted.",
+      "rationale": "The seed task assumes a valid tar archive. Adding missing/corrupt archive handling increases data complexity.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "file existence check",
+            "corrupt archive detection"
+          ]
+        },
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "name": "valid_archive.tar",
+              "type": "tar",
+              "content": "valid"
+            },
+            {
+              "name": "missing_archive.tar",
+              "type": "missing"
+            },
+            {
+              "name": "corrupt_archive.tar",
+              "type": "tar",
+              "content": "corrupt"
+            }
+          ]
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [
+          {
+            "args": [
+              "/tmp/dest",
+              "/nonexistent/archive.tar"
+            ],
+            "expected_exception": "GenipeError",
+            "check_message_contains": "Could not extract"
+          }
+        ],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Old seed solution would fail with CalledProcessError not caught for missing file (actually, it does catch CalledProcessError but tar will error; need to ensure robust behavior)"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "D_spec_missing_archive",
+          "semantic_intent": "Function should raise GenipeError when archive does not exist.",
+          "target_constraint": "The function must raise GenipeError for any non-zero exit from tar.",
+          "expected_failure_mode": "If function does not handle missing file, it might not raise exception or crash.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "missing_archive"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Call untar_file with a non-existent archive file; expect GenipeError."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a test with a missing archive file."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "D",
+      "operator_type": "handle_nested_tar_structure",
+      "operator_intensity": 1,
+      "transformation_goal": "Add requirement to correctly extract archives that contain subdirectories.",
+      "rationale": "Seed task only tests extraction of a single directory; adding nested structure increases input complexity.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "name": "nested_archive.tar",
+              "type": "tar",
+              "content": "nested"
+            }
+          ]
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "setup_code": "import tempfile, os, tarfile; tmpdir=tempfile.mkdtemp(); os.mkdir(os.path.join(tmpdir,'sub')); open(os.path.join(tmpdir,'sub','file.txt'),'w').close(); with tarfile.open(os.path.join(tmpdir,'archive.tar'),'w') as t: t.add(tmpdir, arcname='base')",
+            "call_code": "untar_file(dest_dir, tar_path)",
+            "expected_stdout": "",
+            "expected_file_artifacts": [
+              "dest_dir/base/sub/file.txt"
+            ]
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Old seed solution already works with nested - tar handles recursively"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "D_spec_nested",
+          "semantic_intent": "Function should extract nested tar archives preserving directory structure.",
+          "target_constraint": "Extraction must create all subdirectories.",
+          "expected_failure_mode": "If function extracts files incorrectly, subdirectory might be missing.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "nested_archive"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Extract a tar with nested directories and verify file exists."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include test with nested archive."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "validate_extraction_path",
+      "operator_intensity": 1,
+      "transformation_goal": "Add requirement to verify that the extraction path exists and is a directory before extracting.",
+      "rationale": "The seed task does not check path validity; adding this constraint improves robustness.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "path existence check",
+            "path is directory check"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "setup_code": "",
+            "call_code": "untar_file('/nonexistent_path', 'dummy.tar')",
+            "expected_exception": "GenipeError",
+            "expected_exception_message_contains": "path does not exist or is not a directory"
+          }
+        ],
+        "exception_tests": [
+          {
+            "args": [
+              "/nonexistent",
+              "some.tar"
+            ],
+            "expected_exception": "GenipeError",
+            "check_message_contains": "path"
+          }
+        ],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Old seed solution would crash with CalledProcessError because tar fails if path doesn't exist, but message might not be user-friendly. New operator expects explicit check."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "C_spec_path_exists",
+          "semantic_intent": "Function should raise GenipeError if path does not exist or is not a directory.",
+          "target_constraint": "Prior to extraction, verify that path is an existing directory.",
+          "expected_failure_mode": "If function does not check path, it might raise a less informative error or crash.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "invalid_path"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Call untar_file with a non-existent directory path; expect GenipeError with descriptive message."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include test with invalid path."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "handle_overwrite_protection",
+      "operator_intensity": 1,
+      "transformation_goal": "Add requirement to handle cases where files in the extraction path already exist (e.g., overwrite or raise error).",
+      "rationale": "Default tar behavior overwrites; adding option or constraint adds computation complexity.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "overwrite handling"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [
+          {
+            "args": [
+              "/existing_dir",
+              "archive.tar"
+            ],
+            "expected_exception": "GenipeError",
+            "check_message_contains": "overwrite"
+          }
+        ],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Old seed solution would overwrite silently; new operator expects error or warning."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "C_spec_overwrite",
+          "semantic_intent": "Function should detect existing files and optionally refuse extraction.",
+          "target_constraint": "Before extraction, check for conflicts in destination.",
+          "expected_failure_mode": "If function overwrites without checking, test fails.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "existing_target"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Extract an archive into a directory that already contains a file with same name; expect GenipeError."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include test with pre-existing files in destination."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "prevent_command_injection",
+      "operator_intensity": 1,
+      "transformation_goal": "Add requirement to prevent shell injection via specially crafted archive filenames.",
+      "rationale": "Using subprocess.check_call with unchecked input can lead to injection; adversarial robustness needed.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "input sanitization",
+            "subprocess without shell"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "setup_code": "",
+            "call_code": "untar_file('/tmp/dest', '; rm -rf /')",
+            "expected_exception": "GenipeError",
+            "expected_exception_message_contains": "invalid filename"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Old seed solution would execute arbitrary command via check_call if shell=True (but default uses list so it's safe). However, if user uses shell=True, injection possible. Operator expects explicit validation."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "A_spec_injection",
+          "semantic_intent": "Function should raise error or safely handle filenames with shell metacharacters.",
+          "target_constraint": "The archive filename must not contain dangerous characters or must be passed safely as list.",
+          "expected_failure_mode": "If function uses shell=True or doesn't validate, injection may occur.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "malicious_filename"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Call untar_file with a filename containing shell injection characters; expect GenipeError."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include test with malicious archive filename."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "V",
+      "operator_type": "add_failure_case_verification",
+      "operator_intensity": 1,
+      "transformation_goal": "Add oracle case to verify that the function correctly raises GenipeError on tar failure.",
+      "rationale": "Seed test only covers success case; adding failure test increases verification strength.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {
+          "verifier_type_hint": "functional",
+          "verifier_spec": {
+            "oracle_cases": [
+              {
+                "case_id": "V_failure_case",
+                "description": "Test that function raises GenipeError when tar command fails (corrupted archive).",
+                "setup_code": "import tempfile, os; tmpdir=tempfile.mkdtemp(); open(os.path.join(tmpdir,'bad.tar'),'w').write('not a tar')",
+                "call_code": "untar_file(tmpdir, os.path.join(tmpdir,'bad.tar'))",
+                "expected_output_signature": {
+                  "return_value": null,
+                  "stdout": "",
+                  "stderr": "",
+                  "exception": "GenipeError",
+                  "exception_message_contains": "Could not extract"
+                }
+              }
+            ]
+          }
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          {
+            "check_type": "exception_raised",
+            "target": "GenipeError",
+            "condition": "when tar fails"
+          }
+        ],
+        "new_hidden_tests": [
+          {
+            "setup_code": "import tempfile, os; tmpdir=tempfile.mkdtemp(); open(os.path.join(tmpdir,'bad.tar'),'w').write('corrupt')",
+            "call_code": "untar_file(tmpdir, os.path.join(tmpdir,'bad.tar'))",
+            "expected_exception": "GenipeError",
+            "expected_exception_message_contains": "Could not extract"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Old seed solution passes this test because it already raises GenipeError on failure."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "V_spec_failure",
+          "semantic_intent": "Function should raise GenipeError when extraction fails.",
+          "target_constraint": "The verifier must confirm exception behavior.",
+          "expected_failure_mode": "If function does not raise exception on failure, test fails.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "corrupt_archive"
+          },
+          "expected_behavior": {
+            "kind": "exception_raised",
+            "exception_type": "GenipeError"
+          },
+          "test_case_description": "Extract a corrupt tar file; expect GenipeError."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a failure case test."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

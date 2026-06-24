@@ -1,0 +1,22 @@
+{
+  "scaled_executable_gold_code": "import os\n\ndef parse_theta_results(fname):\n    with open(fname) as f:\n        header = f.readline().strip().split('\\t')\n        body = f.readline().strip().split('\\t')\n    nll = float(body[0])\n    mu_list = body[1].split(',')\n    mu_normal = float(mu_list[0])\n    mu_tumors = list(map(float, mu_list[1:]))\n    regions_c = body[2].split(':')\n    C = []\n    for region in regions_c:\n        values = region.split(',')\n        region_vals = []\n        for v in values:\n            if v.isdigit():\n                region_vals.append(int(v))\n            else:\n                region_vals.append(None)\n        C.append(region_vals)\n    regions_p = body[3].split(':')\n    p_star = []\n    for region in regions_p:\n        values = region.split(',')\n        region_vals = []\n        for v in values:\n            try:\n                region_vals.append(float(v))\n            except ValueError:\n                region_vals.append(None)\n        p_star.append(region_vals)\n    return {'NLL': nll, 'mu_normal': mu_normal, 'mu_tumors': mu_tumors, 'C': C, 'p*': p_star}\n\ndef main():\n    sample = (\n        \"NLL\\tmu\\tC\\tp*\\n\"\n        \"12.5\\t0.4,0.6\\t2:3\\t0.1,0.2\\n\"\n    )\n    fname = \"theta_test.txt\"\n    with open(fname, \"w\") as f:\n        f.write(sample)\n    result = parse_theta_results(fname)\n    print(result)\n    os.remove(fname)\n\nif __name__ == \"__main__\":\n    main()\n",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Scaled task requires handling of multi-tumor parsing and placeholder conversion, which the seed solution did not correctly implement for these cases.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_59_M2_d_01",
+    "env_medagentgym_train_59_M2_d_02"
+  ],
+  "covered_requirements": [
+    "Introduce a file with multiple tumor fractions, requiring the parser to handle multi-sample C and p* lists.",
+    "Introduce placeholders (alphabetic in p*, non-digit in C) to test None conversion."
+  ],
+  "implementation_notes": [
+    "The code splits C and p* on ':' to get regions, then splits each region on ',' to get values per tumor. Non-digit values in C become None; non-float values in p* become None."
+  ],
+  "assumptions": [
+    "The input file always has exactly one data line."
+  ]
+}

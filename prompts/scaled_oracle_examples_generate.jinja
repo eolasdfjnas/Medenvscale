@@ -1,0 +1,174 @@
+You are an expert benchmark example writer for scaled coding tasks.
+
+Your task is to generate authoritative scaled oracle cases for a scaled coding task before the oracle solution code is finalized.
+
+These scaled oracle cases will later be used to:
+- guide scaled executable gold generation
+- guide repair loops
+- derive hidden tests
+- serve as the canonical expected results for the scaled task
+
+Return JSON only.
+
+Do not generate explanations outside the required JSON.
+Do not generate markdown.
+Do not generate placeholder examples.
+Do not generate assert True or smoke tests.
+Do not rely on external network access.
+
+====================
+[SEED PROBLEM]
+====================
+{{ seed_problem }}
+
+====================
+[SEED EXECUTABLE CODE]
+====================
+{{ seed_executable_code }}
+
+====================
+[SEED EXECUTION CASE]
+====================
+{{ seed_execution_case }}
+
+====================
+[SEED GROUND TRUTH OUTPUT SIGNATURE]
+====================
+{{ seed_ground_truth_output_signature }}
+
+====================
+[SCALED FINAL USER PROMPT]
+====================
+{{ final_user_prompt }}
+
+====================
+[FUNCTION / CLASS SIGNATURE]
+====================
+{{ signature_info }}
+
+====================
+[OPERATOR INSTANCES]
+====================
+{{ operator_instances }}
+
+====================
+[SEMANTIC TEST SPECS]
+====================
+{{ semantic_test_specs }}
+
+====================
+[OUTPUT REQUIREMENTS]
+====================
+{{ output_requirements }}
+
+====================
+[OUTPUT CONSTRAINT SPEC]
+====================
+{{ output_constraint_spec }}
+
+====================
+[CASE DESIGN TARGETS]
+====================
+{{ case_design_targets }}
+
+====================
+[SCALED CASE PLAN]
+====================
+{{ scaled_case_plan }}
+
+====================
+[REQUIRED MINIMUM ORACLE CASE COUNT]
+====================
+{{ target_count }}
+
+====================
+[GENERATION REQUIREMENTS]
+====================
+
+Generate at least {{ target_count }} validated scaled oracle case.
+
+The first case should normally be a transformed version of the provided SEED EXECUTION CASE:
+- preserve the original execution path when possible
+- keep setup_code empty if the seed case did not need setup
+- only add extra setup when the scaled task truly requires new files, inputs, or environment state
+- rewrite expected_output_signature so it reflects the scaled task after operators are applied
+
+Additional cases are optional and should be added only when the main transformed seed case does not fully cover the new requirements.
+
+Rules:
+
+1. Each semantic-changing operator in CASE DESIGN TARGETS must be covered by at least one oracle case.
+2. The main transformed seed case should be emitted with `case_kind` = `scaled_seed_case_main`.
+3. Any extra coverage case should be emitted with `case_kind` = `coverage_extension`.
+4. Each scaled oracle case must correspond to one scaled constraint or one combined multi-constraint case.
+5. At least one scaled oracle case should cover combined semantics when multiple operators interact strongly.
+4. Each scaled oracle case must be executable in principle.
+6. `covered_requirements` must quote or closely mirror the exact newly added requirement phrases from CASE DESIGN TARGETS or OUTPUT REQUIREMENTS.
+7. Do not write generic cases like "basic functionality still works" unless that is itself a newly added requirement.
+8. Prefer concrete observable expectations in `expected_output_signature`.
+9. Prefer `return_value`, `return_type`, `return_keys`, `stdout_contains`, and explicit `file_artifacts.path`.
+10. Use `stdout_regex` only when a simple substring check cannot express the requirement. Avoid brittle full-command regexes.
+11. `setup_code` and `call_code` must be directly executable with no missing variable definitions.
+12. `call_code` must assign the main observable result to a variable named `result`.
+13. For operator-specific coverage, `targets_operator_id`, `semantic_intent`, `target_constraint`, and `covered_requirements` must all point to the same newly added requirement.
+14. Every scaled oracle case must include:
+   - setup_code, which may be an empty string when no setup is required
+   - call_code that actually invokes the target code for this case
+   - expected_output_signature describing the correct observable outputs for this case
+15. assertion_code is optional and should usually be an empty string.
+   - Only use assertion_code for a very small extra check that cannot be expressed in expected_output_signature.
+   - Do not include long code blocks in assertion_code.
+   - Do not duplicate checks already expressible through expected_output_signature.
+16. expected_output_signature is task-dependent.
+   - Do not force return_value/stdout/file_artifacts if they are irrelevant.
+   - Only include the observable channels needed for this task.
+17. Every case must satisfy the scaled task after all active difficulty operators are applied.
+18. Use the public API required by the task.
+19. Do not hardcode visible examples only.
+20. Do not weaken the scaled task.
+21. `target_constraint`, `semantic_intent`, and `description` must be concrete enough to rewrite into the final user prompt.
+    They must name the specific changed input shape, field/key/format/value, boundary condition, ordering rule, error behavior, or output contract.
+    Do not write generic text such as "handle scaled input variants", "new constraints", "stronger contract", or "edge-case behavior" unless the exact edge case and expected behavior are named.
+22. The concrete terms in `target_constraint` / `semantic_intent` must be traceable to the target operator and to the observable expectation.
+    For example, if the operator adds a missing value placeholder, name the placeholder and the expected conversion/rejection behavior.
+    If the operator changes output shape, name the required shape and the per-item semantics.
+    If the operator adds a format variant, name the format variant and the expected parsed fields.
+23. `expected_output_signature`, `setup_code`, `call_code`, or `expected_failure_mode` must include observable evidence for the same concrete requirement.
+24. `file_artifacts` is only for files produced or modified by the candidate solution during `call_code`.
+    Do not list input fixture files created in `setup_code` as expected file_artifacts.
+    If a setup-created file is expected to be modified in place by the candidate, explicitly state that mutation requirement in `target_constraint` or `semantic_intent`.
+
+====================
+[OUTPUT FORMAT]
+====================
+
+Return JSON only, with exactly the following fields:
+
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "<unique_case_id>",
+      "description": "<what this scaled oracle case verifies>",
+      "case_kind": "<scaled_seed_case_main|coverage_extension>",
+      "targets_operator_id": "<operator_id>",
+      "axis": "<axis or comma-separated axes>",
+      "semantic_intent": "<semantic intent>",
+      "target_constraint": "<targeted scaled constraint>",
+      "expected_failure_mode": "<what a weak solution would do wrong>",
+      "setup_code": "<optional setup code>",
+      "call_code": "<required executable invocation code>",
+      "assertion_code": "<optional extra assertions beyond expected_output_signature>",
+      "covered_requirements": ["<requirement_1>", "<requirement_2>"],
+      "expected_output_signature": {
+        "return_type": "<optional type name>",
+        "return_keys": ["<optional dict keys>"],
+        "return_value": "<optional exact return value when appropriate>",
+        "stdout_contains": ["<optional substrings>"],
+        "stdout_regex": ["<optional regexes>"],
+        "file_artifacts": [
+          {"path": "<optional produced file path>"}
+        ]
+      }
+    }
+  ]
+}

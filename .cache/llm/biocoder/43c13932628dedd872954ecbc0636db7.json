@@ -1,0 +1,28 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_malformed_input",
+      "description": "Test that the function ignores non-numeric and empty lines in the m/z input string, processing only valid numeric m/z values, and returns the same count as with only valid lines.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_764_M2_d_01",
+      "axis": "D",
+      "semantic_intent": "Prove that the solution gracefully handles malformed input lines (non-numeric) without crashing and only counts valid numeric m/z values.",
+      "target_constraint": "The function should ignore non-numeric lines and empty lines, processing only valid floating point numbers.",
+      "expected_failure_mode": "Old seed behavior that naively passes all lines to the API would likely cause server error or incorrect counts.",
+      "setup_code": "db = 'GLYCOLIPIDS'\nmz_values = '100.0\\nabc\\n200.0\\n12.3.4\\n300.0\\n'\nadducts = 'M+H,M+Na'\ntolerance = 0.01",
+      "call_code": "num_matches = _get_num_matches(db, mz_values, adducts, tolerance)\nprint(f'Number of unique m/z matches: {num_matches}')\nresult = num_matches",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must expose the new requirement introduced by this operator.",
+        "The solution must be robust to malformed input lines."
+      ],
+      "expected_output_signature": {
+        "return_value": 315,
+        "stdout_contains": [
+          "Number of unique m/z matches: 315"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

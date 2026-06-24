@@ -1,0 +1,279 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "add_comment_preservation",
+      "operator_intensity": 1,
+      "transformation_goal": "Require the serialize function to preserve comments in the INI file.",
+      "rationale": "The seed task uses a basic ConfigParser, but the signature mentions ConfigParserWithComments. Comments are a common INI feature that adds data complexity.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Write Python code that uses the serialize(config, path) function to save a configuration stored in a ConfigParserWithComments object into an INI file, preserving all sections, options, and comments. In the configuration, include at least two sections ('General' and 'User') with some options and comments, write it to 'test_config.ini', and then read and print the file content to verify."
+        },
+        "data_state_patch": {
+          "resource_files": [
+            {
+              "path": "sample_config.ini",
+              "content": "[General]\n# This is the version\nversion = 1.0\nenabled = yes\n\n[User]\n# User details\nname = Alice\nemail = alice@example.com\n"
+            }
+          ]
+        },
+        "visible_state_patch": {
+          "context_summary": "import configparser\nimport os\n# Assume ConfigParserWithComments is available and can read comments from sample_config.ini\ndef main():\n    config = configparser.ConfigParser()\n    config.read('sample_config.ini')\n    # ..."
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [
+          {
+            "path": "test_config.ini",
+            "must_contain_lines": [
+              "# This is the version",
+              "# User details"
+            ],
+            "must_not_contain_lines": [],
+            "exact_match": false
+          }
+        ],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "If serialize does not preserve comments, the comment lines will be missing from the output file."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "d_comment_spec_1",
+          "semantic_intent": "Prove that comments in the config are preserved in the output file.",
+          "target_constraint": "The output file must contain the same comments as the input config.",
+          "expected_failure_mode": "Old seed behavior writes only options without comments.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "config_with_comments"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Feed a config with comments (e.g., from sample_config.ini) and verify that comment lines appear in test_config.ini."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must check that comment lines are present in the output file."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "D",
+      "operator_type": "add_special_characters_in_values",
+      "operator_intensity": 1,
+      "transformation_goal": "Require handling of option values containing special characters (e.g., colons, quotes) that need proper INI escaping.",
+      "rationale": "Real-world config files often contain special characters in values, increasing data complexity and testing correct serialization.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Write Python code that uses the serialize(config, path) function to save a configuration stored in a ConfigParserWithComments object into an INI file. The configuration must include sections with options that have values containing special characters such as colons, semicolons, or quotes. Write it to 'test_config.ini', and then read and print the file content to verify."
+        },
+        "data_state_patch": {
+          "resource_files": []
+        },
+        "visible_state_patch": {
+          "context_summary": "import configparser\nimport os\n\ndef main():\n    config = configparser.ConfigParser()\n    config['General'] = {\n        'version': '1.0',\n        'description': 'A config; key=value; special:chars'\n    }\n    config['User'] = {\n        'name': 'Alice \"A\"',\n        'path': '/home/alice'\n    }\n    # ..."
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [
+          {
+            "path": "test_config.ini",
+            "must_contain_lines": [
+              "description = A config; key=value; special:chars",
+              "name = Alice \"A\""
+            ],
+            "must_not_contain_lines": [],
+            "exact_match": false
+          }
+        ],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "If serialize does not properly escape special characters, the output might be malformed or values truncated."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "d_special_spec_1",
+          "semantic_intent": "Prove that option values with special characters are correctly written in the INI file.",
+          "target_constraint": "The output file must contain the exact special characters as in the config object.",
+          "expected_failure_mode": "Old seed behavior might drop or incorrectly escape semicolons, colons, or quotes.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "config_with_special_chars"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Serialize a config with special characters and verify the output file contains them exactly."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must verify that special characters are preserved in the output file."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "V",
+      "operator_type": "enhance_file_content_verification",
+      "operator_intensity": 1,
+      "transformation_goal": "Strengthen verification by adding exact file content checks and testing with multiple config variants.",
+      "rationale": "The current verifier only checks file existence and prints stdout. Adding specific content assertions increases oracle complexity.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {
+          "verifier_type_hint": "execution and file content check with multiple oracle cases"
+        },
+        "test_state_patch": {
+          "hidden_tests_mode": "scenario_set"
+        },
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_id": "v_hidden_1",
+            "description": "Check that output file contains all sections and options in correct order.",
+            "setup_code": "config = configparser.ConfigParser()\nconfig['General'] = {'version': '1.0', 'enabled': 'yes'}\nconfig['User'] = {'name': 'Alice', 'email': 'alice@example.com'}\npath = 'test_config.ini'",
+            "call_code": "serialize(config, path)\nassert os.path.exists(path)\nwith open(path, 'r') as f:\n    content = f.read()\nassert '[General]' in content\nassert '[User]' in content\nassert 'version = 1.0' in content\nassert 'enabled = yes' in content\nassert 'name = Alice' in content\nassert 'email = alice@example.com' in content",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [],
+              "file_artifacts": [
+                {
+                  "path": "test_config.ini"
+                }
+              ],
+              "exception": null
+            },
+            "extraction_method": "assertions"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [
+          {
+            "path": "test_config.ini",
+            "must_contain_lines": [
+              "[General]",
+              "[User]"
+            ],
+            "must_not_contain_lines": [],
+            "exact_match": false
+          }
+        ],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "If serialize fails to write, the file won't exist or will be empty."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "v_file_spec_1",
+          "semantic_intent": "Prove that the serialize function writes a correctly formatted INI file with all sections and options.",
+          "target_constraint": "The output file must contain exactly the sections and options from the config object.",
+          "expected_failure_mode": "Old seed behavior might omit sections or options, or produce incorrect formatting.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "oracle_variant",
+            "value": "standard_config"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "exact_file_content"
+          },
+          "test_case_description": "Serialize a standard two-section config and verify file content exactly matches expected INI format."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include assertions on file content (sections, options, order)."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

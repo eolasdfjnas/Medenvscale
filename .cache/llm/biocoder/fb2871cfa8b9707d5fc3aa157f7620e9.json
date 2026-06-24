@@ -1,0 +1,259 @@
+{
+  "operator_instances": [
+    {
+      "axis": "C",
+      "operator_type": "enforce_default_penalty_handling",
+      "operator_intensity": 1,
+      "transformation_goal": "Explicitly require assignment of penalty weight 1 when penalty arguments are None.",
+      "rationale": "The problem states that penalties default to 1 if None. This operator enforces that the function correctly defaults to weight 1 for each reaction group when the corresponding penalty is None, ensuring output correctness.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {
+          "scaled_oracle_cases": []
+        },
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "id": "default_penalty_weights",
+            "input": "create_extended_model(model, db_penalty=None, ex_penalty=None, tp_penalty=None, penalties=None)",
+            "expected_output": {
+              "weights": {
+                "c1_db_rxn": 1,
+                "c2_db_rxn": 1,
+                "e_ex": 1,
+                "c1_e_tp": 1
+              }
+            }
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "spec_C_default_penalty",
+          "semantic_intent": "Ensure that when all penalty parameters are None, all added reactions have weight 1.",
+          "target_constraint": "Weights for reactions must be 1 unless overridden by penalties dict.",
+          "expected_failure_mode": "An implementation that does not default to 1 (e.g., uses 0 or leaves unset) will produce incorrect weights.",
+          "test_template_type": "input_variant_case",
+          "input_variant": {
+            "kind": "preset_case",
+            "value": "all_penalties_none"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "exact_match"
+          },
+          "test_case_description": "Call create_extended_model with all penalty arguments None and no penalties dict; verify weights are all 1."
+        }
+      ],
+      "output_requirements": [
+        "When a penalty parameter (db_penalty, ex_penalty, tp_penalty) is None, the corresponding reactions must be assigned weight 1.",
+        "When penalties dict is not provided, no additional overrides should occur."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "robustness_empty_compartments",
+      "operator_intensity": 1,
+      "transformation_goal": "Ensure the function gracefully handles models with no compartments.",
+      "rationale": "Adversarial input: model with an empty compartments list. The function should not crash, should log a warning, and db_added should be empty set.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {
+          "scaled_oracle_cases": []
+        },
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "id": "empty_compartments",
+            "input": "model = DummyNativeModel(); model.compartments = []; create_extended_model(model, ...)",
+            "expected_output": {
+              "weights": {
+                "e_ex": 1,
+                "c1_e_tp": 1
+              }
+            }
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "spec_A_empty_compartments",
+          "semantic_intent": "Ensure that when the model has no compartments, no database reactions are added and a warning is logged.",
+          "target_constraint": "db_added must be empty set, and execution should not raise an error.",
+          "expected_failure_mode": "An implementation that tries to iterate over compartments without checking length will fail with an error or incorrectly add reactions.",
+          "test_template_type": "input_variant_case",
+          "input_variant": {
+            "kind": "model_variant",
+            "value": "empty_compartments"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "exact_match"
+          },
+          "test_case_description": "Create a model with empty compartments list; verify that weights contain only exchange and transport reactions, and that a warning is printed (optional check)."
+        }
+      ],
+      "output_requirements": [
+        "The function must handle models with no compartments by setting db_added to an empty set and logging a warning.",
+        "The function must not crash when model.compartments is empty."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "robustness_missing_boundaries",
+      "operator_intensity": 1,
+      "transformation_goal": "Ensure the function gracefully handles models with no compartment boundaries.",
+      "rationale": "Adversarial input: model with an empty compartment_boundaries list. The function should not crash, should log a warning, and tp_added should be empty set.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {
+          "scaled_oracle_cases": []
+        },
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "id": "empty_boundaries",
+            "input": "model = DummyNativeModel(); model.compartment_boundaries = []; create_extended_model(model, ...)",
+            "expected_output": {
+              "weights": {
+                "c1_db_rxn": 5,
+                "c2_db_rxn": 5,
+                "e_ex": 2
+              }
+            }
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "spec_A_empty_boundaries",
+          "semantic_intent": "Ensure that when the model has no compartment boundaries, no transport reactions are added and a warning is logged.",
+          "target_constraint": "tp_added must be empty set, and execution should not raise an error.",
+          "expected_failure_mode": "An implementation that tries to iterate over boundaries without checking length will fail with an error or incorrectly add transport reactions.",
+          "test_template_type": "input_variant_case",
+          "input_variant": {
+            "kind": "model_variant",
+            "value": "empty_boundaries"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "exact_match"
+          },
+          "test_case_description": "Create a model with an empty compartment_boundaries list; verify that weights contain only database and exchange reactions, and that a warning is printed."
+        }
+      ],
+      "output_requirements": [
+        "The function must handle models with no compartment boundaries by setting tp_added to an empty set and logging a warning.",
+        "The function must not crash when model.compartment_boundaries is empty."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

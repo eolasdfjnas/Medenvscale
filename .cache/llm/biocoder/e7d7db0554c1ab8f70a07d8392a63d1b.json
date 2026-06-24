@@ -1,0 +1,243 @@
+{
+  "operator_instances": [
+    {
+      "axis": "C",
+      "operator_type": "require_compartment_field",
+      "operator_intensity": 1,
+      "transformation_goal": "Ensure parse_reaction_file uses the default_compartment parameter and includes a 'compartment' key in each reaction dict.",
+      "rationale": "The function signature includes default_compartment but the seed solution ignores it. This operator enforces its usage, increasing computational constraint.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {
+          "seed_ground_truth_output_signature": {
+            "return_value": null,
+            "stdout": "Parsed TSV reactions:\n{'id': 'r1', 'equation': 'A -> B', 'compartment': None}\n{'id': 'r2', 'equation': 'B -> C', 'compartment': None}\nParsed YAML reactions:\n{'id': 'r3', 'equation': 'C -> D', 'compartment': None}\n{'id': 'r4', 'equation': 'D -> E', 'compartment': None}",
+            "file_artifacts": [
+              {
+                "path": "sample_reactions.tsv",
+                "size_bytes": 41,
+                "sha256": "fb97266d1fa850953f02ed39bbaf794741dfca4a3e7616997a1f5ea37f866edf"
+              },
+              {
+                "path": "sample_reactions.yaml",
+                "size_bytes": 56,
+                "sha256": "cf855d8131657a4bc23184effdf7e29baea47b4128940f2ac1d34a1e7d8aef23"
+              }
+            ]
+          },
+          "seed_execution_case": {
+            "expected_output_signature": {
+              "return_value": {
+                "parsed_tsv": [
+                  {
+                    "id": "r1",
+                    "equation": "A -> B",
+                    "compartment": null
+                  },
+                  {
+                    "id": "r2",
+                    "equation": "B -> C",
+                    "compartment": null
+                  }
+                ],
+                "parsed_yaml": [
+                  {
+                    "id": "r3",
+                    "equation": "C -> D",
+                    "compartment": null
+                  },
+                  {
+                    "id": "r4",
+                    "equation": "D -> E",
+                    "compartment": null
+                  }
+                ]
+              },
+              "stdout_contains": [
+                "Parsed TSV reactions:",
+                "{'id': 'r1', 'equation': 'A -> B', 'compartment': None}",
+                "{'id': 'r2', 'equation': 'B -> C', 'compartment': None}",
+                "Parsed YAML reactions:",
+                "{'id': 'r3', 'equation': 'C -> D', 'compartment': None}",
+                "{'id': 'r4', 'equation': 'D -> E', 'compartment': None}"
+              ],
+              "file_artifacts": [
+                {
+                  "path": "sample_reactions.tsv"
+                },
+                {
+                  "path": "sample_reactions.yaml"
+                }
+              ]
+            }
+          }
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import os\nfrom reaction_utils import parse_reaction_file\n\ndef write_sample_files():\n    # Create a sample TSV reaction file\n    tsv_content = \"\"\"reaction_id\\tequation\nr1\\tA -> B\nr2\\tB -> C\n\"\"\"\n    with open('sample_reactions.tsv', 'w') as f:\n        f.write(tsv_content)\n\n    # Create a sample YAML reaction file\n    yaml_content = \"\"\"- id: r3\n  equation: C -> D\n- id: r4\n  equation: D -> E\n\"\"\"\n    with open('sample_reactions.yaml', 'w') as f:\n        f.write(yaml_content)\n\n# Prepare sample files\nwrite_sample_files()\n\n# Parse reaction files\n# Note: Ensure parsed reactions include a 'compartment' field derived from default_compartment.\n<<insert solution here>>"
+        },
+        "gold_state_patch": {
+          "gold_solution_modification": "In parse_reaction_file, modify the yielded dict to include 'compartment': default_compartment. For TSV: yield {'id': row['reaction_id'], 'equation': row['equation'], 'compartment': default_compartment}. For YAML: yield {'id': item['id'], 'equation': item['equation'], 'compartment': default_compartment}."
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "name": "test_compartment_param",
+            "type": "functional",
+            "setup_code": "import yaml\n# Create sample YAML with compartment\nwith open('test_comp.yaml', 'w') as f:\n    f.write('- id: r5\\n  equation: X -> Y\\n')",
+            "call_code": "result = list(parse_reaction_file('test_comp.yaml', default_compartment='mito'))",
+            "expected": [
+              {
+                "id": "r5",
+                "equation": "X -> Y",
+                "compartment": "mito"
+              }
+            ],
+            "comparison": "exact"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Seed solution would yield dicts without 'compartment' key, causing hidden test to fail."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "C_spec_compartment",
+          "semantic_intent": "Verify that parse_reaction_file correctly attaches the default_compartment parameter to each reaction dict.",
+          "target_constraint": "Each reaction dict must have a 'compartment' key with value equal to the default_compartment argument (or None if not provided).",
+          "expected_failure_mode": "Seed code yields dicts without compartment key or with default value None even when compartment is provided.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Create test files and call parse_reaction_file with and without default_compartment, ensuring compartment field matches."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must verify that the compartment field is correctly set in all parsed reactions."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": false,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "enforce_unique_ids",
+      "operator_intensity": 1,
+      "transformation_goal": "Ensure parse_reaction_file raises ValueError when duplicate reaction IDs are encountered.",
+      "rationale": "Adds a constraint on data integrity, increasing computational complexity by requiring the parser to validate uniqueness.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import os\nfrom reaction_utils import parse_reaction_file\n\ndef write_sample_files():\n    # Create a sample TSV reaction file\n    tsv_content = \"\"\"reaction_id\\tequation\nr1\\tA -> B\nr2\\tB -> C\n\"\"\"\n    with open('sample_reactions.tsv', 'w') as f:\n        f.write(tsv_content)\n\n    # Create a sample YAML reaction file\n    yaml_content = \"\"\"- id: r3\n  equation: C -> D\n- id: r4\n  equation: D -> E\n\"\"\"\n    with open('sample_reactions.yaml', 'w') as f:\n        f.write(yaml_content)\n\n# Prepare sample files\nwrite_sample_files()\n\n# Parse reaction files\n# Note: The parser should raise ValueError if duplicate reaction IDs are found.\n<<insert solution here>>"
+        },
+        "gold_state_patch": {
+          "gold_solution_modification": "In parse_reaction_file, add a set to track seen IDs. For each reaction, if ID already in set, raise ValueError('Duplicate reaction ID: {}'.format(id)). Otherwise add to set and yield dict."
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "name": "test_duplicate_id",
+            "type": "exception",
+            "setup_code": "with open('dup_reactions.tsv', 'w') as f:\n    f.write('reaction_id\\tequation\\nr1\\tA -> B\\nr1\\tB -> C\\n')",
+            "call_code": "list(parse_reaction_file('dup_reactions.tsv'))",
+            "expected_exception": "ValueError",
+            "exception_message_contains": "duplicate reaction ID"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Seed solution would parse duplicate IDs without error, causing test to fail."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "C_spec_unique_ids",
+          "semantic_intent": "Verify that parse_reaction_file rejects duplicate reaction IDs with a ValueError.",
+          "target_constraint": "When a reaction file contains multiple entries with the same ID, the function must raise ValueError.",
+          "expected_failure_mode": "Seed code yields multiple dicts with same ID without error.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "duplicate_ids"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Create a TSV file with duplicate reaction IDs and call parse_reaction_file, expecting ValueError."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must verify that duplicate IDs trigger a ValueError."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": false,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

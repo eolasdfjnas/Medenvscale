@@ -1,0 +1,96 @@
+{
+  "operator_instances": [
+    {
+      "axis": "C",
+      "operator_type": "empty_input_edge_case",
+      "operator_intensity": 1,
+      "transformation_goal": "Add requirement that function handles empty input list gracefully and returns two empty lists.",
+      "rationale": "Increases computational complexity by requiring explicit handling of edge case where input is empty, which the original solution would fail on.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "problem": "In a paired-end DNA sequencing pipeline, you have a list of observed fragment lengths for each read pair. You need to identify which fragment lengths are supported by at least 100 read pairs and do not lie more than 10 median absolute deviations above the median fragment length. The function must also handle an empty input list gracefully, returning two empty lists. Write a function compute_probs(datalist: list) -> (list, list) that returns the filtered fragment lengths (values) and their relative probabilities based on the counts of those lengths."
+        },
+        "gold_state_patch": {
+          "gold_solution": "def compute_probs(datalist: list) ->(list, list):\n    \"\"\"\n    Computes the probabilities for fragments with at least 100 pairs supporting it and that are at least 10 median\n    deviations from the median.\n    :param datalist: A list of fragments with counts\n    :return: A list of values that meet the criteria and a list of their associated probabilities\n    \"\"\"\n    if not datalist:\n        return [], []\n    FILTER_MINREADS = 100\n    FILTER_MEDDEV_M = 10\n    values = []\n    probabilities = []\n    med = median(datalist)\n    mad = median_absolute_deviation(datalist)\n    for item in list(set(datalist)):\n        if 0 < item <= med + FILTER_MEDDEV_M * mad:\n            data_count = datalist.count(item)\n            if data_count >= FILTER_MINREADS:\n                values.append(item)\n                probabilities.append(data_count)\n    count_sum = float(sum(probabilities))\n    probabilities = [(n / count_sum) for n in probabilities]\n    return values, probabilities",
+          "scaled_gold_solution": "def compute_probs(datalist: list) ->(list, list):\n    if not datalist:\n        return [], []\n    FILTER_MINREADS = 100\n    FILTER_MEDDEV_M = 10\n    values = []\n    probabilities = []\n    med = median(datalist)\n    mad = median_absolute_deviation(datalist)\n    for item in list(set(datalist)):\n        if 0 < item <= med + FILTER_MEDDEV_M * mad:\n            data_count = datalist.count(item)\n            if data_count >= FILTER_MINREADS:\n                values.append(item)\n                probabilities.append(data_count)\n    count_sum = float(sum(probabilities))\n    probabilities = [(n / count_sum) for n in probabilities]\n    return values, probabilities"
+        },
+        "verifier_state_patch": {
+          "verifier_type_hint": "unit_test"
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "case_id": "empty_input",
+            "setup_code": "",
+            "call_code": "result = compute_probs([])\nassert result == ([], []), f\"Expected ([], []), got {result}\"\nprint(\"Empty input test passed\")",
+            "expected_output_signature": {
+              "return_value": "([], [])",
+              "stdout_contains": "Empty input test passed"
+            },
+            "description": "Ensure function returns two empty lists for empty input"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "If function does not handle empty input, it will raise an exception (e.g., StatisticsError from median) or return a non-empty list."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "Verify that the function correctly handles an empty input list without error and returns two empty lists.",
+          "target_constraint": "The function must handle empty input gracefully.",
+          "expected_failure_mode": "The original seed solution without edge case handling would raise a StatisticsError because median() requires non-empty input.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "[]"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Empty input list - function should return ([], [])."
+        }
+      ],
+      "output_requirements": [
+        "Must include a test case where input is an empty list and expected output is two empty lists."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "description": "The function will now include a guard for empty datalist, preventing runtime errors and returning empty lists."
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

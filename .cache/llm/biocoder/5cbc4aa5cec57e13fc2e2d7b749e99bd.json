@@ -1,0 +1,25 @@
+{
+  "scaled_executable_gold_code": "import os\n\ndef serialize(config, path):\n    with open(path, 'w') as file:\n        # Check if config has comments attribute (ConfigParserWithComments)\n        if hasattr(config, 'comments') and isinstance(config.comments, dict):\n            # Write sections and options with comments\n            for section in config.sections():\n                if section in config.comments:\n                    file.write(f\"# {config.comments[section]}\\n\")\n                file.write(f\"[{section}]\\n\")\n                for key, value in config.items(section):\n                    option_key = f\"{section}.{key}\"\n                    if option_key in config.comments:\n                        file.write(f\"# {config.comments[option_key]}\\n\")\n                    file.write(f\"{key} = {value}\\n\")\n        else:\n            # For generic objects, just call their write method\n            config.write(file)",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Scaled task adds comment preservation for ConfigParserWithComments, requiring custom serialization logic; seed solution only calls config.write which does not handle comments.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_644_M4_d_01",
+    "env_medagentgym_train_644_M4_c_02",
+    "env_medagentgym_train_644_M4_a_03"
+  ],
+  "covered_requirements": [
+    "Scaled executable cases must verify that comments are preserved in the output file.",
+    "Scaled executable cases must cover empty config, large config, special characters, and error handling.",
+    "Scaled executable cases must use a custom config-like object that only has a write method."
+  ],
+  "implementation_notes": [
+    "The serialize function checks for a 'comments' attribute (dict) on the config object. If present, it manually writes sections and options with comments. Otherwise, it falls back to calling config.write(file), which works for any object with a write method."
+  ],
+  "assumptions": [
+    "Config objects with comments have a 'comments' attribute that is a dictionary mapping section/option keys to comment strings.",
+    "Generic config-like objects have a write(file) method and are used without comments."
+  ]
+}

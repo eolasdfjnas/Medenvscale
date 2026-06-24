@@ -1,0 +1,151 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "add_second_tumor",
+      "operator_intensity": 1,
+      "transformation_goal": "Increase data complexity by adding a second tumor to the input file, requiring parsing of multi-sample format.",
+      "rationale": "The seed task only tests single tumor parsing. Adding a second tumor increases data complexity (D) by introducing nested structures and multiple values per field, which requires more robust parsing logic.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {
+          "resource_manifest": [],
+          "override_sample_file": {
+            "content": "NLL\tmu\tC\tp*\n12.5\t0.4,0.3,0.3\t2,4:3,5\t0.1,0.3:0.2,0.4\n"
+          }
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import os\n<<insert solution here>>\ndef main():\n    sample = (\n        \"NLL\\tmu\\tC\\tp*\\n\"\n        \"12.5\\t0.4,0.3,0.3\\t2,4:3,5\\t0.1,0.3:0.2,0.4\\n\"\n    )\n    fname = \"theta_test.txt\"\n    with open(fname, \"w\") as f:\n        f.write(sample)\n    result = parse_theta_results(fname)\n    print(result)\n    os.remove(fname)\n"
+        },
+        "gold_state_patch": {
+          "gold_solution": "def parse_theta_results(fname):\n    with open(fname) as handle:\n        header = next(handle).rstrip().split('\\t')\n        body = next(handle).rstrip().split('\\t')\n        assert len(body) == len(header) == 4\n        nll = float(body[0])\n        mu = body[1].split(',')\n        mu_normal = float(mu[0])\n        mu_tumors = list(map(float, mu[1:]))\n        copies = body[2].split(':')\n        if len(mu_tumors) == 1:\n            copies = [[(int(c) if c.isdigit() else None) for c in copies]]\n        else:\n            copies = [[(int(c) if c.isdigit() else None) for c in subcop] for subcop in zip(*[c.split(',') for c in copies])]\n        probs = body[3].split(':')\n        if len(mu_tumors) == 1:\n            probs = [[(float(p) if not p.isalpha() else None) for p in probs]]\n        else:\n            probs = [[(float(p) if not p.isalpha() else None) for p in subprob] for subprob in zip(*[p.split(',') for p in probs])]\n        return {'NLL': nll, 'mu_normal': mu_normal, 'mu_tumors': mu_tumors, 'C': copies, 'p*': probs}"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "d_multi_tumor",
+          "semantic_intent": "Verify that the function correctly parses a file with two tumors, returning nested lists for C and p*.",
+          "target_constraint": "The function must handle mu with three values, C colon-separated groups each containing comma-separated copies, and p* similarly structured.",
+          "expected_failure_mode": "A naive parser that treats all fields as flat lists would produce incorrect output or crash.",
+          "test_case_description": "Input file with two tumors: mu '0.4,0.3,0.3', C '2,4:3,5', p* '0.1,0.3:0.2,0.4'. Expected output: mu_normal=0.4, mu_tumors=[0.3,0.3], C=[[2,3],[4,5]], p*=[[0.1,0.2],[0.3,0.4]]."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must test single and multi-tumor inputs."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "add_length_validation",
+      "operator_intensity": 2,
+      "transformation_goal": "Add constraint that validates the number of tumor fractions matches the number of copy number and probability groups, raising errors on mismatch.",
+      "rationale": "Computational complexity (C) is increased by adding validation logic that checks consistency between the number of tumors and the structure of C and p* fields. This ensures type correctness and robust error handling.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {
+          "resource_manifest": [],
+          "override_sample_file": null
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import os\n<<insert solution here>>\ndef main():\n    sample = (\n        \"NLL\\tmu\\tC\\tp*\\n\"\n        \"12.5\\t0.4,0.6\\t2:3\\t0.1,0.2\\n\"\n    )\n    fname = \"theta_test.txt\"\n    with open(fname, \"w\") as f:\n        f.write(sample)\n    result = parse_theta_results(fname)\n    print(result)\n    os.remove(fname)\n"
+        },
+        "gold_state_patch": {
+          "gold_solution": "def parse_theta_results(fname):\n    with open(fname) as handle:\n        header = next(handle).rstrip().split('\\t')\n        body = next(handle).rstrip().split('\\t')\n        assert len(body) == len(header) == 4\n        nll = float(body[0])\n        mu = body[1].split(',')\n        mu_normal = float(mu[0])\n        mu_tumors = list(map(float, mu[1:]))\n        copies = body[2].split(':')\n        if len(mu_tumors) == 1:\n            copies = [[(int(c) if c.isdigit() else None) for c in copies]]\n        else:\n            copies = [[(int(c) if c.isdigit() else None) for c in subcop] for subcop in zip(*[c.split(',') for c in copies])]\n        probs = body[3].split(',')\n        if len(mu_tumors) == 1:\n            probs = [(float(p) if not p.isalpha() else None) for p in probs]\n        else:\n            probs = [[(float(p) if not p.isalpha() else None) for p in subprob] for subprob in zip(*[p.split(',') for p in probs])]\n        # Added validation: ensure number of tumor fractions matches number of copy number groups and probability groups\n        if len(mu_tumors) != len(copies[0]) if len(mu_tumors) == 1 else len(copies):\n            raise ValueError(\"Number of tumor fractions does not match number of copy number groups\")\n        return {'NLL': nll, 'mu_normal': mu_normal, 'mu_tumors': mu_tumors, 'C': copies, 'p*': probs}"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [
+          {
+            "test_id": "c_mismatch",
+            "description": "File with mismatched number of tumors and copy number groups should raise ValueError.",
+            "setup_code": "sample = \"NLL\\tmu\\tC\\tp*\\n12.5\\t0.4,0.6,0.3\\t2:3\\t0.1,0.2\\n\"\nfname = \"theta_bad.txt\"\nwith open(fname, \"w\") as f:\n    f.write(sample)",
+            "call_code": "try:\n    result = parse_theta_results(fname)\n    print(\"Should have raised ValueError\")\nexcept ValueError:\n    print(\"ValueError raised as expected\")\nos.remove(fname)",
+            "expected_stdout": "ValueError raised as expected",
+            "expected_exception": "ValueError"
+          }
+        ],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "c_validation",
+          "semantic_intent": "Verify that the function raises ValueError when number of tumor fractions does not match number of colon-separated groups in C and p*.",
+          "target_constraint": "The function must validate that len(mu_tumors) equals number of tumor copy number pairs derived from C structure.",
+          "expected_failure_mode": "A function without validation would parse mismatched input without error, producing incorrect output.",
+          "test_case_description": "Input with 2 tumor fractions but C field '2:3' (one pair) should raise ValueError."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include at least one case that triggers the validation error."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

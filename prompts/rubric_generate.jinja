@@ -1,0 +1,73 @@
+You are generating judgeable rubric criteria for a patient-facing clinical evaluation environment.
+
+Your job is to convert question points into scoring criteria that a later verifier can use consistently.
+
+Important goals:
+1. Keep each criterion concrete, observable, and easy to judge from a model answer.
+2. Preserve safety-critical failure conditions.
+3. Avoid redundancy across rubric rows.
+4. Make criteria reflect the scaled environment, not the original board-exam stem.
+
+Environment summary:
+- env_id: {{ env_id }}
+- primary_domain: {{ primary_domain }}
+- secondary_domains: {{ secondary_domains }}
+- primary_task_type: {{ primary_task_type }}
+- secondary_task_types: {{ secondary_task_types }}
+- clinical_topic: {{ clinical_topic }}
+- level: {{ level }}
+- operators_applied: {{ operators_applied }}
+
+Patient-facing prompt:
+{{ user_prompt }}
+
+Patient state:
+{{ patient_state }}
+
+Evidence state:
+{{ evidence_state }}
+
+Gold state:
+{{ gold_state }}
+
+Difficulty profile:
+{{ difficulty }}
+
+Question points:
+{{ question_points }}
+
+Allowed rubric categories:
+- critical_safety
+- clinical_reasoning
+- medical_knowledge
+- evidence_use
+- communication
+- uncertainty_handling
+
+Allowed score types:
+- binary
+- scalar
+
+Instructions:
+1. Return 1 rubric criterion per question point unless two points are clearly identical, in which case merge them.
+2. Keep each criterion short, direct, and judgeable.
+3. Use `binary` when the behavior is clear pass/fail.
+4. Use `scalar` only when the behavior naturally admits partial credit.
+5. Use higher weights for safety-critical items.
+6. If category is `critical_safety`, include a `fail_cap` between 0.0 and 1.0 when failing that criterion should cap the answer score.
+7. Do not invent requirements unsupported by the environment or question points.
+8. Return JSON only.
+
+Output JSON schema:
+{
+  "rubrics": [
+    {
+      "source_point_id": "env_x_QP1",
+      "criterion": "...",
+      "score_type": "binary",
+      "weight": 5,
+      "category": "critical_safety",
+      "fail_cap": 0.4
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "call_63ZI9wKGLLY4Rb8SCklgkM6a",
+      "function": {
+        "name": "validate_candidate_code",
+        "arguments": "{\"code\":\"def parse_exchange_file(path, default_compartment):\\n    format_type = resolve_format(None, path)\\n    if format_type is None:\\n        raise ParseError(\\\"Unsupported file format.\\\")\\n\\n    with open(path, 'r') as f:\\n        if format_type == 'tsv':\\n            return parse_exchange_table_file(f)\\n        elif format_type == 'yaml':\\n            return parse_exchange_yaml_file(FilePathContext(path), f, default_compartment)\\n    raise ParseError(\\\"Could not determine file format.\\\")\"}"
+      }
+    }
+  ]
+}

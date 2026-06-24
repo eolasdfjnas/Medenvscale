@@ -1,0 +1,298 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "increase_section_count_and_options",
+      "operator_intensity": 1,
+      "transformation_goal": "Increase the number of sections and options in the configuration to test handling of larger data.",
+      "rationale": "The original seed task uses only two sections with two options each. Scaling up the data size (more sections and options) increases data complexity, ensuring the serialize function can handle larger configurations without truncation or ordering issues.",
+      "state_updates": {
+        "visible_state_patch": {
+          "context": "import configparser\nimport os\n\ndef main():\n    # Create a configuration with multiple sections and options\n    config = configparser.ConfigParser()\n    config['General'] = {\n        'version': '1.0',\n        'enabled': 'yes',\n        'debug': 'false'\n    }\n    config['User'] = {\n        'name': 'Alice',\n        'email': 'alice@example.com',\n        'role': 'admin'\n    }\n    config['Database'] = {\n        'host': 'localhost',\n        'port': '5432',\n        'user': 'admin',\n        'password': 'secret'\n    }\n\n    # Define the output file path\n    path = 'test_config.ini'\n\n    # Save the configuration to disk\n    <<insert solution here>>\n\n    # Verify that the file was created and print its contents\n    if os.path.exists(path):\n        with open(path, 'r') as f:\n            content = f.read()\n        print('Configuration file content:')\n        print(content)\n    else:\n        print('Failed to create configuration file.')\n\nif __name__ == '__main__':\n    main()"
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [
+          "Check that the output file contains exactly [General], [User], and [Database] sections with correct options.",
+          "Check that all 10 options are present in the file."
+        ],
+        "file_output_tests": [
+          {
+            "path": "test_config.ini",
+            "must_contain_sections": [
+              "General",
+              "User",
+              "Database"
+            ],
+            "must_contain_options": {
+              "General": [
+                "version",
+                "enabled",
+                "debug"
+              ],
+              "User": [
+                "name",
+                "email",
+                "role"
+              ],
+              "Database": [
+                "host",
+                "port",
+                "user",
+                "password"
+              ]
+            }
+          }
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_1",
+          "semantic_intent": "Verify that the serialize function correctly writes a configuration with three sections and all options.",
+          "target_constraint": "The output file must contain all sections and options from the configuration object.",
+          "expected_failure_mode": "If the serialize function only writes sections it knows about (e.g., hardcoded), or truncates options, the file will be incomplete.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "A scaled case where the config has three sections and all options are present; the output file must contain exactly those sections and options."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new data complexity requirement introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "ensure_value_with_special_character",
+      "operator_intensity": 1,
+      "transformation_goal": "Introduce an option value containing a colon (':'), which requires proper quoting or escaping in INI format.",
+      "rationale": "INI files treat colons as key-value separators in some dialects. Python's configparser supports both '=' and ':' but values containing colons must be properly handled. This increases constraint complexity by requiring the serialize function to correctly escape or quote such values.",
+      "state_updates": {
+        "visible_state_patch": {
+          "context": "import configparser\nimport os\n\ndef main():\n    # Create a configuration with an option value containing a colon\n    config = configparser.ConfigParser()\n    config['General'] = {\n        'version': '1.0',\n        'enabled': 'yes',\n        'datetime': '2025-03-21 14:30:00'  # value contains colon\n    }\n    config['User'] = {\n        'name': 'Alice',\n        'email': 'alice@example.com'\n    }\n\n    # Define the output file path\n    path = 'test_config.ini'\n\n    # Save the configuration to disk\n    <<insert solution here>>\n\n    # Verify that the file was created and print its contents\n    if os.path.exists(path):\n        with open(path, 'r') as f:\n            content = f.read()\n        print('Configuration file content:')\n        print(content)\n    else:\n        print('Failed to create configuration file.')\n\nif __name__ == '__main__':\n    main()"
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [
+          "Check that the output file contains the line 'datetime = 2025-03-21 14:30:00' exactly.",
+          "Check that the file can be parsed back by configparser without errors."
+        ],
+        "file_output_tests": [
+          {
+            "path": "test_config.ini",
+            "must_contain_line": "datetime = 2025-03-21 14:30:00"
+          }
+        ],
+        "static_checks": [
+          "The serialize function must not preprocess the value (e.g., remove colons)."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "Verify that the serialize function correctly writes an option value containing a colon without altering it.",
+          "target_constraint": "The output file must contain the exact value including colons, and the file must remain a valid INI file.",
+          "expected_failure_mode": "If the serialize function uses a naive write that interprets colons as key-value separators, or if it strips colons, the written value will be incorrect or the file will be malformed.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "A scaled case where the config contains a value with a colon; the serialize function must preserve it exactly."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new constraint complexity introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "require_correct_section_order",
+      "operator_intensity": 1,
+      "transformation_goal": "Add a constraint that sections must appear in a specific order (alphabetical) in the output file.",
+      "rationale": "The seed task does not specify ordering. However, in some applications, the order of sections matters (e.g., for readability or downstream parsing). This operator increases constraint complexity by requiring the serialize function to write sections in alphabetical order.",
+      "state_updates": {
+        "visible_state_patch": {
+          "context": "import configparser\nimport os\n\ndef main():\n    # Create a configuration with sections in non-alphabetical order\n    config = configparser.ConfigParser()\n    config['User'] = {\n        'name': 'Alice',\n        'email': 'alice@example.com'\n    }\n    config['General'] = {\n        'version': '1.0',\n        'enabled': 'yes'\n    }\n\n    # Define the output file path\n    path = 'test_config.ini'\n\n    # Save the configuration to disk\n    <<insert solution here>>\n\n    # Verify that the file was created and print its contents\n    if os.path.exists(path):\n        with open(path, 'r') as f:\n            content = f.read()\n        # Check if sections appear in alphabetical order\n        lines = content.strip().split('\\n')\n        sections = [line for line in lines if line.startswith('[')]\n        if sections == sorted(sections):\n            print('Sections are in correct order.')\n        else:\n            print('Sections are not in alphabetical order.')\n        print('Configuration file content:')\n        print(content)\n    else:\n        print('Failed to create configuration file.')\n\nif __name__ == '__main__':\n    main()"
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [
+          "Check that the output file sections appear in alphabetical order: ['[General]', '[User]'].",
+          "The verification code now includes an order check."
+        ],
+        "file_output_tests": [
+          {
+            "path": "test_config.ini",
+            "must_have_sections_in_order": [
+              "[General]",
+              "[User]"
+            ]
+          }
+        ],
+        "static_checks": [
+          "The serialize function must not rely on insertion order; it must sort sections."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_2",
+          "semantic_intent": "Verify that the serialize function writes sections in alphabetical order regardless of insertion order.",
+          "target_constraint": "The output file must have sections sorted alphabetically.",
+          "expected_failure_mode": "If the serialize function writes sections in the order they were added (User first, General second), the order will be [User], [General] which is not alphabetical.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "A scaled case where sections are added in non-alphabetical order; the output must be sorted."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new constraint complexity introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "handle_empty_section",
+      "operator_intensity": 1,
+      "transformation_goal": "Include an empty section (no options) in the configuration to test robustness against sections with no key-value pairs.",
+      "rationale": "Adversarial inputs may include sections without any options. A brittle implementation might skip writing the section header or fail. This operator tests robustness by requiring the serialize function to correctly write empty section headers.",
+      "state_updates": {
+        "visible_state_patch": {
+          "context": "import configparser\nimport os\n\ndef main():\n    # Create a configuration with an empty section\n    config = configparser.ConfigParser()\n    config['General'] = {\n        'version': '1.0',\n        'enabled': 'yes'\n    }\n    config['Empty'] = {}  # empty section\n    config['User'] = {\n        'name': 'Alice',\n        'email': 'alice@example.com'\n    }\n\n    # Define the output file path\n    path = 'test_config.ini'\n\n    # Save the configuration to disk\n    <<insert solution here>>\n\n    # Verify that the file was created and print its contents\n    if os.path.exists(path):\n        with open(path, 'r') as f:\n            content = f.read()\n        print('Configuration file content:')\n        print(content)\n    else:\n        print('Failed to create configuration file.')\n\nif __name__ == '__main__':\n    main()"
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [
+          "Check that the output file contains the section header '[Empty]'.",
+          "Check that no options are listed under '[Empty]'."
+        ],
+        "file_output_tests": [
+          {
+            "path": "test_config.ini",
+            "must_contain_section": "Empty",
+            "section_options_count": {
+              "Empty": 0
+            }
+          }
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_a_spec_1",
+          "semantic_intent": "Verify that the serialize function correctly writes an empty section with just the header.",
+          "target_constraint": "The output file must contain a line '[Empty]' and no key-value pairs under it until the next section.",
+          "expected_failure_mode": "If the serialize function skips empty sections, the file will lack the '[Empty]' header. If it crashes on empty sections, an exception will occur.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "A scaled case where the config contains an empty section; the output must include the section header with no options."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new adversarial robustness requirement introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

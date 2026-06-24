@@ -1,0 +1,63 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Verifies that the function correctly filters and computes probabilities for a sample dataset with multiple fragment lengths.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_811_M2_c_01",
+      "axis": "C",
+      "semantic_intent": "Verify that the function retains correct behavior for typical input after adding empty-input handling.",
+      "target_constraint": "The function must handle empty input gracefully, but for non-empty input it should still apply the filtering criteria correctly.",
+      "expected_failure_mode": "Not applicable for this case; it tests that existing functionality is preserved.",
+      "setup_code": "",
+      "call_code": "datalist = [8]*200 + [10]*120 + [12]*150 + [15]*90 + [20]*50\nvalues, probs = compute_probs(datalist)\nprint(\"Selected fragment lengths:\", values)\nprint(\"Their probabilities:\", probs)\nresult = {'values': values, 'probs': probs}",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Filter fragment lengths based on at least 100 read pairs and within 10 median absolute deviations of median, and compute relative probabilities"
+      ],
+      "expected_output_signature": {
+        "return_value": {
+          "values": [
+            8,
+            10,
+            12
+          ],
+          "probs": [
+            0.425531914893617,
+            0.2553191489361702,
+            0.3191489361702128
+          ]
+        },
+        "stdout_contains": [
+          "Selected fragment lengths: [8, 10, 12]",
+          "Their probabilities: [0.425531914893617, 0.2553191489361702, 0.3191489361702128]"
+        ],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "empty_input",
+      "description": "Verifies that the function returns two empty lists when given an empty input list.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_811_M2_c_01",
+      "axis": "C",
+      "semantic_intent": "Verify that the function returns two empty lists for empty input.",
+      "target_constraint": "The function must handle empty input gracefully and return two empty lists.",
+      "expected_failure_mode": "Raises StatisticsError from median() or returns non-empty lists.",
+      "setup_code": "",
+      "call_code": "result = compute_probs([])\nprint('Empty test result:', result)",
+      "assertion_code": "assert result == ([], []), f'Expected ([], []), got {result}'",
+      "covered_requirements": [
+        "Add requirement that function handles empty input list gracefully and returns two empty lists.",
+        "Must include a test case where input is an empty list and expected output is two empty lists."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [
+          "Empty test result: ([], [])"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

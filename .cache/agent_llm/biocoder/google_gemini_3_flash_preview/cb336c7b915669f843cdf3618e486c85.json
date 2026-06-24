@@ -1,0 +1,26 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "tool_run_custom_test_lS0ZYapOROt7cKGHyTHf",
+      "function": {
+        "name": "run_custom_test",
+        "arguments": "{\"code\":\"import pandas as pd\\n\\ndef from_label(label):\\n    # placeholder for label conversion\\n    return label\\n\\ndef report_bad_line(parse_func):\\n    def parse_line(line):\\n        line = line.strip()\\n        parts = line.split()\\n        chrom, rest = parts[0].split(':')\\n        start, end = rest.split('-')\\n        gene = parts[1] if len(parts) > 1 else ''\\n        return (chrom, int(start), int(end), gene)\\n    return parse_line\\n\\ndef as_handle(path, mode):\\n    return open(path, mode)\\n\\ndef read_text(infile):\\n    data = []\\n    parse_line = report_bad_line(None)\\n    with as_handle(infile, 'r') as f:\\n        for line in f:\\n            if not line.strip():\\n                continue\\n            chrom, start, end, gene = parse_line(line)\\n            if not gene:\\n                gene = '-'\\n            data.append([chrom, start, end, gene])\\n    return pd.DataFrame(data, columns=['chromosome', 'start', 'end', 'gene'])\\n\\ndef main():\\n    # create a sample input file\\n    sample_lines = [\\n        'chr1:100-200 geneA',\\n        'chrom2:300-400',\\n        'chr3:500-600 REF>ALT'\\n    ]\\n    with open('coords.txt', 'w') as f:\\n        for line in sample_lines:\\n            f.write(line + '\\\\n')\\n    # call the read_text function\\n    df = read_text('coords.txt')\\n    print(df)\\n\\nif __name__ == '__main__':\\n    main()\\n\",\"test_snippet\":\"# No additional test needed, main() already prints output.\\n\"}"
+      }
+    }
+  ],
+  "reasoning_details": [
+    {
+      "type": "reasoning.encrypted",
+      "data": "AY89a188sO2221fBg7MseiEKbLfbHa11oAEZlodKL0xoYsyZynb5CO4CdG8E/A5UGI0=",
+      "format": "google-gemini-v1",
+      "id": "tool_run_custom_test_lS0ZYapOROt7cKGHyTHf",
+      "index": 0
+    }
+  ]
+}

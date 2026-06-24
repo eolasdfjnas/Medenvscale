@@ -1,0 +1,260 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "content_based_format_detection",
+      "operator_intensity": 1,
+      "transformation_goal": "Change format detection from extension-based to content-based by examining the first line of the file.",
+      "rationale": "Removes reliance on file extensions, forcing the agent to handle cases where extension is missing or misleading, increasing input complexity.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "In metabolic modeling, exchange reactions are often defined in files that list metabolites and their allowable flux bounds. Write a function `parse_exchange_file(path, default_compartment)` that reads an exchange file (either TSV or YAML) and yields each compound entry as a dictionary with keys 'compound', 'lower', 'upper', and, for YAML, a 'compartment'. The file format should be auto-detected by examining the file content (first non-empty line) rather than using file extension: if TSV, use `parse_exchange_table_file(f)`; if YAML, use `parse_exchange_yaml_file(context, f, default_compartment)`. Raise a `ParseError` if the format cannot be determined. Do not rely on `resolve_format` or any file extension."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import logging\nimport os\n# Note: resolve_format is provided but should not be used; implement content-based detection.\nclass FilePathContext:\n    def __init__(self, path):\n        self.filepath = path if isinstance(path, str) else path.filepath\n    def open(self, mode):\n        return open(self.filepath, mode)\n\ndef parse_exchange_table_file(f):\n    # Expect header: compound\\tlower\\tupper\n    header = f.readline()\n    for line in f:\n        parts = line.strip().split('\\t')\n        if len(parts) != 3:\n            continue\n        yield {'compound': parts[0], 'lower': float(parts[1]), 'upper': float(parts[2])}\n\ndef parse_exchange_yaml_file(context, f, default_compartment):\n    # Minimal YAML-like stub: each line \"compound:lower:upper[:compartment]\"\n    for line in f:\n        parts = line.strip().split(':')\n        if len(parts) < 3:\n            continue\n        entry = {\n            'compound': parts[0],\n            'lower': float(parts[1]),\n            'upper': float(parts[2]),\n            'compartment': parts[3] if len(parts) > 3 else default_compartment\n        }\n        yield entry\n\nclass ParseError(Exception):\n    pass\n\nlogger = logging.getLogger(__name__)\n\n<<insert solution here>>"
+        },
+        "gold_state_patch": {
+          "operator_mode": "gold_compatible",
+          "gold_solution_must_pass": false
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          "Test that the function does not use file extension to detect format; provide a file with .txt extension but TSV content, and also a file with .yaml extension but TSV content; verify correct parsing.",
+          "Test with a file that has no extension (e.g., 'exchange_noext') and TSV content; should parse as TSV."
+        ],
+        "new_hidden_tests": [],
+        "exception_tests": [
+          "Provide a file with empty content; should raise ParseError."
+        ],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Relying on file extension will cause failures in cases where extension is missing or misleading."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_1",
+          "semantic_intent": "The downstream scaled case must prove that format detection works without relying on file extension.",
+          "target_constraint": "Format must be detected by content, not by extension.",
+          "expected_failure_mode": "Old seed behavior (extension-based) will fail to parse a file with wrong extension (e.g., .txt for YAML).",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Create two files: one with .tsv extension but YAML content, and another with .yaml extension but TSV content. The function must parse correctly based on content, not extension."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement: content-based format detection.",
+        "The function must not use file extension to decide format."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "strict_entry_validation",
+      "operator_intensity": 3,
+      "transformation_goal": "Add strict validation that each compound entry must have proper numeric bounds (lower <= upper) and that all lines must be well-formed; raise ParseError for any malformed line or invalid bounds.",
+      "rationale": "Increases computational complexity by enforcing constraints on input data and requiring error handling for invalid entries.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "In metabolic modeling, exchange reactions are often defined in files that list metabolites and their allowable flux bounds. Write a function `parse_exchange_file(path, default_compartment)` that reads an exchange file (either TSV or YAML) and yields each compound entry as a dictionary with keys 'compound', 'lower', 'upper', and, for YAML, a 'compartment'. The file format should be auto-detected: if TSV, use `parse_exchange_table_file(f)`; if YAML, use `parse_exchange_yaml_file(context, f, default_compartment)`. Raise a `ParseError` if the format cannot be determined. Additionally, the function must validate each entry: ensure lower and upper are numeric and that lower <= upper. If a line is malformed (e.g., missing fields, non-numeric bounds) or bounds are invalid, raise a `ParseError` with a descriptive message. Do not skip malformed lines silently."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import logging\nimport os\n\nclass FilePathContext:\n    def __init__(self, path):\n        self.filepath = path if isinstance(path, str) else path.filepath\n    def open(self, mode):\n        return open(self.filepath, mode)\n\ndef resolve_format(fmt, filepath):\n    _, ext = os.path.splitext(filepath.lower())\n    if ext in ['.tsv', '.txt']:\n        return 'tsv'\n    if ext in ['.yaml', '.yml']:\n        return 'yaml'\n    return None\n\ndef parse_exchange_table_file(f):\n    # Expect header: compound\\tlower\\tupper\n    header = f.readline()\n    for line in f:\n        parts = line.strip().split('\\t')\n        if len(parts) != 3:\n            continue\n        yield {'compound': parts[0], 'lower': float(parts[1]), 'upper': float(parts[2])}\n\ndef parse_exchange_yaml_file(context, f, default_compartment):\n    # Minimal YAML-like stub: each line \"compound:lower:upper[:compartment]\"\n    for line in f:\n        parts = line.strip().split(':')\n        if len(parts) < 3:\n            continue\n        entry = {\n            'compound': parts[0],\n            'lower': float(parts[1]),\n            'upper': float(parts[2]),\n            'compartment': parts[3] if len(parts) > 3 else default_compartment\n        }\n        yield entry\n\nclass ParseError(Exception):\n    pass\n\nlogger = logging.getLogger(__name__)\n\n<<insert solution here>>"
+        },
+        "gold_state_patch": {
+          "operator_mode": "gold_compatible",
+          "gold_solution_must_pass": false
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          "Test that malformed TSV line (e.g., 'Glucose\\t-10' missing upper) raises ParseError.",
+          "Test that malformed YAML line (e.g., 'Glucose:-10' missing upper) raises ParseError.",
+          "Test that invalid bounds (lower > upper) raises ParseError.",
+          "Test that non-numeric bounds (e.g., 'abc') raises ParseError."
+        ],
+        "new_hidden_tests": [],
+        "exception_tests": [
+          "All malformed or invalid entries must raise ParseError, not be skipped."
+        ],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Old seed behavior skips malformed lines and does not validate bounds; will fail these checks."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "The downstream scaled case must prove that the function validates each entry and raises ParseError for malformed or invalid data.",
+          "target_constraint": "No malformed or invalid entry is silently skipped; an error is raised.",
+          "expected_failure_mode": "Old seed behavior would yield entries for valid lines only and skip malformed lines without error.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Create TSV files with a malformed line (missing field) and with invalid bounds (lower > upper). Expect ParseError."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement: strict validation of entries.",
+        "The function must raise ParseError for any malformed or invalid entry."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "robust_to_malformed_and_bom",
+      "operator_intensity": 1,
+      "transformation_goal": "Ensure robustness against files with UTF-8 BOM, variable line endings (CR/LF/CRLF), leading/trailing whitespace in fields, and empty lines.",
+      "rationale": "Tests the agent's ability to handle real-world file quirks, preventing shortcuts that assume perfectly formatted files.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "In metabolic modeling, exchange reactions are often defined in files that list metabolites and their allowable flux bounds. Write a function `parse_exchange_file(path, default_compartment)` that reads an exchange file (either TSV or YAML) and yields each compound entry as a dictionary with keys 'compound', 'lower', 'upper', and, for YAML, a 'compartment'. The file format should be auto-detected: if TSV, use `parse_exchange_table_file(f)`; if YAML, use `parse_exchange_yaml_file(context, f, default_compartment)`. Raise a `ParseError` if the format cannot be determined. The function must be robust to UTF-8 BOM (byte order mark) at the beginning of the file, different line endings (CR, LF, CRLF), leading/trailing whitespace in field values, and empty lines. These should be handled gracefully without causing errors or silently producing incorrect results."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {
+          "operator_mode": "gold_compatible",
+          "gold_solution_must_pass": false
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          "Test with a TSV file that has a UTF-8 BOM at the start.",
+          "Test with a YAML file that has CRLF line endings.",
+          "Test with leading/trailing spaces in compound name: ' Glucose ' should be treated as 'Glucose'.",
+          "Test with empty lines interspersed; they should be skipped."
+        ],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Old seed behavior may fail to handle BOM (if not stripped) or may misinterpret CRLF lines.",
+          "Leading/trailing whitespace may cause compound name mismatch or parsing errors."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_a_spec_1",
+          "semantic_intent": "The downstream scaled case must prove that the function handles BOM, varying line endings, whitespace, and empty lines correctly.",
+          "target_constraint": "All such file quirks are handled gracefully, producing the same results as without quirks.",
+          "expected_failure_mode": "Old seed behavior may produce errors or different output on files with BOM or CRLF line endings.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Create TSV files with BOM, CRLF line endings, whitespace in fields, and empty lines. Compare output to a clean file."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement: robustness to file quirks.",
+        "The function must handle BOM, any line endings, whitespace, and empty lines."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

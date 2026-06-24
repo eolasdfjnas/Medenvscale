@@ -1,0 +1,10 @@
+{
+  "primary_axis_weight_hint": {
+    "D": 5,
+    "C": 4,
+    "A": 1,
+    "V": 2
+  },
+  "secondary_axis_weight_hints": [],
+  "axis_weight_reason": "Primary task is structured_data_processing with priority D > C > V > A. D (data) is key as we process CSV columns; C (control flow) handles conditional logic; V (validation) deals with missing/empty fields; A (algorithm) for simple string splits. D gets 5, C gets 4, V gets 2, A gets 1."
+}

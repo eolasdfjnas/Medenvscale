@@ -1,0 +1,26 @@
+{
+  "scaled_executable_gold_code": "import pandas as pd\n\ndef from_label(label):\n    # placeholder for label conversion\n    return label\n\ndef report_bad_line(parse_func):\n    def parse_line(line):\n        line = line.strip()\n        parts = line.split()\n        chrom, rest = parts[0].split(':')\n        start, end = rest.split('-')\n        gene = parts[1] if len(parts) > 1 else ''\n        return (chrom, int(start), int(end), gene)\n    return parse_line\n\ndef as_handle(path, mode):\n    return open(path, mode)\n\ndef read_text(infile):\n    rows = []\n    with as_handle(infile, 'r') as handle:\n        for line in handle:\n            line = line.strip()\n            if not line or line.startswith('#'):\n                continue\n            parts = line.split()\n            if not parts:\n                continue\n            chrom_colon = parts[0]\n            if ':' not in chrom_colon:\n                continue\n            chrom, rest = chrom_colon.split(':', 1)\n            if '-' not in rest:\n                continue\n            start_str, end_str = rest.split('-', 1)\n            start = int(start_str)\n            end = int(end_str)\n            # Normalize chromosome\n            chrom_lower = chrom.lower()\n            for prefix in ['chromosome', 'chrom', 'chr']:\n                if chrom_lower.startswith(prefix):\n                    chrom = chrom[len(prefix):]\n                    break\n            gene = parts[1] if len(parts) > 1 else ''\n            if gene == '':\n                gene = '-'\n            rows.append((chrom, start, end, gene))\n    df = pd.DataFrame.from_records(rows, columns=['chromosome', 'start', 'end', 'gene'])\n    return df",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "The original seed solution did not skip comments/empty lines, did not handle whitespace variations robustly, and did not normalize chromosome identifiers. The scaled task requires these features.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_295_M4_d_01",
+    "env_medagentgym_train_295_M4_d_02",
+    "env_medagentgym_train_295_M4_c_03",
+    "env_medagentgym_train_295_M4_a_04"
+  ],
+  "covered_requirements": [
+    "Handle input lines with whitespace variations (tabs, multiple spaces, leading/trailing).",
+    "Skip empty lines and comment lines (starting with '#').",
+    "Normalize chromosome identifiers by stripping common prefixes ('chr', 'chrom', 'chromosome').",
+    "Preserve the required function signature and output format."
+  ],
+  "implementation_notes": [
+    "The read_text function now strips each line, skips empty/comment lines, splits on any whitespace, parses chrom:start-end, normalizes chromosome by removing prefixes, and replaces missing gene with '-'.",
+    "Helper functions from_label, report_bad_line, and as_handle are retained for compatibility.",
+    "The code is self-contained and passes the provided scaled oracle cases."
+  ],
+  "assumptions": []
+}

@@ -1,0 +1,35 @@
+{
+  "primary_domain": "omics_measurement_analysis",
+  "secondary_domains": [
+    {
+      "domain": "bioinformatics_sequence_structure",
+      "relevance": 0.8
+    },
+    {
+      "domain": "biomedical_data_analysis",
+      "relevance": 0.6
+    }
+  ],
+  "primary_task_type": "code_validation_and_utility",
+  "solution_form": "code_snippet",
+  "secondary_task_types": [
+    "structured_data_processing"
+  ],
+  "domain_concepts": [
+    "peptide sequences",
+    "fragment annotations",
+    "precursor transitions",
+    "charge state",
+    "protein mapping"
+  ],
+  "required_capabilities": [
+    "Python programming",
+    "CSV parsing",
+    "dictionary manipulation",
+    "string splitting",
+    "handling missing values"
+  ],
+  "verifier_type_hint": "unit_test",
+  "routing_reason": "Task implements a function to process proteomics CSV rows for peptide and transition mapping, typical of proteomics data analysis in biomedical research.",
+  "confidence": 0.95
+}

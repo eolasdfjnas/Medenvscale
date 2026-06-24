@@ -1,0 +1,54 @@
+You are routing a MedAgentGym biomedical/scientific code-completion task.
+
+Problem:
+{{ problem }}
+
+Context summary:
+{{ context }}
+
+Signature:
+{{ signature }}
+
+Code:
+{{ code }}
+
+Task family:
+{{ task_family }}
+
+Resources:
+{{ resource_files }}
+
+Allowed domains:
+{{ domains }}
+
+Allowed task types:
+{{ task_types }}
+
+You must identify one primary_domain and up to three secondary_domains.
+
+Primary domain:
+- The single most central biomedical/scientific domain of the task.
+
+Secondary domains:
+- Additional domains that are clearly relevant but not central.
+- Return at most 3.
+- Each secondary domain must include a relevance score from 0.0 to 1.0.
+- Do not include a secondary domain with relevance below 0.35.
+- Do not repeat the primary domain in secondary_domains.
+
+Important:
+- Domains do not decide difficulty axes.
+- Domains do not decide selected_axes or axis_intensity.
+- Domains only provide semantic context for tool planning, dynamic operator synthesis, verifier generation, rubric generation, hidden test generation, and reporting.
+
+Return JSON with:
+- primary_domain
+- secondary_domains
+- primary_task_type
+- solution_form
+- secondary_task_types
+- domain_concepts
+- required_capabilities
+- verifier_type_hint
+- routing_reason
+- confidence

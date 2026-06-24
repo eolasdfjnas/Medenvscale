@@ -1,0 +1,16 @@
+{
+  "role": "assistant",
+  "content": "",
+  "reasoning_content": "Let me understand the task. I need to implement the `bc_chromosome_draw_label` function that monkeypatches the `Chromosome._draw_label` method so that the label is drawn above the chromosome instead of below.\n\nLet me first look at the Biopython BasicChromosome module to understand the original `_draw_label` method.",
+  "tool_calls": [
+    {
+      "index": 0,
+      "id": "call_00_IzGJm9YqPHjk5Hh9gEv25606",
+      "type": "function",
+      "function": {
+        "name": "get_task_context",
+        "arguments": "{\"window\": 4000}"
+      }
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "scaled_executable_gold_code": "import os\nimport tarfile\nimport tempfile\n\nclass GenipeError(Exception):\n    pass\n\ndef untar_file(path, fn):\n    # Validate that path exists and is a directory\n    if not os.path.isdir(path):\n        raise GenipeError('path does not exist or is not a directory')\n    \n    # Sanitize filename to prevent shell injection (disallow shell metacharacters)\n    dangerous_chars = set(';|&$`\\'\"(){}[]<>#')\n    if any(c in fn for c in dangerous_chars):\n        raise GenipeError('invalid filename')\n    \n    # Open tarfile to list members; will raise an error if missing or corrupt\n    try:\n        with tarfile.open(fn, 'r') as tar:\n            # Check for overwrite conflicts: only for files, skip '.' and directories\n            for member in tar.getmembers():\n                if member.name == '.':\n                    continue\n                full_path = os.path.join(path, member.name)\n                # If the member is a file and the destination exists, conflict\n                if member.isfile() and os.path.exists(full_path):\n                    raise GenipeError('overwrite conflict with existing file: {}'.format(full_path))\n                # If the member is a directory and the destination exists as a file, conflict\n                if member.isdir() and os.path.isfile(full_path):\n                    raise GenipeError('overwrite conflict with existing file: {}'.format(full_path))\n            # Extract\n            tar.extractall(path)\n    except (tarfile.TarError, OSError):\n        raise GenipeError('Could not extract {}'.format(fn))\n\ndef main():\n    with tempfile.TemporaryDirectory() as tmp_dir:\n        # Create a source directory with a file\n        source_dir = os.path.join(tmp_dir, 'source')\n        os.mkdir(source_dir)\n        test_file = os.path.join(source_dir, 'hello.txt')\n        with open(test_file, 'w') as f:\n            f.write('Hello, world!')\n\n        # Create a tar archive of the source directory\n        tar_path = os.path.join(tmp_dir, 'archive.tar')\n        with tarfile.open(tar_path, 'w') as tar:\n            tar.add(source_dir, arcname='source')\n\n        # Prepare the extraction directory\n        extract_dir = os.path.join(tmp_dir, 'dest')\n        os.mkdir(extract_dir)\n\n        # Call the solution here to extract\n        untar_file(extract_dir, tar_path)\n\n        # Verify extraction\n        extracted_file = os.path.join(extract_dir, 'source', 'hello.txt')\n        assert os.path.isfile(extracted_file), 'File was not extracted correctly.'\n        print('Extraction succeeded:', open(extracted_file).read())\n\nif __name__ == '__main__':\n    main()\n",
+  "repair_summary": "Removed pre-check for archive file existence (os.path.isfile) to let tarfile.open handle missing files, aligning with the contract that error must originate from tar non-zero exit. This should fix D_spec_missing_archive and V_spec_failure cases. Other changes preserved.",
+  "covered_operator_ids": [
+    "env_medagentgym_train_255_M4_d_01",
+    "env_medagentgym_train_255_M4_d_02",
+    "env_medagentgym_train_255_M4_c_03",
+    "env_medagentgym_train_255_M4_c_04",
+    "env_medagentgym_train_255_M4_a_05",
+    "env_medagentgym_train_255_M4_v_06"
+  ],
+  "covered_requirements": [
+    "Scaled executable cases must include a test with a missing archive file.",
+    "Scaled executable cases must include test with nested archive.",
+    "Scaled executable cases must include test with invalid path.",
+    "Scaled executable cases must include test with pre-existing files in destination.",
+    "Scaled executable cases must include test with malicious archive filename.",
+    "Scaled executable cases must include a failure case test."
+  ],
+  "remaining_risks": [
+    "D_spec_nested file artifact may not be found by test harness due to path naming mismatch; if so, extraction directory may need to be renamed to 'dest_dir' to match expected relative artifact path. Current solution extracts to the absolute path provided by the caller."
+  ]
+}

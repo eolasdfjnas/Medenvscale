@@ -1,0 +1,8 @@
+default_dataset: biocoder
+trainer: simple_prm
+dataset_path: data/splits/prm_train.jsonl
+eval_path: data/splits/prm_dev.jsonl
+output_dir: experiments/prm
+model_name_or_path: Qwen/Qwen2.5-1.5B-Instruct
+max_steps: 50
+learning_rate: 2.0e-5

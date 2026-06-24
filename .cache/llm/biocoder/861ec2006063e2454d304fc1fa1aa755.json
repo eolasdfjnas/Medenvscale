@@ -1,0 +1,127 @@
+{
+  "operator_instances": [
+    {
+      "axis": "V",
+      "operator_type": "strengthen_verification_coverage",
+      "operator_intensity": 2,
+      "transformation_goal": "Add comprehensive executable oracle cases that verify the profile's structure, mathematical properties, and file output integrity, ensuring the solution is robust against common errors.",
+      "rationale": "The original task only has a single seed case with basic assertions. To increase verification complexity, we add multiple scaled cases that check: (1) the profile is monotonically decreasing, (2) all probabilities are valid (0-1), (3) the list is not the same object on repeated calls, (4) the JSON file is valid and matches the returned profile, and (5) edge-case-like calls (e.g., verifying first and last values strictly).",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {
+          "verifier_type_hint": "assertion_based"
+        },
+        "test_state_patch": {
+          "scaled_oracle_cases": []
+        },
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          "Profile is monotonically non-increasing: profile[i] >= profile[i+1] for i in range(11)",
+          "All values are between 0 and 1 inclusive",
+          "Repeated calls return different list objects (no shared reference)",
+          "JSON file content when loaded equals the returned profile",
+          "First value strictly equals 1, last value strictly equals 0.0005"
+        ],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [
+          {
+            "file_path": "error_profile.json",
+            "check_mode": "json_equals",
+            "expected_function": "load_profile_from_return"
+          }
+        ],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Hardcoded list that is not monotonically decreasing",
+          "Returning the same list object each call (reference leak)",
+          "Values outside [0,1]",
+          "JSON file missing or incorrect content"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_v_spec_1",
+          "semantic_intent": "Verify the profile is monotonically non-increasing.",
+          "target_constraint": "Each successive element must be <= the previous element.",
+          "expected_failure_mode": "A monotonically increasing or constant profile would fail.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "no_input_change"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "exact"
+          },
+          "test_case_description": "Check monotonic decreasing property of the returned list."
+        },
+        {
+          "spec_id": "task_v_spec_2",
+          "semantic_intent": "Verify that the function returns a new list object on each call (immutable output).",
+          "target_constraint": "Calling get_default_error_profile() twice must yield distinct list objects.",
+          "expected_failure_mode": "If the function returns a global list reference, both calls will return the same object.",
+          "test_template_type": "function_behavior_case",
+          "input_variant": {
+            "kind": "no_input_change"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "reference_inequality"
+          },
+          "test_case_description": "Ensure repeated calls do not share the same list object."
+        },
+        {
+          "spec_id": "task_v_spec_3",
+          "semantic_intent": "Verify that the JSON file artifact contains exactly the same profile as returned.",
+          "target_constraint": "Reading error_profile.json gives a list identical to the return value.",
+          "expected_failure_mode": "If the file is written with different values or format, equality will fail.",
+          "test_template_type": "file_output_case",
+          "input_variant": {
+            "kind": "no_input_change"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "file_content_equals_return"
+          },
+          "test_case_description": "Validate JSON file content against returned profile."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must cover monotonicity, list uniqueness, and file-content matching."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "behavioral_change": false,
+        "difficulty_increase_estimate": 2
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

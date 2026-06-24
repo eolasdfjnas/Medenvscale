@@ -1,0 +1,17 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "call_vYey5RATZHjkYheLU5re33P5",
+      "function": {
+        "name": "read_resource_file",
+        "arguments": "{\"path\":\"main.py\"}"
+      }
+    }
+  ]
+}

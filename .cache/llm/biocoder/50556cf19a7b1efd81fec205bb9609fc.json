@@ -1,0 +1,28 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_main",
+      "description": "Combined test of state masking and N_k truncation: use variable N_k and mask one state, verify f_k update is correct.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_647_M3_c_01,env_medagentgym_train_647_M3_a_02",
+      "axis": "C,A",
+      "semantic_intent": "Verify that the function correctly handles both states_with_samples masking and N_k truncation.",
+      "target_constraint": "The function must only update f_k for states where states_with_samples is True and must use only the first N_k[k] columns of u_kn[k].",
+      "expected_failure_mode": "A solution that ignores masking or fails to truncate samples will produce incorrect f_k values, especially for masked states or when padded values are present.",
+      "setup_code": "np.random.seed(42)\nn_states = 4\nN_k = np.array([200, 150, 180, 170], dtype=int)\nmax_samples = np.max(N_k)\nu_kn = np.random.rand(n_states, max_samples) * 5.0\nfor k in range(n_states):\n    u_kn[k, N_k[k]:] = 100.0\nf_k = np.zeros(n_states)\nstates_with_samples = np.array([True, False, True, True])",
+      "call_code": "updated_f_k = self_consistent_update(u_kn, N_k, f_k, states_with_samples)\nprint(\"Updated free energies:\", updated_f_k)\nresult = updated_f_k",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Add the requirement that the self-consistent update must correctly exclude states that are marked as not having samples (states_with_samples is False). Also enforce that the implementation actually computes the update rather than delegating to the stub.",
+        "Add requirement that the function must use N_k to truncate the number of samples per state, i.e., not assume u_kn has the same number of columns for all states; only the first N_k[k] columns of u_kn[k] are valid. Also ensure no hardcoding of sample count."
+      ],
+      "expected_output_signature": {
+        "return_value": "[1.54339371, 0.0, 1.60174865, 1.59883336]",
+        "stdout_contains": [
+          "Updated free energies: [1.54339371 0.         1.60174865 1.59883336]"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

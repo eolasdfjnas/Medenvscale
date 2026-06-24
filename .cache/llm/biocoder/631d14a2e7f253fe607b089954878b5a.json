@@ -1,0 +1,375 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "add_json_format_support",
+      "operator_intensity": 1,
+      "transformation_goal": "Add JSON as a supported exchange file format, requiring the function to detect .json extension and parse a JSON array of objects with keys 'compound', 'lower', 'upper', and optionally 'compartment'.",
+      "rationale": "Increases data complexity by introducing a third file format (JSON) with a different structure, requiring new parsing logic and format detection. This tests the function's extensibility and handling of structured data.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "file I/O",
+            "format detection",
+            "JSON parsing",
+            "iteration",
+            "dictionary creation",
+            "exception handling"
+          ],
+          "domain_concepts": [
+            "exchange reaction",
+            "flux bounds",
+            "file format detection",
+            "TSV parsing",
+            "YAML parsing",
+            "JSON parsing"
+          ]
+        },
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "path": "exchange_limits.json",
+              "purpose": "Test JSON format input"
+            }
+          ]
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import logging\nimport os\nimport json  # Added for JSON parsing\n# Stub implementations to support parse_exchange_file\nclass FilePathContext:\n    def __init__(self, path):\n        self.filepath = path if isinstance(path, str) else path.filepath\n    def open(self, mode):",
+          "placeholder_token": "<<insert solution here>>"
+        },
+        "gold_state_patch": {
+          "operator_mode": "gold_compatible"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          "Check that parse_exchange_file correctly parses a .json file with valid data.",
+          "Check that parse_exchange_file raises ParseError for malformed JSON (e.g., invalid syntax)."
+        ],
+        "new_hidden_tests": [],
+        "exception_tests": [
+          {
+            "test_id": "json_invalid_syntax",
+            "description": "Feed a file with .json extension but invalid JSON content",
+            "expected_exception": "ParseError"
+          }
+        ],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Old seed code would not recognize .json extension and raise ParseError even on valid JSON.",
+          "Old seed code would fail to parse JSON content."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_json_parsing",
+          "semantic_intent": "The function must correctly parse a JSON exchange file and yield entries with proper keys.",
+          "target_constraint": "Support .json extension, parse a JSON array of objects, yield each object as a dictionary with 'compound', 'lower', 'upper', and optionally 'compartment'.",
+          "expected_failure_mode": "Old code raises ParseError for .json files or parses incorrectly.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "JSON file with valid entries"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Create a JSON file 'exchange_limits.json' with content [{\"compound\":\"Glucose\",\"lower\":-10,\"upper\":100,\"compartment\":\"c\"}, {\"compound\":\"O2\",\"lower\":-1000,\"upper\":1000}] and run parse_exchange_file. Expected output: two dictionaries with keys as above."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a JSON file variant that tests correct parsing and error handling."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "D",
+      "operator_type": "require_robust_parsing_of_malformed_lines",
+      "operator_intensity": 1,
+      "transformation_goal": "Require the function to handle malformed lines in TSV and YAML files robustly: lines with missing fields, extra fields, or non-numeric bounds should raise ParseError instead of being silently skipped.",
+      "rationale": "Increases data complexity by introducing messy data with structural errors. The current seed code silently skips lines with wrong number of parts. A robust parser should either raise an error or log a warning and skip, but the requirement is to raise ParseError for malformed lines to ensure data integrity.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "file I/O",
+            "format detection",
+            "robust parsing",
+            "error handling",
+            "iteration"
+          ],
+          "domain_concepts": [
+            "exchange reaction",
+            "flux bounds",
+            "file format detection",
+            "TSV parsing",
+            "YAML parsing",
+            "data validation"
+          ]
+        },
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "path": "malformed_exchange.tsv",
+              "purpose": "TSV file with missing and extra columns"
+            },
+            {
+              "path": "malformed_exchange.yaml",
+              "purpose": "YAML file with invalid numeric values"
+            }
+          ]
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import logging\nimport os\n# Stub implementations to support parse_exchange_file\nclass FilePathContext:\n    def __init__(self, path):\n        self.filepath = path if isinstance(path, str) else path.filepath\n    def open(self, mode):\n        return open(self.filepath, mode)\n\ndef resolve_format(fmt, filepath):\n    _, ext = os.path.splitext(filepath.lower())\n    if ext in ['.tsv', '.txt']:\n        return 'tsv'\n    if ext in ['.yaml', '.yml']:\n        return 'yaml'\n    return None",
+          "placeholder_token": "<<insert solution here>>"
+        },
+        "gold_state_patch": {
+          "operator_mode": "gold_compatible"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          "For TSV: line with 2 columns should raise ParseError.",
+          "For TSV: line with 4 columns should raise ParseError.",
+          "For YAML: line with non-numeric bounds should raise ParseError.",
+          "For YAML: line with missing fields (only 2 parts) should raise ParseError."
+        ],
+        "new_hidden_tests": [],
+        "exception_tests": [
+          {
+            "test_id": "tsv_missing_column",
+            "description": "TSV line with only compound and lower (missing upper)",
+            "expected_exception": "ParseError"
+          },
+          {
+            "test_id": "tsv_extra_column",
+            "description": "TSV line with 4 columns",
+            "expected_exception": "ParseError"
+          },
+          {
+            "test_id": "yaml_non_numeric",
+            "description": "YAML line with non-numeric lower bound",
+            "expected_exception": "ParseError"
+          },
+          {
+            "test_id": "yaml_too_few_parts",
+            "description": "YAML line with only compound:lower (2 parts)",
+            "expected_exception": "ParseError"
+          }
+        ],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Old seed code silently skips malformed lines, whereas new requirement demands ParseError."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_malformed_tsv",
+          "semantic_intent": "The function must raise ParseError for malformed TSV lines (wrong number of columns).",
+          "target_constraint": "TSV lines with != 3 columns after header should raise ParseError.",
+          "expected_failure_mode": "Old code would silently skip such lines and continue.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "TSV file containing a malformed line"
+          },
+          "expected_behavior": {
+            "kind": "exception",
+            "exception_type": "ParseError"
+          },
+          "test_case_description": "Create a TSV file with header then a line with 2 columns ('Metabolite\\t-10') and a valid line. parse_exchange_file should raise ParseError on the malformed line."
+        },
+        {
+          "spec_id": "task_d_malformed_yaml",
+          "semantic_intent": "The function must raise ParseError for malformed YAML lines (wrong number of parts or non-numeric values).",
+          "target_constraint": "YAML lines must have at least 3 parts with numeric lower and upper; otherwise raise ParseError.",
+          "expected_failure_mode": "Old code would skip lines with <3 parts or attempt float conversion and raise ValueError for non-numeric, but not ParseError.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "YAML file with invalid numeric value"
+          },
+          "expected_behavior": {
+            "kind": "exception",
+            "exception_type": "ParseError"
+          },
+          "test_case_description": "Create a YAML file with line 'Metabolite:-10:abc' (non-numeric upper). parse_exchange_file should raise ParseError."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include malformed input files that trigger ParseError."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "add_content_based_format_detection",
+      "operator_intensity": 1,
+      "transformation_goal": "Require the function to detect file format based on content when the file extension is missing or ambiguous (e.g., no extension, .txt, .dat), by sniffing the first line: if it contains tabs, treat as TSV; if it contains colons, treat as YAML; else raise ParseError.",
+      "rationale": "Increases computation complexity by adding a heuristic for format detection beyond simple extension lookup. This requires the function to read part of the file, decide format, and then parse accordingly, which is a more sophisticated algorithm.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "file I/O",
+            "content-based format detection",
+            "heuristic parsing",
+            "iteration",
+            "exception handling"
+          ],
+          "domain_concepts": [
+            "exchange reaction",
+            "flux bounds",
+            "file format detection",
+            "content sniffing",
+            "TSV parsing",
+            "YAML parsing"
+          ]
+        },
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "path": "exchange_limits_noext",
+              "purpose": "File without extension, content TSV"
+            },
+            {
+              "path": "exchange_limits.dat",
+              "purpose": "File with .dat extension, content YAML-like"
+            }
+          ]
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import logging\nimport os\n# Stub implementations to support parse_exchange_file\nclass FilePathContext:\n    def __init__(self, path):\n        self.filepath = path if isinstance(path, str) else path.filepath\n    def open(self, mode):\n        return open(self.filepath, mode)\n\ndef resolve_format(fmt, filepath):\n    # We keep the original resolve_format for extension-based detection, but format by content may override if needed.\n    _, ext = os.path.splitext(filepath.lower())\n    if ext in ['.tsv', '.txt']:\n        return 'tsv'\n    if ext in ['.yaml', '.yml']:\n        return 'yaml'\n    return None",
+          "placeholder_token": "<<insert solution here>>"
+        },
+        "gold_state_patch": {
+          "operator_mode": "gold_compatible"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          "File without extension but containing tabs should be parsed as TSV.",
+          "File with .dat extension but containing colons should be parsed as YAML.",
+          "File with no extension and ambiguous content (e.g., no tabs or colons) should raise ParseError."
+        ],
+        "new_hidden_tests": [],
+        "exception_tests": [
+          {
+            "test_id": "no_ext_ambiguous",
+            "description": "File without extension and content that is neither tab-separated nor colon-separated",
+            "expected_exception": "ParseError"
+          }
+        ],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Old seed code uses only extension-based detection and would raise ParseError for files with no recognized extension, even if content is valid TSV or YAML."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_content_based_detection",
+          "semantic_intent": "The function must detect format by content when extension is missing or unrecognized.",
+          "target_constraint": "If extension is not .tsv/.txt/.yaml/.yml or missing, sniff the first line: if it contains a tab, treat as TSV; if it contains a colon, treat as YAML; else raise ParseError.",
+          "expected_failure_mode": "Old code would not sniff content and would raise ParseError for such files.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "File without extension but valid TSV content"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Create a file named 'exchange_limits' (no extension) with TSV content (header and a data line). parse_exchange_file should detect TSV by content and yield entries correctly."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include files with ambiguous or missing extensions to test content-based detection."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

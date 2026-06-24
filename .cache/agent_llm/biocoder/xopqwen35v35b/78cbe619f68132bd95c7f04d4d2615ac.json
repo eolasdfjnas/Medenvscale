@@ -1,0 +1,17 @@
+{
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+    {
+      "index": 0,
+      "id": "call_a753ee3917d6400f903f2efd",
+      "type": "function",
+      "function": {
+        "name": "run_custom_test",
+        "arguments": "{\"code\": \"import logging\\nimport multiprocessing as mp\\n\\ndef _system_call(command):\\n    # Dummy system call implementation for testing\\n    stdout = f\\\"Executed command: {command}\\\"\\n    stderr = \\\"\\\"\\n    return (stdout, stderr, 0)\\n\\ndef deblur_system_call(params, input_fp):\\n    \\\"\\\"\\\"\\n    Builds a Deblur CLI command to deblur a FASTA file.\\n    \\n    Args:\\n        params: List of strings representing additional command-line options.\\n        input_fp: String path to the input FASTA file.\\n    \\n    Returns:\\n        Tuple of (stdout, stderr, returncode) from _system_call.\\n    \\\"\\\"\\\"\\n    command = ['deblur', 'workflow', '--is-worker-thread', '--keep-tmp-files']\\n    command.extend(params)\\n    command.append(input_fp)\\n    \\n    logging.debug(f\\\"Full command: {command}\\\")\\n    \\n    return _system_call(command)\\n\\ndef main():\\n    logging.basicConfig(level=logging.DEBUG)\\n    # Create a dummy FASTA file for testing\\n    input_fp = 'test_sequences.fasta'\\n    with open(input_fp, 'w') as f:\\n        f.write(\\\">seq1\\\\nACTG\\\\n>seq2\\\\nTGCA\\\\n\\\")\\n    # Example parameters for deblur\\n    params = ['--min-size', '50']\\n    stdout, stderr, returncode = deblur_system_call(params, input_fp)\\n    print('STDOUT:', stdout)\\n    print('STDERR:', stderr)\\n    print('Return code:', returncode)\\n\\nif __name__ == '__main__':\\n    main()\", \"test_snippet\": \"# Test that the function builds the correct command structure\\nimport logging\\nlogging.basicConfig(level=logging.DEBUG)\\n\\ndef _system_call(command):\\n    return (f\\\"Executed: {command}\\\", \\\"\\\", 0)\\n\\ndef deblur_system_call(params, input_fp):\\n    command = ['deblur', 'workflow', '--is-worker-thread', '--keep-tmp-files']\\n    command.extend(params)\\n    command.append(input_fp)\\n    logging.debug(f\\\"Full command: {command}\\\")\\n    return _system_call(command)\\n\\n# Test case 1: Basic functionality\\nparams = ['--min-size', '50']\\ninput_fp = 'test.fasta'\\nstdout, stderr, rc = deblur_system_call(params, input_fp)\\nassert 'deblur workflow --is-worker-thread --keep-tmp-files --min-size 50 test.fasta' in stdout or \\\"['deblur', 'workflow', '--is-worker-thread', '--keep-tmp-files', '--min-size', '50', 'test.fasta']\\\" in stdout, f\\\"Command not built correctly: {stdout}\\\"\\nassert rc == 0, f\\\"Return code should be 0, got {rc}\\\"\\nassert stderr == \\\"\\\", f\\\"Stderr should be empty, got {stderr}\\\"\\n\\n# Test case 2: Empty params\\nparams_empty = []\\nstdout2, stderr2, rc2 = deblur_system_call(params_empty, 'input.fasta')\\nassert \\\"['deblur', 'workflow', '--is-worker-thread', '--keep-tmp-files', 'input.fasta']\\\" in stdout2 or 'deblur workflow --is-worker-thread --keep-tmp-files input.fasta' in stdout2, f\\\"Empty params failed: {stdout2}\\\"\\n\\nprint(\\\"All tests passed!\\\")\"}"
+      }
+    }
+  ],
+  "reasoning_content": "",
+  "plugins_content": null
+}

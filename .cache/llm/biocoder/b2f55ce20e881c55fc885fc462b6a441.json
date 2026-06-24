@@ -1,0 +1,33 @@
+{
+  "primary_axis_weight_hint": {
+    "D": 3,
+    "C": 5,
+    "A": 2,
+    "V": 4
+  },
+  "secondary_axis_weight_hints": [
+    {
+      "task_type": "code_validation_and_utility",
+      "relevance": 0.9,
+      "axis_weight_hint": {
+        "D": 2,
+        "C": 5,
+        "A": 4,
+        "V": 3
+      },
+      "reason": "Validation is critical; C and A are top priority for this secondary task."
+    },
+    {
+      "task_type": "structured_data_processing",
+      "relevance": 0.6,
+      "axis_weight_hint": {
+        "D": 5,
+        "C": 4,
+        "V": 3,
+        "A": 2
+      },
+      "reason": "Data processing emphasizes D and C."
+    }
+  ],
+  "axis_weight_reason": "Primary numerical computation task prioritizes computational efficiency (C) and verification (V), followed by data handling (D) and accuracy (A)."
+}

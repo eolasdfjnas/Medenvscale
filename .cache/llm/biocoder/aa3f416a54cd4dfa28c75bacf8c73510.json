@@ -1,0 +1,20 @@
+{
+  "scaled_executable_gold_code": "class Compound:\n    def __init__(self, name):\n        self.name = name\n\nclass Reaction:\n    def __init__(self, compounds):\n        self.compounds = compounds\n\ndef reaction_charge(reaction, compound_charge):\n    net_charge = 0.0\n    absolute_charge = 0.0\n    for compound, coeff in reaction.compounds:\n        charge = compound_charge.get(compound.name, float('nan'))\n        net_charge += charge * float(coeff)\n        absolute_charge += abs(charge * float(coeff))\n    return {'net_charge': net_charge, 'absolute_charge': absolute_charge}\n\ndef main():\n    h_plus = Compound('H+')\n    oh_minus = Compound('OH-')\n    na_plus = Compound('Na+')\n    reaction1 = Reaction([\n        (h_plus, 2),\n        (oh_minus, 1)\n    ])\n    compound_charge = {\n        'H+': 1.0,\n        'OH-': -1.0,\n        'Na+': 1.0\n    }\n    net_charge1 = reaction_charge(reaction1, compound_charge)\n    print(f\"Net charge of reaction1: {net_charge1}\")\n    reaction2 = Reaction([\n        (na_plus, 1),\n        (oh_minus, 1)\n    ])\n    net_charge2 = reaction_charge(reaction2, compound_charge)\n    print(f\"Net charge of reaction2: {net_charge2}\")\n\nif __name__ == '__main__':\n    main()",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Modified reaction_charge to return a dictionary with net_charge and absolute_charge fields as required by the C-axis operator.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_502_M2_c_01"
+  ],
+  "covered_requirements": [
+    "Function must return a dictionary with keys 'net_charge' and 'absolute_charge'.",
+    "Scaled executable cases must test both fields."
+  ],
+  "implementation_notes": [
+    "Modified reaction_charge to compute both net charge and absolute charge sum, returning a dictionary.",
+    "Updated main() to use the new return type; print statements now output the dictionary representation."
+  ],
+  "assumptions": []
+}

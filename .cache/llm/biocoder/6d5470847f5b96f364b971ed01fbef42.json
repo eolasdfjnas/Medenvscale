@@ -1,0 +1,118 @@
+{
+  "operator_instances": [
+    {
+      "axis": "C",
+      "operator_type": "add_output_constraints_and_validation",
+      "operator_intensity": 2,
+      "transformation_goal": "Add requirement to validate non-empty version strings and include platform information.",
+      "rationale": "Increases computational complexity by adding error handling for missing version data and requiring additional system information acquisition.",
+      "state_updates": {
+        "visible_state_patch": {
+          "context": "import sys\nimport types\nimport pandas as pd\nimport networkx as nx\n\n# Create a dummy macsypy module for testing\nmacsypy = types.SimpleNamespace(__version__=\"1.2.3\",\n                                solution=types.SimpleNamespace(nx=nx),\n                                __citation__=\"Doe et al., 2023\")\n\n<<insert solution here>>\n\ndef main():\n    msg = get_version_message()\n    print(msg)\n    # Verify expected contents\n    assert \"Macsyfinder 1.2.3\" in msg\n    assert \"- Python\" in msg\n    assert \"- NetworkX\" in msg\n    assert \"- Pandas\" in msg\n    assert \"- Platform\" in msg\n    assert \"If you use this software please cite\" in msg\n\nif __name__ == \"__main__\":\n    main()"
+        },
+        "gold_state_patch": {
+          "gold_solution": "def get_version_message():\n    version = macsypy.__version__\n    if not version:\n        raise ValueError('macsypy version is empty')\n    py_vers = sys.version.replace('\\n', ' ')\n    nx_vers = macsypy.solution.nx.__version__\n    if not nx_vers:\n        raise ValueError('NetworkX version is empty')\n    pd_vers = pd.__version__\n    if not pd_vers:\n        raise ValueError('pandas version is empty')\n    import platform\n    plat_vers = platform.platform()\n    vers_msg = f\"\"\"Macsyfinder {version}\nusing:\n- Python {py_vers}\n- NetworkX {nx_vers}\n- Pandas {pd_vers}\n- Platform {plat_vers}\n\nMacsyFinder is distributed under the terms of the GNU General Public License (GPLv3).\nSee the COPYING file for details.\n\nIf you use this software please cite:\n{macsypy.__citation__}\nand don't forget to cite models used:\nmacsydata cite <model>\n\"\"\"\n    return vers_msg"
+        }
+      },
+      "verifier_delta": {
+        "new_hidden_tests": [
+          {
+            "case_id": "empty_version_case",
+            "description": "Test that function raises ValueError when a version string is empty.",
+            "setup_code": "import sys; import types; import pandas as pd; import networkx as nx; macsypy = types.SimpleNamespace(__version__='', solution=types.SimpleNamespace(nx=nx), __citation__='Doe');",
+            "call_code": "try:\n    get_version_message()\n    assert False, 'Expected ValueError'\nexcept ValueError:\n    pass\nresult = None",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout": "",
+              "stderr_contains": []
+            }
+          }
+        ],
+        "exception_tests": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "c_validation_and_platform",
+          "semantic_intent": "Prove the function validates non-empty version strings and includes platform information.",
+          "target_constraint": "The function must raise ValueError if any version string is empty, and must include a line with 'Platform:' in the output.",
+          "expected_failure_mode": "Old seed behavior (without validation and platform) would output incorrect version string without validation and omit platform, causing assertion failure or passing empty versions.",
+          "test_template_type": "assertion_verifier",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "standard"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Standard test with non-empty versions should include 'Platform:', and a test with empty version should raise ValueError."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must validate version strings and include platform info."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "add_adversarial_module_and_path",
+      "operator_intensity": 2,
+      "transformation_goal": "Change attribute paths and add conflicting version attribute to test robustness against hardcoding and misleading data.",
+      "rationale": "Increases adversarial robustness by requiring the solution to use correct attribute names despite similar misleading attributes and changed module structure.",
+      "state_updates": {
+        "visible_state_patch": {
+          "context": "import sys\nimport types\nimport pandas as pd\nimport networkx as nx\n\n# Create a dummy macsypy module for testing\nmacsypy = types.SimpleNamespace(__version__=\"1.2.3\",\n                                _version=\"0.9.0\",\n                                solver=types.SimpleNamespace(graph=nx),\n                                __citation__=\"Doe et al., 2023\")\n\n<<insert solution here>>\n\ndef main():\n    msg = get_version_message()\n    print(msg)\n    # Verify expected contents\n    assert \"Macsyfinder 1.2.3\" in msg\n    assert \"- Python\" in msg\n    assert \"- NetworkX\" in msg\n    assert \"- Pandas\" in msg\n    assert \"If you use this software please cite\" in msg\n\nif __name__ == \"__main__\":\n    main()"
+        },
+        "gold_state_patch": {
+          "gold_solution": "def get_version_message():\n    version = macsypy.__version__\n    py_vers = sys.version.replace('\\n', ' ')\n    nx_vers = macsypy.solver.graph.__version__\n    pd_vers = pd.__version__\n    vers_msg = f\"\"\"Macsyfinder {version}\nusing:\n- Python {py_vers}\n- NetworkX {nx_vers}\n- Pandas {pd_vers}\n\nMacsyFinder is distributed under the terms of the GNU General Public License (GPLv3).\nSee the COPYING file for details.\n\nIf you use this software please cite:\n{macsypy.__citation__}\nand don't forget to cite models used:\nmacsydata cite <model>\n\"\"\"\n    return vers_msg"
+        }
+      },
+      "verifier_delta": {
+        "new_hidden_tests": [
+          {
+            "case_id": "adversarial_module_test",
+            "description": "Run main() with the modified adversarial module and verify correct output.",
+            "setup_code": "",
+            "call_code": "msg = get_version_message()\nprint(msg)\nassert \"Macsyfinder 1.2.3\" in msg\nassert \"- Python\" in msg\nassert \"- NetworkX\" in msg\nassert \"- Pandas\" in msg\nassert \"If you use this software please cite\" in msg\nassert \"0.9.0\" not in msg\nresult = msg",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [
+                "Macsyfinder 1.2.3",
+                "- NetworkX",
+                "Doe et al., 2023"
+              ],
+              "file_artifacts": []
+            }
+          }
+        ],
+        "exception_tests": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "a_adversarial_path_and_conflict",
+          "semantic_intent": "Prove the function correctly handles a changed attribute path (solver.graph instead of solution.nx) and ignores a misleading _version attribute.",
+          "target_constraint": "The function must access NetworkX version via macsypy.solver.graph.__version__ and use macsypy.__version__ (not _version).",
+          "expected_failure_mode": "Old seed behavior (using solution.nx) would raise AttributeError; hardcoded path would fail; using _version would produce wrong version.",
+          "test_template_type": "assertion_verifier_with_setup",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "adversarial"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Test with module having solver/graph path and _version attribute."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must run with the adversarially modified module and verify correct attribute access."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      }
+    }
+  ]
+}

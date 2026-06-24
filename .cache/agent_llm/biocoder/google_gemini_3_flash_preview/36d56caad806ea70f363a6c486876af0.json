@@ -1,0 +1,26 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "tool_run_custom_test_wW03vcbsfTDmCKcYRHb6",
+      "function": {
+        "name": "run_custom_test",
+        "arguments": "{\"test_snippet\":\"# No test snippet needed, just checking source\",\"code\":\"from Bio.Graphics import BasicChromosome as BC\\nfrom Bio.Graphics.BasicChromosome import Chromosome\\nimport inspect\\n\\nprint(inspect.getsource(Chromosome._draw_label))\\n\"}"
+      }
+    }
+  ],
+  "reasoning_details": [
+    {
+      "type": "reasoning.encrypted",
+      "data": "AY89a19Q5k369kTneMp2hC2ea8qVDn6tySXYTC3CeWGXevbrJ3THoZEXFIzAWds8BMc=",
+      "format": "google-gemini-v1",
+      "id": "tool_run_custom_test_wW03vcbsfTDmCKcYRHb6",
+      "index": 0
+    }
+  ]
+}

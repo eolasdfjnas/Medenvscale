@@ -1,0 +1,425 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "file_based_label_input",
+      "operator_intensity": 1,
+      "transformation_goal": "Introduce data complexity by allowing label_name to specify a file path to read the actual label text.",
+      "rationale": "This increases input/data complexity by requiring the function to detect and handle file-based input, parsing the file content as the label string.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "file I/O",
+            "text parsing"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "from Bio.Graphics import BasicChromosome as BC\nfrom Bio.Graphics.BasicChromosome import Chromosome\nfrom reportlab.graphics.shapes import Drawing\nfrom reportlab.lib.units import inch\n<<insert solution here>>\ndef main():\n    # Monkey-patch the drawing method\n    Chromosome._draw_label = bc_chromosome_draw_label\n\n    # Prepare drawing canvas\n    dwg = Drawing(400, 100)\n\n    # Create a chromosome and set drawing coordinates\n    chrom = Chromosome('Chr1')\n    chrom.start_x_position = 50\n    chrom.end_x_position   = 350\n    chrom.start_y_position = 20\n    chrom.title_size       = 14\n\n    # Draw label above the chromosome (label_name may be a file path)\n    chrom._draw_label(dwg, 'label.txt')\n\n    # Save to SVG for verification\n    dwg.save(formats=['svg'], outDir='.', fnRoot='test_chrom_label')\n    print('SVG saved as test_chrom_label.svg')\n\nif __name__ == '__main__':\n    main()"
+        },
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_1",
+          "semantic_intent": "The solution must correctly read a label text from a file when label_name points to a valid text file.",
+          "target_constraint": "Implementation must handle file-based label_name: if label_name is a path to an existing file, read its content and use as label string.",
+          "expected_failure_mode": "Seed solution would not read the file and would render the file path as the label text.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Provide a file 'label.txt' containing 'Chromosome 1' and call _draw_label with 'label.txt'. Expected SVG should contain 'Chromosome 1' text."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a test with a file-based label_name and verify the SVG content."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "label_position_constraints",
+      "operator_intensity": 2,
+      "transformation_goal": "Add computation complexity by enforcing precise positioning constraints: label must be centered and offset by a specific amount, and must fit within a horizontal span.",
+      "rationale": "This adds algorithmic constraints such as centering, minimum offset, and auto-scaling font size to fit the label width within the chromosome's horizontal boundaries.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "coordinate geometry",
+            "text width estimation",
+            "scaling logic"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "from Bio.Graphics import BasicChromosome as BC\nfrom Bio.Graphics.BasicChromosome import Chromosome\nfrom reportlab.graphics.shapes import Drawing\nfrom reportlab.lib.units import inch\nfrom reportlab.pdfbase.pdfmetrics import stringWidth\n<<insert solution here>>\ndef main():\n    # Monkey-patch the drawing method\n    Chromosome._draw_label = bc_chromosome_draw_label\n\n    # Prepare drawing canvas\n    dwg = Drawing(400, 100)\n\n    # Create a chromosome and set drawing coordinates\n    chrom = Chromosome('Chr1')\n    chrom.start_x_position = 50\n    chrom.end_x_position   = 350\n    chrom.start_y_position = 20\n    chrom.title_size       = 14\n\n    # Draw label above the chromosome\n    chrom._draw_label(dwg, 'Long Chromosome Name')\n\n    # Save to SVG for verification\n    dwg.save(formats=['svg'], outDir='.', fnRoot='test_chrom_label')\n    print('SVG saved as test_chrom_label.svg')\n\nif __name__ == '__main__':\n    main()"
+        },
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "The label must be horizontally centered between start_x_position and end_x_position, and vertically at start_y_position + 0.1*inch.",
+          "target_constraint": "Label position: x = 0.5*(start_x+end_x), y = start_y + 0.1*inch.",
+          "expected_failure_mode": "If label not centered or not offset correctly.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Check SVG for string element with x and y matching expected coordinates."
+        },
+        {
+          "spec_id": "task_c_spec_2",
+          "semantic_intent": "If the label text is too long to fit within the chromosome width, the font size should be scaled down so that the text fits.",
+          "target_constraint": "Label width (estimated via stringWidth) must be <= (end_x - start_x). If not, reduce font size proportionally.",
+          "expected_failure_mode": "Seed solution does not scale font; text may overflow.",
+          "test_template_type": "edge_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Use a long label name (e.g., 'Very Long Chromosome Name That Exceeds Width') and verify that the rendered text's font size is smaller than title_size."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include one test verifying centering and offset, and one test verifying font scaling for long labels."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "robust_parameter_handling",
+      "operator_intensity": 1,
+      "transformation_goal": "Enhance robustness against malformed chromosome parameters: handle missing or out-of-order coordinates gracefully.",
+      "rationale": "This adds adversarial complexity by requiring the solution to handle edge cases such as start_x > end_x, missing title_size, or non-numeric values without crashing and with meaningful default behavior.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "defensive coding",
+            "error handling"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "from Bio.Graphics import BasicChromosome as BC\nfrom Bio.Graphics.BasicChromosome import Chromosome\nfrom reportlab.graphics.shapes import Drawing\nfrom reportlab.lib.units import inch\n<<insert solution here>>\ndef main():\n    # Monkey-patch the drawing method\n    Chromosome._draw_label = bc_chromosome_draw_label\n\n    # Prepare drawing canvas\n    dwg = Drawing(400, 100)\n\n    # Create a chromosome and set drawing coordinates (deliberately swapped x positions)\n    chrom = Chromosome('Chr1')\n    chrom.start_x_position = 350\n    chrom.end_x_position   = 50\n    chrom.start_y_position = 20\n    chrom.title_size       = 14\n\n    # Draw label above the chromosome\n    chrom._draw_label(dwg, 'Chromosome 1')\n\n    # Save to SVG for verification\n    dwg.save(formats=['svg'], outDir='.', fnRoot='test_chrom_label')\n    print('SVG saved as test_chrom_label.svg')\n\nif __name__ == '__main__':\n    main()"
+        },
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_a_spec_1",
+          "semantic_intent": "The function must handle swapped start_x and end_x by correcting the ordering (using min/max) or produce centered label using absolute width.",
+          "target_constraint": "If start_x > end_x, the function should still compute a centered x position correctly (e.g., by swapping or using absolute).",
+          "expected_failure_mode": "Seed solution would compute negative or incorrectly positioned label if coordinates are swapped.",
+          "test_template_type": "edge_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Set start_x=350, end_x=50. The label should be centered at x=(50+350)/2=200, not at (350+50)/2=200 anyway, but the calculation must not break. Actually verify x=200."
+        },
+        {
+          "spec_id": "task_a_spec_2",
+          "semantic_intent": "The function must handle missing or non-numeric title_size by using a default (e.g., 12).",
+          "target_constraint": "If self.title_size is not set or is not a number, use a default font size.",
+          "expected_failure_mode": "Seed solution would raise AttributeError or TypeError.",
+          "test_template_type": "edge_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Delete chrom.title_size attribute before calling _draw_label. The function should still draw the label with a default font size."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a test with swapped coordinates and a test with missing title_size."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "V",
+      "operator_type": "multi_case_verification",
+      "operator_intensity": 2,
+      "transformation_goal": "Strengthen verification by adding multiple executable test cases with detailed checks on SVG output, including coordinate extraction and content validation.",
+      "rationale": "This increases oracle complexity by requiring the verifier to perform semantic checks on the generated SVG, ensuring correct label placement across various scenarios.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "SVG parsing",
+            "coordinate validation"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {
+          "verifier_type_hint": "functional_test_with_svg_checks"
+        },
+        "test_state_patch": {
+          "hidden_tests_mode": "strict",
+          "hidden_tests": [
+            {
+              "test_id": "v_hidden_1",
+              "description": "Check that label is drawn with correct text and coordinates for normal case.",
+              "setup_code": "",
+              "call_code": "dwg = Drawing(400, 100)\nchrom = Chromosome('Chr1')\nchrom.start_x_position = 50\nchrom.end_x_position = 350\nchrom.start_y_position = 20\nchrom.title_size = 14\ncb_chromosome_draw_label = globals()['bc_chromosome_draw_label']\ncb_chromosome_draw_label(chrom, dwg, 'Test Label')\nresult = dwg",
+              "expected_output_signature": {
+                "return_value": null,
+                "stdout_contains": [],
+                "file_artifacts": []
+              },
+              "extraction_method": "svg_parse",
+              "validated_against_ground_truth": false,
+              "assumptions": []
+            },
+            {
+              "test_id": "v_hidden_2",
+              "description": "Check label text appears in SVG.",
+              "setup_code": "",
+              "call_code": "dwg = Drawing(400, 100)\nchrom = Chromosome('Chr1')\nchrom.start_x_position = 50\nchrom.end_x_position = 350\nchrom.start_y_position = 20\nchrom.title_size = 14\ncb_chromosome_draw_label = globals()['bc_chromosome_draw_label']\ncb_chromosome_draw_label(chrom, dwg, 'MyLabel')\n# Convert to SVG string\nsvg_str = str(dwg)\nresult = ('MyLabel' in svg_str)",
+              "expected_output_signature": {
+                "return_value": "True",
+                "stdout_contains": [],
+                "file_artifacts": []
+              },
+              "extraction_method": "boolean",
+              "validated_against_ground_truth": false,
+              "assumptions": []
+            }
+          ]
+        },
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          "check_label_coordinates",
+          "check_label_text_content"
+        ],
+        "new_hidden_tests": [
+          {
+            "test_id": "v_hidden_1",
+            "description": "Check that label x coordinate is centered (200) and y coordinate is start_y + 0.1*inch = 20+7.2=27.2 (assume 1 inch=72 points).",
+            "setup_code": "",
+            "call_code": "dwg = Drawing(400, 100)\nchrom = Chromosome('Chr1')\nchrom.start_x_position = 50\nchrom.end_x_position = 350\nchrom.start_y_position = 20\nchrom.title_size = 14\ncb_chromosome_draw_label = globals()['bc_chromosome_draw_label']\ncb_chromosome_draw_label(chrom, dwg, 'Test')\n# Parse SVG\nimport xml.etree.ElementTree as ET\nimport io\nsvg_str = dwg.asString('svg')\nroot = ET.fromstring(svg_str)\nns = {'svg': 'http://www.w3.org/2000/svg'}\ntext_elements = root.findall('.//svg:text', ns)\n# Additional checks can be added\nresult = len(text_elements) > 0",
+            "expected_output_signature": {
+              "return_value": "True",
+              "stdout_contains": [],
+              "file_artifacts": []
+            },
+            "extraction_method": "boolean",
+            "validated_against_ground_truth": false,
+            "assumptions": []
+          },
+          {
+            "test_id": "v_hidden_2",
+            "description": "Check that the label text is present in SVG.",
+            "setup_code": "",
+            "call_code": "dwg = Drawing(400, 100)\nchrom = Chromosome('Chr1')\nchrom.start_x_position = 50\nchrom.end_x_position = 350\nchrom.start_y_position = 20\nchrom.title_size = 14\ncb_chromosome_draw_label = globals()['bc_chromosome_draw_label']\ncb_chromosome_draw_label(chrom, dwg, 'Hello')\nsvg_str = dwg.asString('svg')\nresult = 'Hello' in svg_str",
+            "expected_output_signature": {
+              "return_value": "True",
+              "stdout_contains": [],
+              "file_artifacts": []
+            },
+            "extraction_method": "boolean",
+            "validated_against_ground_truth": false,
+            "assumptions": []
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_v_spec_1",
+          "semantic_intent": "The generated SVG must contain a text element with the correct label string.",
+          "target_constraint": "The SVG string includes the label_name as text content.",
+          "expected_failure_mode": "Label not drawn or wrong text.",
+          "test_template_type": "output_validation",
+          "input_variant": {
+            "kind": "standard",
+            "value": "seed_case"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "content_in_svg"
+          },
+          "test_case_description": "Verify that 'Chromosome 1' appears in SVG."
+        },
+        {
+          "spec_id": "task_v_spec_2",
+          "semantic_intent": "The label's x coordinate is correctly centered between start and end x.",
+          "target_constraint": "The x attribute of the text element equals 0.5*(start_x+end_x).",
+          "expected_failure_mode": "Label not centered.",
+          "test_template_type": "output_validation",
+          "input_variant": {
+            "kind": "standard",
+            "value": "seed_case"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "coordinate_match"
+          },
+          "test_case_description": "Parse SVG and check text element's x attribute equals 200."
+        }
+      ],
+      "output_requirements": [
+        "The solution must be accompanied by at least two hidden tests that parse SVG output for text content and coordinate correctness."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "tool_run_custom_test_WCuGgiyVbektZvfSmjEr",
+      "function": {
+        "name": "run_custom_test",
+        "arguments": "{\"test_snippet\":\"main()\",\"code\":\"import logging\\nimport multiprocessing as mp\\n\\ndef _system_call(command):\\n    # Dummy system call implementation for testing\\n    stdout = f\\\"Executed command: {command}\\\"\\n    stderr = \\\"\\\"\\n    return (stdout, stderr, 0)\\n\\ndef deblur_system_call(params, input_fp):\\n    command = ['deblur', 'workflow', '--is-worker-thread', '--keep-tmp-files']\\n    command.extend(params)\\n    command.append(input_fp)\\n    logging.info(f\\\"Running command: {command}\\\")\\n    return _system_call(command)\\n\\ndef main():\\n    logging.basicConfig(level=logging.DEBUG)\\n    # Test with spaces\\n    input_fp = 'my sequences.fasta'\\n    params = ['--min-size', '50']\\n    stdout, stderr, returncode = deblur_system_call(params, input_fp)\\n    print(stdout)\\n    assert \\\"'my sequences.fasta'\\\" in stdout or '\\\"my sequences.fasta\\\"' in stdout or \\\"['deblur', 'workflow', '--is-worker-thread', '--keep-tmp-files', '--min-size', '50', 'my sequences.fasta']\\\" in stdout\\n\\nif __name__ == '__main__':\\n    main()\\n\"}"
+      }
+    }
+  ],
+  "reasoning_details": [
+    {
+      "type": "reasoning.encrypted",
+      "data": "AY89a18RfFzYrX8OBhgAxXDg6jrHFz626LGq1ey3lMKDuBE7WfKB2pr/vCS9lVOy7ic=",
+      "format": "google-gemini-v1",
+      "id": "tool_run_custom_test_WCuGgiyVbektZvfSmjEr",
+      "index": 0
+    }
+  ]
+}

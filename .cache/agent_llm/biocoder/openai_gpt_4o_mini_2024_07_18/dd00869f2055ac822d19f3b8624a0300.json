@@ -1,0 +1,17 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "call_cYZaXEy4IH8XareKwJ8e7xYk",
+      "function": {
+        "name": "validate_candidate_code",
+        "arguments": "{\"code\":\"def mapRow(this_row, header_dict, precursors_mapping, sequences_mapping, protein_mapping):\\n    peptide_name = this_row[header_dict['FullPeptideName']]\\n    fragment_annotation = this_row[header_dict['aggr_Fragment_Annotation']].rstrip(';')\\n    precursor_annotation = this_row[header_dict['aggr_prec_Fragment_Annotation']].rstrip(';')\\n    charge_state = this_row[header_dict['Charge']].strip()\\n    protein_name = this_row[header_dict['ProteinName']]\\n\\n    # Handle charge state\\n    if charge_state == 'NA' or charge_state == '':\\n        charge_state = '0'\\n\\n    # Split annotations\\n    transitions = [x for x in fragment_annotation.split(';') if x]\\n    pr_transitions = [x for x in precursor_annotation.split(';') if x]\\n\\n    # Return early if transitions are empty\\n    if not transitions:\\n        return\\n\\n    # Create keys for mappings\\n    key = f'{peptide_name}/{charge_state}'\\n    key_pr = f'{peptide_name}/{charge_state}_pr'\\n\\n    # Populate precursors_mapping\\n    precursors_mapping[key] = transitions\\n    precursors_mapping[key_pr] = pr_transitions\\n\\n    # Populate sequences_mapping\\n    if peptide_name not in sequences_mapping:\\n        sequences_mapping[peptide_name] = []\\n    sequences_mapping[peptide_name].append(key)\\n    sequences_mapping[peptide_name].append(key_pr)\\n\\n    # Populate protein_mapping\\n    if protein_name not in protein_mapping:\\n        protein_mapping[protein_name] = []\\n    if peptide_name not in protein_mapping[protein_name]:\\n        protein_mapping[protein_name].append(peptide_name)\"}"
+      }
+    }
+  ]
+}

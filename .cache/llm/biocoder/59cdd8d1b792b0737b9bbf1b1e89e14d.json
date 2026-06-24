@@ -1,0 +1,337 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "multi_chromosome_input",
+      "operator_intensity": 1,
+      "transformation_goal": "Add a second chromosome with different dimensions to test label positioning for multiple chromosomes.",
+      "rationale": "Increases input complexity by requiring the solution to handle multiple chromosomes with varying start/end positions and title sizes.",
+      "state_updates": {
+        "visible_state_patch": {},
+        "data_state_patch": {
+          "resource_manifest": []
+        },
+        "task_state_patch": {
+          "required_capabilities": [
+            "Python",
+            "monkeypatching",
+            "Biopython",
+            "ReportLab"
+          ]
+        },
+        "tool_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_1",
+          "semantic_intent": "The scaled case should prove that the label is correctly positioned above the chromosome for multiple chromosomes with different coordinates.",
+          "target_constraint": "Label must appear above the chromosome (y > end_y_position) for each chromosome.",
+          "expected_failure_mode": "If the solution only works for a single chromosome with fixed coordinates, it will fail when applied to a second chromosome with different geometry.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "MultipleChromosomes"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Create two chromosomes with different start/end positions and title sizes, draw labels for both, and verify SVG contains both labels at correct positions."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include at least two chromosomes with distinct dimensions."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "constraint_label_above",
+      "operator_intensity": 6,
+      "transformation_goal": "Add constraint that label must be strictly above the chromosome's top edge (start_y_position + height) and centered horizontally.",
+      "rationale": "Increases computational complexity by requiring precise coordinate calculations and handling edge cases like zero height or negative positions.",
+      "state_updates": {
+        "visible_state_patch": {},
+        "data_state_patch": {},
+        "task_state_patch": {},
+        "tool_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "Scaled case must ensure label is positioned such that its bottom is above the top of the chromosome body (i.e., y_label + font_size < start_y_position if label anchored at bottom, but more practically y_label > start_y_position + 0.1*inch if anchored at middle).",
+          "target_constraint": "Label must be drawn above the chromosome, not below.",
+          "expected_failure_mode": "If the solution draws label at original position (below), it will fail the constraint.",
+          "test_template_type": "coordinate_check_case",
+          "input_variant": {
+            "kind": "constraint_variant",
+            "value": "AboveChromosome"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "constraint_checked"
+          },
+          "test_case_description": "Parse SVG to extract label coordinates and assert that label's y-coordinate is greater than the chromosome's top y-coordinate."
+        },
+        {
+          "spec_id": "task_c_spec_2",
+          "semantic_intent": "Test with chromosome having zero height (start_y_position equals end_y_position).",
+          "target_constraint": "Label should still be drawn above the zero-height chromosome.",
+          "expected_failure_mode": "If solution assumes non-zero height, it may place label incorrectly.",
+          "test_template_type": "edge_case",
+          "input_variant": {
+            "kind": "edge_case",
+            "value": "ZeroHeight"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "edge_case"
+          },
+          "test_case_description": "Create chromosome with start_y_position = end_y_position = 20, draw label, verify label is above 20."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must verify label position via SVG parsing.",
+        "Include at least one edge case."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "robustness_no_hardcode",
+      "operator_intensity": 4,
+      "transformation_goal": "Remove hardcoded constant 0.1*inch and require dynamic calculation based on font size or chromosome height.",
+      "rationale": "Increases robustness against changes in font size or chromosome dimensions. The solution must not assume a fixed offset.",
+      "state_updates": {
+        "visible_state_patch": {},
+        "data_state_patch": {},
+        "task_state_patch": {},
+        "tool_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_a_spec_1",
+          "semantic_intent": "Scaled case must prove that the solution does not use a constant offset (e.g., 0.1*inch) but instead calculates label y position based on font size or chromosome height.",
+          "target_constraint": "Label offset must be dynamic: either proportional to title_size or based on chromosome height.",
+          "expected_failure_mode": "A solution with hardcoded offset of 0.1*inch will fail when title_size is large (e.g., 20) or chromosome height is small, causing overlap or misplacement.",
+          "test_template_type": "adversarial_variant",
+          "input_variant": {
+            "kind": "adversarial",
+            "value": "LargeFontSize"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "adversarial"
+          },
+          "test_case_description": "Set title_size = 20 and chrom.start_y_position = 5, check that label is still above and not overlapping."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include at least one adversarial scenario with extreme parameter values."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "V",
+      "operator_type": "svg_verification_strengthen",
+      "operator_intensity": 2,
+      "transformation_goal": "Add stronger verification by checking SVG output for correct text content, font name, and position relative to chromosome.",
+      "rationale": "Increases verifier complexity by requiring executable checks on file artifacts, not just stdout.",
+      "state_updates": {
+        "visible_state_patch": {},
+        "data_state_patch": {},
+        "task_state_patch": {},
+        "tool_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {
+          "verifier_type_hint": "visual_or_svg_parsing"
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          {
+            "check_type": "file_artifact_check",
+            "check_name": "svg_label_text_check",
+            "description": "Parse SVG file and verify that a text element with specified label_name exists.",
+            "condition": "any_text_node_contains(label_name)"
+          },
+          {
+            "check_type": "file_artifact_check",
+            "check_name": "svg_label_font_check",
+            "description": "Verify the fontName of the label is 'Times-BoldItalic'.",
+            "condition": "check_font('Times-BoldItalic')"
+          }
+        ],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [
+          {
+            "test_case_id": "vg_file_check",
+            "description": "Check that SVG file is generated and has correct text.",
+            "file_path": "test_chrom_label.svg",
+            "checks": [
+              "exists",
+              "size_greater_than(500)",
+              "contains_text('Chromosome 1')"
+            ]
+          }
+        ],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_v_spec_1",
+          "semantic_intent": "Scaled case must prove that the output SVG contains the label with correct text and font.",
+          "target_constraint": "SVG must include a <text> element with the label name and correct font.",
+          "expected_failure_mode": "If label is missing or font is different, test fails.",
+          "test_template_type": "file_check_case",
+          "input_variant": {
+            "kind": "standard",
+            "value": "OriginalInput"
+          },
+          "expected_behavior": {
+            "kind": "file_artifact_match",
+            "mode": "svg_parsed"
+          },
+          "test_case_description": "Execute the code, verify SVG file exists, parse it, and assert presence of text node with label and correct font."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include file artifact checks on output SVG.",
+        "Verifier must parse SVG to extract text elements."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

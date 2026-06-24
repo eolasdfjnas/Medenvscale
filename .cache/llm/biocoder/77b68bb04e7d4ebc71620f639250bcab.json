@@ -1,0 +1,39 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Combined scaled requirements: content-based format detection, compound/bound validation, comment skipping, empty file handling, BOM handling.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_441_M4_d_01,env_medagentgym_train_441_M4_c_02,env_medagentgym_train_441_M4_a_03",
+      "axis": "D,C,A",
+      "semantic_intent": "Verify that parse_exchange_file handles content-based format detection for .dat files, validates compound names (alphanumeric) and bounds (lower<=upper), skips comment lines, gracefully handles empty files, and correctly strips UTF-8 BOM.",
+      "target_constraint": "When file extension is not .tsv/.yaml but content is TSV, function must detect and parse correctly; skip entries with non-alphanumeric compound names or lower>upper; skip lines starting with '#'; handle empty file without crashing and yield no entries; handle TSV with BOM by stripping it and parsing correctly.",
+      "expected_failure_mode": "Original solution would raise ParseError for .dat, include invalid entries, crash on empty file, and misinterpret BOM as part of header.",
+      "setup_code": "import os\nimport logging\n\nclass FilePathContext:\n    def __init__(self, path):\n        self.filepath = path if isinstance(path, str) else path.filepath\n    def open(self, mode):\n        return open(self.filepath, mode)\n\ndef resolve_format(fmt, filepath):\n    _, ext = os.path.splitext(filepath.lower())\n    if ext in ['.tsv', '.txt']:\n        return 'tsv'\n    if ext in ['.yaml', '.yml']:\n        return 'yaml'\n    return None\n\ndef parse_exchange_table_file(f):\n    header = f.readline()\n    for line in f:\n        parts = line.strip().split('\\t')\n        if len(parts) != 3:\n            continue\n        yield {'compound': parts[0], 'lower': float(parts[1]), 'upper': float(parts[2])}\n\ndef parse_exchange_yaml_file(context, f, default_compartment):\n    for line in f:\n        parts = line.strip().split(':')\n        if len(parts) < 3:\n            continue\n        entry = {\n            'compound': parts[0],\n            'lower': float(parts[1]),\n            'upper': float(parts[2]),\n            'compartment': parts[3] if len(parts) > 3 else default_compartment\n        }\n        yield entry\n\nclass ParseError(Exception):\n    pass\n\nlogger = logging.getLogger(__name__)\n\n# Create test files\n# 1. .dat file with TSV content\nwith open('exchange_limits.dat', 'w') as f:\n    f.write('compound\\tlower\\tupper\\n')\n    f.write('Glucose\\t-10\\t100\\n')\n    f.write('Lactate\\t0\\t50\\n')\n\n# 2. TSV file with comments, invalid name, invalid bound\nwith open('exchange_comments.tsv', 'w') as f:\n    f.write('compound\\tlower\\tupper\\n')\n    f.write('# This is a comment\\n')\n    f.write('Glucose\\t-10\\t100\\n')\n    f.write('Invalid@Name\\t0\\t50\\n')\n    f.write('Lactate\\t20\\t10\\n')\n\n# 3. Empty TSV file\nwith open('empty_exchange.tsv', 'w') as f:\n    pass\n\n# 4. TSV file with UTF-8 BOM\nwith open('bom_exchange.tsv', 'wb') as f:\n    f.write(b'\\xef\\xbb\\xbfcompound\\tlower\\tupper\\n')\n    f.write(b'Glucose\\t-10\\t100\\n')\n\n# 5. YAML file with comment\nwith open('exchange_yaml.yaml', 'w') as f:\n    f.write('# comment line\\n')\n    f.write('Glucose:-10:100:cytosol\\n')\n    f.write('Lactate:0:50:c\\n')",
+      "call_code": "# Test content-based detection (.dat)\nprint('Parsing .dat file:')\nfor entry in parse_exchange_file('exchange_limits.dat', default_compartment='c'):\n    print(entry)\n\n# Test validation and comments\nprint('\\nParsing TSV with validation:')\nfor entry in parse_exchange_file('exchange_comments.tsv', default_compartment='c'):\n    print(entry)\n\n# Test empty file\nprint('\\nParsing empty file:')\nentries = list(parse_exchange_file('empty_exchange.tsv', default_compartment='c'))\nprint('Number of entries:', len(entries))\n\n# Test BOM file\nprint('\\nParsing BOM file:')\nfor entry in parse_exchange_file('bom_exchange.tsv', default_compartment='c'):\n    print(entry)\n\n# Test YAML file (comment and validation)\nprint('\\nParsing YAML file:')\nfor entry in parse_exchange_file('exchange_yaml.yaml', default_compartment='c'):\n    print(entry)\n\nresult = None",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must include a scenario where the file extension is not .tsv or .yaml, but the file content is valid TSV or YAML.",
+        "Scaled executable cases must include a file with comments, invalid compound names, and invalid flux bounds; the expected output should only include valid entries.",
+        "Scaled executable cases must include an empty file and a file with BOM; the expected outputs are empty list and a valid entry, respectively."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [
+          "Parsing .dat file:",
+          "{'compound': 'Glucose', 'lower': -10.0, 'upper': 100.0}",
+          "{'compound': 'Lactate', 'lower': 0.0, 'upper': 50.0}",
+          "Parsing TSV with validation:",
+          "{'compound': 'Glucose', 'lower': -10.0, 'upper': 100.0}",
+          "Parsing empty file:",
+          "Number of entries: 0",
+          "Parsing BOM file:",
+          "{'compound': 'Glucose', 'lower': -10.0, 'upper': 100.0}",
+          "Parsing YAML file:",
+          "{'compound': 'Glucose', 'lower': -10.0, 'upper': 100.0, 'compartment': 'cytosol'}",
+          "{'compound': 'Lactate', 'lower': 0.0, 'upper': 50.0, 'compartment': 'c'}"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,176 @@
+{
+  "operator_instances": [
+    {
+      "axis": "C",
+      "operator_type": "reversed_coordinate_handling",
+      "operator_intensity": 1,
+      "transformation_goal": "Ensure the label drawing method correctly centers the label even when the chromosome's start and end x positions are swapped (start > end).",
+      "rationale": "The original seed uses start_x=50, end_x=350 (start < end). Reversed coordinates test robustness of the centering calculation and ensure the method uses (min+max)/2 rather than assuming order.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "case_id": "hidden_test_reversed_x",
+            "description": "Test with reversed coordinates (start_x > end_x).",
+            "setup_code": "",
+            "call_code": "Chromosome._draw_label = bc_chromosome_draw_label\ndwg = Drawing(400, 100)\nchrom = Chromosome('Chr1')\nchrom.start_x_position = 350\nchrom.end_x_position = 50\nchrom.start_y_position = 20\nchrom.title_size = 14\nchrom._draw_label(dwg, 'Chromosome 1')\n# Check that the label's x position is the midpoint (200)\nassert len(dwg.contents) == 1\nlabel = dwg.contents[0]\nassert label.x == 200.0, f\"Expected x=200, got {label.x}\"\n# Check y position is above chromosome\nassert label.y == 20 + 0.1 * inch, f\"Expected y={20+0.1*inch}, got {label.y}\"\nprint('Passed reversed coordinate test')\nresult = None",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [
+                "Passed reversed coordinate test"
+              ],
+              "file_artifacts": []
+            }
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "label.x is not the midpoint if method uses start_x only"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "C_spec_1",
+          "semantic_intent": "The label must be centered horizontally even when chromosome start and end x positions are reversed.",
+          "target_constraint": "Label x-coordinate must equal (min(start_x,end_x) + max(start_x,end_x))/2.",
+          "expected_failure_mode": "Old seed behavior might use start_x directly assuming order, causing label to be off-center.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "reverse_x_coordinates"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Verify label centering with start_x > end_x."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a hidden test with reversed x coordinates."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "label_name_robustness",
+      "operator_intensity": 1,
+      "transformation_goal": "Ensure the monkeypatched method does not hardcode the label name and works correctly with various label names including numbers, special characters, and empty strings.",
+      "rationale": "The seed test only uses 'Chromosome 1'. An adversarial model might ignore the label_name parameter and hardcode a constant. This operator tests that the method uses the provided label_name and handles edge cases robustly.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "case_id": "hidden_test_label_variants",
+            "description": "Test with different label names: 'Chr2', '123', '', 'name with spaces'.",
+            "setup_code": "",
+            "call_code": "Chromosome._draw_label = bc_chromosome_draw_label\ndwg = Drawing(400, 100)\nchrom = Chromosome('Chr1')\nchrom.start_x_position = 50\nchrom.end_x_position = 350\nchrom.start_y_position = 20\nchrom.title_size = 14\n# Test with label 'Chr2'\ndwg2 = Drawing(400, 100)\nchrom._draw_label(dwg2, 'Chr2')\nlabel = dwg2.contents[0]\nassert label.text == 'Chr2', f\"Expected text='Chr2', got {label.text}\"\n# Test with numeric label\ndwg3 = Drawing(400, 100)\nchrom._draw_label(dwg3, '123')\nlabel = dwg3.contents[0]\nassert label.text == '123', f\"Expected text='123', got {label.text}\"\n# Test with empty string\ndwg4 = Drawing(400, 100)\nchrom._draw_label(dwg4, '')\nlabel = dwg4.contents[0]\nassert label.text == '', f\"Expected empty text, got {label.text}\"\n# Test with spaces\ndwg5 = Drawing(400, 100)\nchrom._draw_label(dwg5, 'name with spaces')\nlabel = dwg5.contents[0]\nassert label.text == 'name with spaces', f\"Expected text='name with spaces', got {label.text}\"\nprint('Passed label name robustness test')\nresult = None",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [
+                "Passed label name robustness test"
+              ],
+              "file_artifacts": []
+            }
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "label.text is hardcoded to 'Chromosome 1'"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "A_spec_1",
+          "semantic_intent": "The method must use the label_name parameter and not hardcode a specific string.",
+          "target_constraint": "The drawn label's text must equal the label_name passed to the method.",
+          "expected_failure_mode": "Hardcoded label name causes test to fail for non-matching names.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "multiple_label_names"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Verify that the label text matches the provided label_name for various inputs."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include hidden tests with multiple label name variants."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "scaled_executable_gold_code": "from statistics import median\n\ndef median_absolute_deviation(data):\n    med = median(data)\n    deviations = [abs(x - med) for x in data]\n    return median(deviations)\n\n\ndef compute_probs(datalist: list) ->(list, list):\n    \"\"\"\n    Computes the probabilities for fragments with at least 100 pairs supporting it and that are at least 10 median\n    deviations from the median.\n    :param datalist: A list of fragments with counts\n    :return: A list of values that meet the criteria and a list of their associated probabilities\n    \"\"\"\n    if not datalist:\n        return [], []\n    FILTER_MINREADS = 100\n    FILTER_MEDDEV_M = 10\n    values = []\n    probabilities = []\n    med = median(datalist)\n    mad = median_absolute_deviation(datalist)\n    for item in list(set(datalist)):\n        if 0 < item <= med + FILTER_MEDDEV_M * mad:\n            data_count = datalist.count(item)\n            if data_count >= FILTER_MINREADS:\n                values.append(item)\n                probabilities.append(data_count)\n    count_sum = float(sum(probabilities))\n    probabilities = [(n / count_sum) for n in probabilities]\n    return values, probabilities\n\n\ndef main():\n    # Sample list of fragment lengths observed from paired-end reads\n    datalist = [8]*200 + [10]*120 + [12]*150 + [15]*90 + [20]*50\n    # Compute filtered fragment lengths and their probabilities\n    values, probs = compute_probs(datalist)\n    print(\"Selected fragment lengths:\", values)\n    print(\"Their probabilities:\", probs)\n\nif __name__ == \"__main__\":\n    main()\n",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Added empty input handling to return two empty lists as required by the C-axis operator.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_811_M2_c_01"
+  ],
+  "covered_requirements": [
+    "Add requirement that function handles empty input list gracefully and returns two empty lists."
+  ],
+  "implementation_notes": [
+    "Added guard clause at start of compute_probs to return two empty lists if datalist is empty.",
+    "Original filtering logic preserved for non-empty inputs."
+  ],
+  "assumptions": []
+}

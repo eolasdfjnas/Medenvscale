@@ -1,0 +1,17 @@
+{
+  "role": "assistant",
+  "content": "The solution works. Now I need to provide the complete executable Python program that includes the monkeypatch function and the main function as specified in the task:\n\n",
+  "tool_calls": [
+    {
+      "index": 0,
+      "id": "call_7f8c04c0b64e457eb9897946",
+      "type": "function",
+      "function": {
+        "name": "submit_final_code",
+        "arguments": "{\"code\": \"from Bio.Graphics import BasicChromosome as BC\\nfrom Bio.Graphics.BasicChromosome import Chromosome\\nfrom reportlab.graphics.shapes import Drawing, String\\nfrom reportlab.lib.units import inch\\n\\n\\ndef bc_chromosome_draw_label(self, cur_drawing, label_name):\\n    \\\"\\\"\\\"Draw a label for the chromosome ABOVE the chromosome (PRIVATE).\\\"\\\"\\\"\\n    # Calculate x position centered between start and end\\n    x_position = 0.5 * (self.start_x_position + self.end_x_position)\\n    # Use start_y_position to draw ABOVE the chromosome instead of end_y_position\\n    y_position = self.start_y_position\\n\\n    label_string = String(x_position, y_position, label_name)\\n    label_string.fontName = \\\"Times-BoldItalic\\\"\\n    label_string.fontSize = self.title_size\\n    label_string.textAnchor = \\\"middle\\\"\\n\\n    cur_drawing.add(label_string)\\n\\n\\ndef main():\\n    # Monkey-patch the drawing method\\n    Chromosome._draw_label = bc_chromosome_draw_label\\n\\n    # Prepare drawing canvas\\n    dwg = Drawing(400, 100)\\n\\n    # Create a chromosome and set drawing coordinates\\n    chrom = Chromosome('Chr1')\\n    chrom.start_x_position = 50\\n    chrom.end_x_position   = 350\\n    chrom.start_y_position = 20\\n    chrom.title_size       = 14\\n\\n    # Draw label above the chromosome\\n    chrom._draw_label(dwg, 'Chromosome 1')\\n\\n    # Save to SVG for verification\\n    dwg.save(formats=['svg'], outDir='.', fnRoot='test_chrom_label')\\n    print('SVG saved as test_chrom_label.svg')\\n\\n\\nif __name__ == '__main__':\\n    main()\"}"
+      }
+    }
+  ],
+  "reasoning_content": "",
+  "plugins_content": null
+}

@@ -1,0 +1,104 @@
+project_name: medenvscale_medagentgym_4axis_dynamic_operator
+language: en
+
+dataset:
+  name: MedAgentGym
+  dataset_slug: medagentgym
+  dataset_root: /archive/zengjiaqi/dataset/medagentgym
+  default_dataset: biocoder
+  split_source: train
+  max_seed_cases: 500
+  deduplicate_by_question: false
+  local_raw_path: data/raw/medagentgym/medagentgym_tasks_raw.jsonl
+  metadata_path: data/raw/medagentgym/prepare_meta.json
+  task_files:
+    train: train_tasks.jsonl
+    test: test_tasks.jsonl
+  code_execution:
+    backend: local
+    docker_image: medenvscale-biocoder:latest
+    python_bin: python
+    local_python_bin: /home/zengjiaqi/miniconda3/envs/latentmas/bin/python
+    timeout_seconds: 30
+    max_repair_attempts: 3
+
+routing:
+  use_rule_router: true
+  use_llm_router: true
+  min_confidence: 0.60
+  review_confidence: 0.75
+  fallback_domain: scientific_software_engineering
+  fallback_task_type: code_validation_and_utility
+
+generation:
+  levels:
+    - M1
+    - M2
+    - M3
+    - M4
+  variants_per_seed: 4
+  operator_mode: gold_compatible
+  llm_mode: api
+  llm_model: deepseek-chat
+  temperature: 0.2
+  max_retries: 3
+  cache_dir: .cache/llm
+  system_prompt: "You are a careful biomedical coding agent. Inspect the task, use tools within budget, and return verifier-aligned code only."
+  include_system_prompt_in_sft: true
+  sample_trajectories: true
+
+scaling:
+  sampling_seed: 1337
+  allow_gold_regeneration_for: []
+
+stage05:
+  validation_mode: case_first
+  min_validated_oracle_cases:
+    M1: 1
+    M2: 1
+    M3: 1
+    M4: 1
+  oracle_case_repair:
+    enabled: true
+    max_rounds: 3
+  scaled_gold_repair:
+    enabled: true
+    max_rounds: 3
+  hidden_tests:
+    enabled: false
+    use_as_admission_gate: false
+
+stage06:
+  llm_config: configs/agent_llm.yaml
+  llm_mode: api
+  tool_agent:
+    abort_on_llm_error: false
+    max_turns: 8
+    tool_budget:
+      max_total_tool_calls: 6
+      max_calls_per_tool:
+        get_task_context: 1
+        read_resource_file: 3
+        validate_candidate_code: 2
+        run_custom_test: 3
+        submit_final_code: 1
+
+quality:
+  min_question_points: 4
+  max_question_points: 10
+  min_rubrics: 5
+  max_rubrics: 15
+  max_duplicate_rubric_similarity: 0.85
+  min_preference_margin: 0.25
+
+splits:
+  train: 0.7
+  dev: 0.1
+  test: 0.2
+  seed: 1337
+
+output:
+  raw_dir: data/raw/medagentgym
+  interim_dir: data/interim
+  processed_dir: data/processed
+  split_dir: data/splits

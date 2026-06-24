@@ -1,0 +1,55 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Main scaled case covering both operators: validates non-empty versions, includes platform info, and uses adversarial attribute paths (solver.graph) while ignoring misleading _version.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_611_M3_c_01,env_medagentgym_train_611_M3_a_02",
+      "axis": "C,A",
+      "semantic_intent": "Prove the function validates non-empty version strings and includes platform information, and correctly handles changed attribute paths (solver.graph instead of solution.nx) and ignores misleading _version.",
+      "target_constraint": "The function must raise ValueError if any version string is empty, must include a line with 'Platform:' in the output, must access NetworkX version via macsypy.solver.graph.__version__, and must use macsypy.__version__ (not _version).",
+      "expected_failure_mode": "Old seed behavior would omit platform, not validate versions, and would raise AttributeError or use wrong attribute path.",
+      "setup_code": "",
+      "call_code": "msg = get_version_message()\nprint(msg)\nassert \"Macsyfinder 1.2.3\" in msg\nassert \"- Python\" in msg\nassert \"- NetworkX\" in msg\nassert \"- Pandas\" in msg\nassert \"- Platform\" in msg\nassert \"If you use this software please cite\" in msg\nassert \"0.9.0\" not in msg\nresult = msg",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must validate version strings and include platform info.",
+        "Scaled executable cases must run with the adversarially modified module and verify correct attribute access."
+      ],
+      "expected_output_signature": {
+        "return_type": "str",
+        "return_value": null,
+        "stdout_contains": [
+          "Macsyfinder 1.2.3",
+          "- Python",
+          "- NetworkX",
+          "- Pandas",
+          "- Platform",
+          "If you use this software please cite"
+        ],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "empty_version_validation",
+      "description": "Tests that function raises ValueError when macsypy.__version__ is empty, using the adversarial module to also verify attribute path robustness.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_611_M3_c_01",
+      "axis": "C",
+      "semantic_intent": "Prove the function raises ValueError when a version string is empty.",
+      "target_constraint": "The function must raise ValueError if any version string (macsypy.__version__, NetworkX, or Pandas) is empty.",
+      "expected_failure_mode": "Old seed behavior would output the message with empty version string, violating the validation requirement.",
+      "setup_code": "import sys\nimport types\nimport pandas as pd\nimport networkx as nx\n# Adversarial module with empty __version__ but other versions valid\nmacsypy = types.SimpleNamespace(__version__='',\n                                _version='0.9.0',\n                                solver=types.SimpleNamespace(graph=nx),\n                                __citation__='Doe et al., 2023')",
+      "call_code": "try:\n    get_version_message()\n    assert False, 'Expected ValueError'\nexcept ValueError:\n    pass\nresult = None",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must validate version strings and include platform info."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout": "",
+        "file_artifacts": []
+      }
+    }
+  ]
+}

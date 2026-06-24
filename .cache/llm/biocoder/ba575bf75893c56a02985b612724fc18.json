@@ -1,0 +1,113 @@
+{
+  "operator_instances": [
+    {
+      "axis": "C",
+      "operator_type": "extend_output_contract_to_include_absolute_charge_sum",
+      "operator_intensity": 1,
+      "transformation_goal": "Modify the required output of reaction_charge to return a dictionary with keys 'net_charge' and 'absolute_charge', where 'absolute_charge' is the sum of absolute values of (charge * coefficient) for each compound.",
+      "rationale": "Increases computation complexity by adding an additional aggregate computation (sum of absolute values) and changes the output contract to a structured dictionary format, requiring multi-step logic and proper key-value handling.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Given a biochemical reaction represented by a Reaction object that holds a list of (Compound, stoichiometric_coefficient) pairs, and a dictionary mapping each compound name to its electric charge, write code to compute the overall net charge of the reaction and the total absolute charge sum. The function `reaction_charge` should return a dictionary with keys 'net_charge' (float) and 'absolute_charge' (float)."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context": "class Compound:\n    def __init__(self, name):\n        self.name = name\n\nclass Reaction:\n    def __init__(self, compounds):\n        # compounds is a list of (Compound, coefficient) tuples\n        self.compounds = compounds\n\n# Output must be a dict with keys 'net_charge' and 'absolute_charge'.\n# Provided solution function\n# <<insert solution here>>\n\n"
+        },
+        "gold_state_patch": {},
+        "verifier_state_patch": {
+          "verifier_type_hint": "structured_output_match"
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          {
+            "check_type": "return_value_is_dict_with_keys",
+            "keys": [
+              "net_charge",
+              "absolute_charge"
+            ]
+          },
+          {
+            "check_type": "return_value_numeric_fields",
+            "fields": [
+              "net_charge",
+              "absolute_charge"
+            ],
+            "tolerance": 1e-09
+          }
+        ],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [
+          {
+            "test_id": "C_abs_charge_01",
+            "case": {
+              "setup_code": "h_plus = Compound('H+')\noh_minus = Compound('OH-')\nreaction = Reaction([(h_plus, 2), (oh_minus, 1)])\ncompound_charge = {'H+': 1.0, 'OH-': -1.0}",
+              "call_code": "result = reaction_charge(reaction, compound_charge)\nnet = result['net_charge']\nabs_charge = result['absolute_charge']"
+            },
+            "expected_net_charge": 1.0,
+            "expected_absolute_charge": 3.0
+          }
+        ],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Returning a float instead of dict",
+          "Missing keys",
+          "Incorrect absolute charge calculation (e.g., not summing absolute values)"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_C_spec_1",
+          "semantic_intent": "Verify that the function returns both net charge and absolute charge sum as a dictionary.",
+          "target_constraint": "The function must compute and return two values: net charge and sum of absolute values of (charge * coefficient).",
+          "expected_failure_mode": "Old seed behavior returns only a float, which would fail the dictionary structure check.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Use a simple reaction (2 H+ + OH-) and assert the returned dict has correct net_charge (1.0) and absolute_charge (3.0)."
+        }
+      ],
+      "output_requirements": [
+        "Function must return a dictionary with keys 'net_charge' and 'absolute_charge'.",
+        "Scaled executable cases must test both fields."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "new_complexity": "Added multi-step computation (net charge and absolute charge) and structured output contract."
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

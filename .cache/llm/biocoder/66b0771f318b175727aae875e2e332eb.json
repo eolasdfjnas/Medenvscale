@@ -1,0 +1,254 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "multi_sample_parsing",
+      "operator_intensity": 1,
+      "transformation_goal": "Modify the input file to contain multiple lines (each a separate tumor sample), requiring the function to parse all lines and return aggregated results.",
+      "rationale": "The seed data only has a single line. Real THetA outputs often contain multiple samples. This increases data volume and requires iteration over lines.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Suppose you have a file containing THetA results with a header of four tab-separated columns: NLL, mu, C, and p*. The file may contain multiple data lines, each representing a different tumor sample. The second line onwards contains values: NLL is a float; mu is a comma-separated list where the first value is the normal fraction and the remaining values are tumor fractions; C is a colon-separated list of copy number states; p* is a comma-separated list of probabilities. Write a function parse_theta_results(fname) that reads this file and returns a dictionary with keys 'NLL', 'mu_normal', 'mu_tumors', 'C', and 'p*', where each value is a list (one per sample). For each field, convert to appropriate Python types (floats, ints, lists, or None for missing)."
+        },
+        "data_state_patch": {
+          "resource_manifest": []
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import os\n<<insert solution here>>\ndef main():\n    # Create a temporary THetA output file with multiple tumor samples\n    sample = (\n        \"NLL\\tmu\\tC\\tp*\\n\"\n        \"12.5\\t0.4,0.6\\t2:3\\t0.1,0.2\\n\"\n        \"13.1\\t0.5,0.5\\t2:2\\t0.2,0.3\\n\"\n    )\n    fname = \"theta_multi.txt\"\n    with open(fname, \"w\") as f:\n        f.write(sample)\n\n    # Parse the THetA results\n    result = parse_theta_results(fname)\n    print(result)\n\n    # Clean up\n    os.remove(fname)\n\nif __name__ == \"__main__\":\n    main()"
+        },
+        "gold_state_patch": {
+          "operator_mode": "gold_compatible"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Parsing only the first line and ignoring others",
+          "Returning a single dict instead of list of values per key"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_1",
+          "semantic_intent": "Verify that the function handles multiple lines in the input file.",
+          "target_constraint": "Output dictionary must have each value as a list of length equal to number of data lines.",
+          "expected_failure_mode": "old_gold_solution returns dict with scalar values (not lists) and only first line data.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "multi_sample_case"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "File with two data lines; output should have lists of two elements per key."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose multi-line parsing requirement."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "output_format_choice",
+      "operator_intensity": 1,
+      "transformation_goal": "Add a parameter to the function that toggles output format between single sample dict (default for one line) and list of dicts (for multiple lines). However, to make it simpler, change the required output to always be a list of dicts (even for one line). This increases constraint on output structure.",
+      "rationale": "Current gold solution returns a flat dict for one line. Requiring a list of dicts for any number of lines enforces systematic handling and clarifies API.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Suppose you have a file containing THetA results with a header of four tab-separated columns: NLL, mu, C, and p*. The file may contain multiple data lines, each representing a different tumor sample. Write a function parse_theta_results(fname) that reads this file and returns a list of dictionaries, one per sample. Each dictionary has keys 'NLL', 'mu_normal', 'mu_tumors', 'C', and 'p*', converting each field to the appropriate Python types (floats, ints, lists, or None for missing)."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import os\n<<insert solution here>>\ndef main():\n    # Create a temporary THetA output file with a single tumor sample\n    sample = (\n        \"NLL\\tmu\\tC\\tp*\\n\"\n        \"12.5\\t0.4,0.6\\t2:3\\t0.1,0.2\\n\"\n    )\n    fname = \"theta_list.txt\"\n    with open(fname, \"w\") as f:\n        f.write(sample)\n\n    # Parse the THetA results (should return list of one dict)\n    results = parse_theta_results(fname)\n    print(results)\n\n    # Clean up\n    os.remove(fname)\n\nif __name__ == \"__main__\":\n    main()"
+        },
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Returning a single dict instead of a list",
+          "Returning non-list container"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "Ensure function returns a list of dictionaries regardless of number of lines.",
+          "target_constraint": "Return type must be list, each element is a dict with required keys.",
+          "expected_failure_mode": "Old gold solution returns a dict (not list) for single line.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "single_line_case"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "list_of_dicts"
+          },
+          "test_case_description": "File with one line; output should be a list containing one dict."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must verify list output."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "strict_type_validation",
+      "operator_intensity": 1,
+      "transformation_goal": "Add constraint that the function must raise a ValueError if any required field is missing or malformed (e.g., non-numeric NLL, missing mu, incorrect number of mu components).",
+      "rationale": "Seed gold solution uses placeholder None for missing values; a stricter approach requires immediate error detection, increasing computational constraint.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Suppose you have a file containing THetA results with a header of four tab-separated columns: NLL, mu, C, and p*. The second line contains the corresponding values. Write a function parse_theta_results(fname) that reads this file. The function must validate each field: NLL must be a float; mu must have at least two comma-separated values (normal fraction and at least one tumor fraction); C must have at least one colon-separated segment; p* must have at least one comma-separated probability. If any field is missing or malformed, raise a ValueError with an appropriate message. Otherwise, return a dictionary with keys 'NLL', 'mu_normal', 'mu_tumors', 'C', and 'p*', converting each to appropriate Python types (floats, ints, lists)."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import os\n<<insert solution here>>\ndef main():\n    # Create a temporary THetA output file with valid data\n    sample = (\n        \"NLL\\tmu\\tC\\tp*\\n\"\n        \"12.5\\t0.4,0.6\\t2:3\\t0.1,0.2\\n\"\n    )\n    fname = \"theta_valid.txt\"\n    with open(fname, \"w\") as f:\n        f.write(sample)\n\n    try:\n        result = parse_theta_results(fname)\n        print(result)\n    except ValueError as e:\n        print(\"Error:\", e)\n    finally:\n        os.remove(fname)\n\nif __name__ == \"__main__\":\n    main()"
+        },
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_id": "hidden_valuerror_missing",
+            "description": "Input file with missing mu value, expect ValueError",
+            "setup_code": "sample = 'NLL\\tmu\\tC\\tp*\\n12.5\\t\\t2:3\\t0.1,0.2\\n'\nfname = 'theta_missing.txt'\nwith open(fname, 'w') as f: f.write(sample)",
+            "call_code": "try:\n    result = parse_theta_results(fname)\n    print('No exception')\nexcept ValueError as e:\n    print('ValueError:', e)\nfinally:\n    os.remove(fname)",
+            "expected_output": "ValueError"
+          },
+          {
+            "test_id": "hidden_valuerror_malformed_nll",
+            "description": "Input file with non-float NLL, expect ValueError",
+            "setup_code": "sample = 'NLL\\tmu\\tC\\tp*\\nbad\\t0.4,0.6\\t2:3\\t0.1,0.2\\n'\nfname = 'theta_badnll.txt'\nwith open(fname, 'w') as f: f.write(sample)",
+            "call_code": "try:\n    result = parse_theta_results(fname)\n    print('No exception')\nexcept ValueError as e:\n    print('ValueError:', e)\nfinally:\n    os.remove(fname)",
+            "expected_output": "ValueError"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Returning a dict with None instead of raising exception",
+          "Silently ignoring missing or malformed fields"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_2",
+          "semantic_intent": "Verify that function raises ValueError on malformed or missing fields.",
+          "target_constraint": "NLL must be parseable as float; mu must have at least two parts; C must have at least one colon-separated segment; p* must have at least one part.",
+          "expected_failure_mode": "Old gold solution does not raise exception; it assigns None.",
+          "test_template_type": "exception_case",
+          "input_variant": {
+            "kind": "exception_data",
+            "value": "malformed_data_cases"
+          },
+          "expected_behavior": {
+            "kind": "exception_raised",
+            "exception_type": "ValueError"
+          },
+          "test_case_description": "Feed files with missing mu or non-numeric NLL; expect ValueError."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include exception tests for malformed input."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

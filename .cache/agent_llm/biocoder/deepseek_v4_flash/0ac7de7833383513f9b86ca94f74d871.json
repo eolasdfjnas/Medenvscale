@@ -1,0 +1,16 @@
+{
+  "role": "assistant",
+  "content": "",
+  "reasoning_content": "Let me check the resource manifest.",
+  "tool_calls": [
+    {
+      "index": 0,
+      "id": "call_00_HaEs9PGiD9MsZLDeMGeJ7633",
+      "type": "function",
+      "function": {
+        "name": "get_task_context",
+        "arguments": "{\"window\": 1000}"
+      }
+    }
+  ]
+}

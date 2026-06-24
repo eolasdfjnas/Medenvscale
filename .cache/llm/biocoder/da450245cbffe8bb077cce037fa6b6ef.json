@@ -1,0 +1,29 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Combined scaled case: variable column name in response, malformed input m/z (blank lines, non-numeric, whitespace), multiple adducts for same input, mocked server response.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_764_M4_c_01,env_medagentgym_train_764_M4_a_02,env_medagentgym_train_764_M4_v_03",
+      "axis": "C,A,V",
+      "semantic_intent": "Verify that the solution works with variable column names, gracefully handles malformed input (empty lines, non-numeric, whitespace), and correctly counts unique input m/z under mocked response with multiple adducts.",
+      "target_constraint": "The function must not crash or return incorrect count when the response CSV has column name 'Input m/z' instead of 'Input Mass', and when one input m/z matches multiple adducts. Additionally, the input m/z string may contain empty lines, non-numeric entries, or extra whitespace; the function should ignore such lines and only process valid numeric m/z values.",
+      "expected_failure_mode": "If solution hardcodes column name 'Input Mass', KeyError. If it counts rows instead of unique masses, count inflated. If it does not skip invalid lines, it may raise ValueError or cause malformed query.",
+      "setup_code": "import requests\noriginal_post = requests.post\nimport pandas as pd\nfrom io import StringIO\nmock_csv = \"Input m/z\\tOther\\n100.0\\t1\\n100.0\\t2\\n200.0\\t3\\n300.0\\t4\\n\"\ndef mock_post(url, data, files=None, **kwargs):\n    return type('Response', (), {'text': mock_csv, 'status_code': 200})()\nrequests.post = mock_post",
+      "call_code": "db = 'GLYCOLIPIDS'\nmz_values = '100.0\\n\\nabc\\n 200.0 \\n300.0'\nadducts = ' M+H , M+Na '\ntolerance = 0.01\nnum_matches = _get_num_matches(db, mz_values, adducts, tolerance)\nprint(f'Number of unique m/z matches: {num_matches}')\nresult = num_matches",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must verify that the solution works with at least two different column names for input mass and correctly returns unique count.",
+        "Scaled executable cases must include input with blank lines and non-numeric entries, and verify that the solution handles them gracefully.",
+        "Scaled executable cases must include mocked server tests to ensure deterministic verification."
+      ],
+      "expected_output_signature": {
+        "return_value": 3,
+        "stdout_contains": [
+          "Number of unique m/z matches: 3"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

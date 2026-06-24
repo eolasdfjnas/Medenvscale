@@ -1,0 +1,33 @@
+{
+  "primary_axis_weight_hint": {
+    "C": 6,
+    "V": 5,
+    "D": 3,
+    "A": 2
+  },
+  "secondary_axis_weight_hints": [
+    {
+      "task_type": "structured_data_processing",
+      "relevance": 0.6,
+      "axis_weight_hint": {
+        "D": 5,
+        "C": 4,
+        "V": 2,
+        "A": 1
+      },
+      "reason": "Priority for structured_data_processing is [D, C, V, A]; D highest for data structure handling, C for correctness, V for validation, A lowest."
+    },
+    {
+      "task_type": "code_validation_and_utility",
+      "relevance": 0.4,
+      "axis_weight_hint": {
+        "C": 5,
+        "A": 4,
+        "V": 3,
+        "D": 2
+      },
+      "reason": "Priority for code_validation_and_utility is [C, A, V, D]; C highest for correctness, A for adherence, V for validation, D lowest."
+    }
+  ],
+  "axis_weight_reason": "Primary task numerical_computation priority [C, V, D, A] assigned with C>V>D>A; top axes get >=5 and >=4 respectively. Secondary tasks weighted with their own priorities and moderate relevance."
+}

@@ -1,0 +1,17 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "call_RGfbgTOMeINT4n55dWYXKwRZ",
+      "function": {
+        "name": "run_custom_test",
+        "arguments": "{\"code\":\"from Bio.Graphics import BasicChromosome as BC\\nfrom Bio.Graphics.BasicChromosome import Chromosome\\nfrom reportlab.graphics.shapes import Drawing\\nfrom reportlab.lib.units import inch\\n\\n\\ndef bc_chromosome_draw_label(self, cur_drawing, label_name):\\n    # Calculate the x position for the label\\n    start_x = self.start_x_position\\n    end_x = self.end_x_position\\n    label_x = (min(start_x, end_x) + max(start_x, end_x)) / 2\\n    label_y = self.start_y_position + 10  # Adjust y position to draw above the chromosome\\n\\n    # Draw the label using the provided label_name\\n    cur_drawing.add(BC.Text(label_x, label_y, label_name, fontSize=self.title_size))\\n\\n\\ndef main():\\n    # Monkey-patch the drawing method\\n    Chromosome._draw_label = bc_chromosome_draw_label\\n\\n    # Prepare drawing canvas\\n    dwg = Drawing(400, 100)\\n\\n    # Create a chromosome and set drawing coordinates\\n    chrom = Chromosome('Chr1')\\n    chrom.start_x_position = 350\\n    chrom.end_x_position   = 50\\n    chrom.start_y_position = 20\\n    chrom.title_size       = 14\\n\\n    # Draw label above the chromosome with reversed coordinates\\n    chrom._draw_label(dwg, 'Chromosome 1')\\n\\n    # Save to SVG for verification\\n    dwg.save(formats=['svg'], outDir='.', fnRoot='test_chrom_label_reversed')\\n    print('SVG saved as test_chrom_label_reversed.svg')\\n\\n\\nif __name__ == '__main__':\\n    main()\",\"test_snippet\":\"# Test with reversed coordinates\\nfrom Bio.Graphics import BasicChromosome as BC\\nfrom Bio.Graphics.BasicChromosome import Chromosome\\nfrom reportlab.graphics.shapes import Drawing\\n\\n\\ndef test_bc_chromosome_draw_label():\\n    dwg = Drawing(400, 100)\\n    chrom = Chromosome('Chr1')\\n    chrom.start_x_position = 350\\n    chrom.end_x_position = 50\\n    chrom.start_y_position = 20\\n    chrom.title_size = 14\\n    chrom._draw_label(dwg, 'Test Label')\\n    # Check if the label is drawn correctly\\n    assert dwg.contents[0].text == 'Test Label'\\n    assert dwg.contents[0].x == (min(350, 50) + max(350, 50)) / 2\\n    assert dwg.contents[0].y == chrom.start_y_position + 10\\n\\ntest_bc_chromosome_draw_label()\"}"
+      }
+    }
+  ]
+}

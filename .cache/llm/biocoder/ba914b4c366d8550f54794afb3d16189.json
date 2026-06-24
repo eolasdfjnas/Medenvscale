@@ -1,0 +1,32 @@
+{
+  "scaled_executable_gold_code": "import os\n\ndef parse_theta_results(fname):\n    \"\"\"Parse THetA results into a data structure.\n\n    Columns: NLL, mu, C, p*\n    \"\"\"\n    with open(fname) as handle:\n        header = next(handle).rstrip().split('\\t')\n        body = next(handle).rstrip().split('\\t')\n        # Strip each field to handle trailing spaces\n        body = [field.strip() for field in body]\n        nll = float(body[0])\n        mu_field = body[1]\n        c_field = body[2]\n        p_field = body[3]\n        # Parse mu\n        mu_parts = [x.strip() for x in mu_field.split(',')]\n        mu_normal = float(mu_parts[0])\n        mu_tumors = list(map(float, mu_parts[1:]))\n        # Parse C\n        raw_c = [x.strip() for x in c_field.split(':')]\n        if len(mu_tumors) <= 1:\n            # Single or no tumor: each colon part is a single value\n            copies = [[ (int(x) if x.isdigit() else None) for x in raw_c ]]\n        else:\n            # Multiple tumors: each colon part is comma-separated values per tumor\n            raw_c_splits = [ [y.strip() for y in part.split(',')] for part in raw_c ]\n            # Transpose to get list per tumor\n            transposed = list(zip(*raw_c_splits))\n            copies = [ [ (int(y) if y.isdigit() else None) for y in inner ] for inner in transposed ]\n        # Parse p* (always flat list per region)\n        raw_p = [x.strip() for x in p_field.split(',')]\n        probs = [ (float(x) if not x.isalpha() else None) for x in raw_p ]\n    return {'NLL': nll, 'mu_normal': mu_normal, 'mu_tumors': mu_tumors, 'C': copies, 'p*': probs}\n\n\ndef main():\n    # Create a temporary THetA output file with a single tumor example\n    sample = (\n        \"NLL\\tmu\\tC\\tp*\\n\"\n        \"12.5\\t0.4,0.6\\t2:3\\t0.1,0.2\\n\"\n    )\n    fname = \"theta_test.txt\"\n    with open(fname, \"w\") as f:\n        f.write(sample)\n\n    # Parse the THetA results\n    result = parse_theta_results(fname)\n    print(result)\n\n    # Clean up\n    os.remove(fname)\n\nif __name__ == \"__main__\":\n    main()\n",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Needed to handle trailing spaces, leading zeros, scientific notation, no-tumor edge case, multi-tumor transposition, and placeholder values; corrected p* parsing to always be flat.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_59_M4_d_01",
+    "env_medagentgym_train_59_M4_d_02",
+    "env_medagentgym_train_59_M4_c_03",
+    "env_medagentgym_train_59_M4_a_04",
+    "env_medagentgym_train_59_M4_a_05",
+    "env_medagentgym_train_59_M4_a_06"
+  ],
+  "covered_requirements": [
+    "Add a test case with two tumors (three mu values) to verify multi-tumor C and p* parsing via zip transposition.",
+    "Add a test case with placeholder values (alphabetic) in C and p* to verify None handling.",
+    "Add a test case with only normal fraction (mu has single value) to verify empty mu_tumors list.",
+    "Add a test case with values in scientific notation (e.g., NLL=1.2e-5).",
+    "Add a test case with leading zeros in numeric values (e.g., NLL=012.3).",
+    "Add a test case with trailing spaces in numeric values (e.g., NLL='12.5   ')."
+  ],
+  "implementation_notes": [
+    "Stripped each field after splitting by tab and each sub-element after splitting by comma/colon.",
+    "Handled len(mu_tumors) <= 1 as single-tumor format for C (no transposition).",
+    "p* is always treated as flat list (per region) regardless of tumor count.",
+    "Scientific notation and leading zeros are handled by float() and int().",
+    "Placeholder detection: isdigit() for C, isalpha() for p*."
+  ],
+  "assumptions": []
+}

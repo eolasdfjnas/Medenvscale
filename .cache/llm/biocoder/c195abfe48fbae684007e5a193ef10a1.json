@@ -1,0 +1,209 @@
+{
+  "operator_instances": [
+    {
+      "axis": "C",
+      "operator_type": "dynamic_version_constraint",
+      "operator_intensity": 2,
+      "transformation_goal": "Enforce that the version message dynamically uses actual module versions and does not hardcode any numeric values.",
+      "rationale": "The seed solution works but the verifier checks for hardcoded 'Macsyfinder 1.2.3'. To increase computational complexity, the function must be verified to work with any version strings, not just the dummy values. This ensures the function is not overfitted to specific version numbers.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "dynamic string formatting",
+            "version retrieval without hardcoding"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import sys\nimport types\nimport pandas as pd\nimport networkx as nx\n\n# Create a dummy macsypy module for testing\nmacsypy = types.SimpleNamespace(__version__=\"1.2.3\",\n                                solution=types.SimpleNamespace(nx=nx),\n                                __citation__=\"Doe et al., 2023\")"
+        },
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          "assert macsypy.__version__ in msg",
+          "assert pd.__version__ in msg",
+          "assert macsypy.solution.nx.__version__ in msg"
+        ],
+        "new_hidden_tests": [
+          {
+            "setup": "",
+            "call": "msg = get_version_message()\nassert macsypy.__version__ in msg, f'Missing macsyfinder version {macsypy.__version__}'\nassert pd.__version__ in msg, f'Missing pandas version {pd.__version__}'\nassert macsypy.solution.nx.__version__ in msg, f'Missing networkx version {macsypy.solution.nx.__version__}'",
+            "expected": null,
+            "description": "Check that all versions are dynamically present."
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Hardcoded version string fails because version mismatch."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "c_spec_1",
+          "semantic_intent": "Ensure the function outputs correct version numbers for any module versions.",
+          "target_constraint": "The output string must contain the actual __version__ attributes of macsypy, pandas, and networkx.",
+          "expected_failure_mode": "If the function hardcodes version numbers, the assertion will fail when versions change.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "change module versions to alternative values (e.g., macsypy.__version__='2.0.0', pd.__version__='1.5.0', nx.__version__='2.8')"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant",
+            "oracle_template": "(Function must include the new version numbers in its output.)"
+          },
+          "test_case_description": "Modify the dummy modules' version attributes before calling get_version_message and verify the output contains the new versions."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement introduced by this operator.",
+        "The function must dynamically include all four version components."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "missing_optional_attribute_handling",
+      "operator_intensity": 2,
+      "transformation_goal": "Ensure the function gracefully handles optional attributes that might be missing from the macsypy module (e.g., __citation__, solution, or nx).",
+      "rationale": "The seed solution assumes all attributes are present. To increase robustness, the function should handle cases where some optional metadata is missing, e.g., __citation__ might be absent. This prevents crashes and provides meaningful output even with incomplete module metadata.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "exception handling",
+            "optional attribute access"
+          ]
+        },
+        "data_state_patch": {
+          "resource_manifest": []
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import sys\nimport types\nimport pandas as pd\nimport networkx as nx\n\n# Create a dummy macsypy module for testing\nmacsypy = types.SimpleNamespace(__version__=\"1.2.3\",\n                                solution=types.SimpleNamespace(nx=nx),\n                                __citation__=\"Doe et al., 2023\")"
+        },
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "setup": "macsypy = types.SimpleNamespace(__version__=\"1.2.3\", solution=types.SimpleNamespace(nx=nx))",
+            "call": "try:\n    msg = get_version_message()\n    assert isinstance(msg, str), \"Should return a string\"\nexcept Exception as e:\n    raise AssertionError(f\"Should not crash when __citation__ is missing: {e}\")",
+            "expected": null,
+            "description": "Missing __citation__ attribute should not cause an error."
+          },
+          {
+            "setup": "macsypy = types.SimpleNamespace(__version__=\"1.2.3\", __citation__=\"Doe et al., 2023\")  # no solution attribute",
+            "call": "try:\n    msg = get_version_message()\n    assert isinstance(msg, str), \"Should return a string\"\nexcept Exception as e:\n    raise AssertionError(f\"Should not crash when solution is missing: {e}\")",
+            "expected": null,
+            "description": "Missing solution attribute should be handled."
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Function that directly accesses macsypy.__citation__ without getattr or try/except will crash."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "a_spec_1",
+          "semantic_intent": "Ensure the function works when __citation__ is missing from macsypy.",
+          "target_constraint": "The function should not raise an AttributeError and should return a string that contains version information.",
+          "expected_failure_mode": "If the function unconditionally accesses macsypy.__citation__, it will crash.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "macsypy without __citation__"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant",
+            "oracle_template": "(Function should run without error and output should include version info but may omit citation or show a default message.)"
+          },
+          "test_case_description": "Remove __citation__ from macsypy before calling get_version_message; verify no exception and output contains version."
+        },
+        {
+          "spec_id": "a_spec_2",
+          "semantic_intent": "Ensure the function works when solution (networkx) is missing.",
+          "target_constraint": "The function should not crash when macsypy.solution is absent.",
+          "expected_failure_mode": "If the function assumes macsypy.solution exists, it will crash.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "macsypy without solution attribute"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant",
+            "oracle_template": "(Function should run without error and output may omit networkx version or include a placeholder.)"
+          },
+          "test_case_description": "Remove solution from macsypy before calling get_version_message; verify no exception."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement introduced by this operator.",
+        "The function must handle missing optional attributes gracefully."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

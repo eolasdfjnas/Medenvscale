@@ -1,0 +1,35 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Test get_version_message() when NetworkX is unavailable to verify graceful handling of missing dependency.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_611_M2_c_01",
+      "axis": "C",
+      "semantic_intent": "Handle missing NetworkX module gracefully by reporting version as 'unknown'.",
+      "target_constraint": "If macsypy.solution.nx is None, the function must output '- NetworkX unknown' without raising an error.",
+      "expected_failure_mode": "Original solution would raise AttributeError or produce empty string for NetworkX version.",
+      "setup_code": "import sys, types, pandas as pd, networkx as nx\nmacsypy = types.SimpleNamespace(__version__='1.2.3', solution=types.SimpleNamespace(nx=None), __citation__='Doe et al., 2023')",
+      "call_code": "msg = get_version_message()\nprint(msg)\nresult = msg",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must expose the new computation and contract constraints introduced by this operator."
+      ],
+      "expected_output_signature": {
+        "return_type": "str",
+        "return_value": null,
+        "stdout_contains": [
+          "Macsyfinder 1.2.3",
+          "using:",
+          "- Python",
+          "- NetworkX unknown",
+          "- Pandas",
+          "If you use this software please cite",
+          "Doe et al., 2023"
+        ],
+        "stdout_regex": [],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

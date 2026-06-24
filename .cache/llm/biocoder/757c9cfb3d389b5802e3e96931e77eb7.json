@@ -1,0 +1,72 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Replay the canonical main() seed flow for compute_probs, verifying core filtering and probability computation.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_811_M4_c_01,env_medagentgym_train_811_M4_c_02,env_medagentgym_train_811_M4_v_01,env_medagentgym_train_811_M4_v_02",
+      "axis": "C,V",
+      "semantic_intent": "The solution must produce correct filtered values and probabilities for a typical input with multiple fragment lengths and varying counts.",
+      "target_constraint": "The solution must correctly apply both the minimum read count threshold (>=100) and the median absolute deviation threshold (<= med + 10*MAD), and output probabilities summing to 1.",
+      "expected_failure_mode": "solution fails to filter correctly or miscalculates probabilities for the base case.",
+      "setup_code": "datalist = [8]*200 + [10]*120 + [12]*150 + [15]*90 + [20]*50",
+      "call_code": "values, probs = compute_probs(datalist)\nprint(\"Selected fragment lengths:\", values)\nprint(\"Their probabilities:\", probs)\nresult = {'values': values, 'probs': probs}",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must expose the new computation and contract constraints introduced by this operator.",
+        "Scaled executable cases must provide stronger executable verification coverage for this operator."
+      ],
+      "expected_output_signature": {
+        "return_value": {
+          "values": [
+            8,
+            10,
+            12
+          ],
+          "probs": [
+            0.425531914893617,
+            0.2553191489361702,
+            0.3191489361702128
+          ]
+        },
+        "stdout_contains": [
+          "Selected fragment lengths: [8, 10, 12]",
+          "Their probabilities: [0.425531914893617, 0.2553191489361702, 0.3191489361702128]"
+        ],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "scaled_robustness_MAD_boundary",
+      "description": "Verify that fragment lengths above the median absolute deviation threshold are correctly excluded even if they have sufficient read support.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_811_M4_c_01,env_medagentgym_train_811_M4_c_02,env_medagentgym_train_811_M4_a_01",
+      "axis": "A,C",
+      "semantic_intent": "The solution must correctly exclude a fragment length that is more than 10 median absolute deviations above the median, despite having high read count.",
+      "target_constraint": "The condition 'do not lie more than 10 median absolute deviations above the median' must be strictly enforced; outliers with high counts must be excluded.",
+      "expected_failure_mode": "solution includes the outlier because it only checks read count threshold or miscomputes MAD.",
+      "setup_code": "datalist = [10]*500 + [1000]*200",
+      "call_code": "values, probs = compute_probs(datalist)\nprint(\"Selected fragment lengths:\", values)\nprint(\"Their probabilities:\", probs)\nresult = {'values': values, 'probs': probs}",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must expose the new anti-shortcut robustness requirement introduced by this operator.",
+        "Scaled executable cases must expose the new computation and contract constraints introduced by this operator."
+      ],
+      "expected_output_signature": {
+        "return_value": {
+          "values": [
+            10
+          ],
+          "probs": [
+            1.0
+          ]
+        },
+        "stdout_contains": [
+          "Selected fragment lengths: [10]",
+          "Their probabilities: [1.0]"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

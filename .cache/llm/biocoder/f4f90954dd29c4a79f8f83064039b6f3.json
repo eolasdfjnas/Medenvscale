@@ -1,0 +1,83 @@
+{
+  "operator_instances": [
+    {
+      "axis": "C",
+      "operator_type": "compression_constraint",
+      "operator_intensity": 2,
+      "transformation_goal": "Add requirement to handle compressed tar archives (e.g., .tar.gz, .tar.bz2) by detecting the file extension or via an optional 'compression' parameter, and set the correct tar flags accordingly.",
+      "rationale": "In scientific software engineering, tar archives are often compressed. Adding compression support increases computation complexity (correct flag selection) and edge-case handling (e.g., unknown compression types).",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "subprocess with check_call",
+            "exception handling",
+            "file I/O",
+            "compression detection"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "problem": "Write a Python function named `untar_file(path, fn, compression='auto')` that uses the system `tar` command to extract the tar archive file `fn` into the directory `path`. The function should support compressed archives: if the filename ends with '.tar.gz' or '.tgz', use uncompression flag 'z'; if ends with '.tar.bz2' or '.tbz2', use 'j'; if ends with '.tar.xz' or '.txz', use 'J'; otherwise use no compression flag. If `compression` is provided explicitly, override the auto-detection. If the extraction fails or the compression type is unsupported, the function should raise a `GenipeError` with an appropriate message."
+        },
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "The scaled case must prove that the function correctly handles a compressed tar archive (e.g., .tar.gz) using the auto-detection or explicit compression parameter.",
+          "target_constraint": "The function must use the correct tar flag (-xzf) for .tar.gz archives and extract without error.",
+          "expected_failure_mode": "A naive solution that always uses '-xf' or ignores compression would fail to extract (subprocess may return non-zero) or extract garbage.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Create a .tar.gz archive using tarfile with 'w:gz' and extract it using untar_file. Verify that extracted file exists and content matches."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a test with a compressed tar archive (e.g., .tar.gz) to verify compression support."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

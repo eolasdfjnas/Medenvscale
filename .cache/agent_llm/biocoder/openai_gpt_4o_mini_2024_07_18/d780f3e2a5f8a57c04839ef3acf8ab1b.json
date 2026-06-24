@@ -1,0 +1,17 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "call_9qnIk1dIDpnRxJyvUeMuyCZn",
+      "function": {
+        "name": "read_resource_file",
+        "arguments": "{\"path\":\"chromosome_labels.csv\"}"
+      }
+    }
+  ]
+}

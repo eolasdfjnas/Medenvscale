@@ -1,0 +1,158 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "multi_tumor_data_variant",
+      "operator_intensity": 1,
+      "transformation_goal": "Extend input data to contain multiple tumor fractions (two tumors) in the mu, C, and p* fields, testing parsing of multi-sample THetA results.",
+      "rationale": "The seed case only tests single tumor. Adding multiple tumors verifies that the function correctly parses comma-separated tumor fractions and their corresponding copy number states and probabilities.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "filename": "theta_multi.txt",
+              "content": "NLL\tmu\tC\tp*\n15.2\t0.2,0.5,0.3\t2:3,4:1\t0.1,0.2,0.7"
+            }
+          ]
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_multi_tumor",
+          "semantic_intent": "Verify that the function correctly parses a THetA result with multiple tumors.",
+          "target_constraint": "The function must parse mu into one normal fraction and two tumor fractions, C into a 2x2 list of copy numbers, and p* into three probabilities.",
+          "expected_failure_mode": "Old seed behavior would treat the entire mu string as single tumor or incorrectly split C/p*.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "file content: NLL=15.2, mu=0.2,0.5,0.3, C=2:3,4:1, p*=0.1,0.2,0.7"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Load a THetA file with two tumors and verify the parsed dictionary contains mu_normal=0.2, mu_tumors=[0.5,0.3], C=[[2,3],[4,1]], p*=[0.1,0.2,0.7]."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a test with the multi-tumor file and compare the output dictionary."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "D",
+      "operator_type": "placeholder_data_variant",
+      "operator_intensity": 1,
+      "transformation_goal": "Introduce placeholder values (e.g., '?' or alphabetic strings) in the C and p* fields to test handling of missing or non-numeric data.",
+      "rationale": "The seed case contains only numeric values. Real THetA output may include placeholders for missing copy numbers or probabilities. The function should convert these to None per the problem statement.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "filename": "theta_placeholder.txt",
+              "content": "NLL\tmu\tC\tp*\n10.0\t0.5,0.5\t2:?\t0.3,A"
+            }
+          ]
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_placeholder",
+          "semantic_intent": "Verify that the function converts alphabetic placeholder values to None in C and p* fields.",
+          "target_constraint": "The function must return C as [[2, None]] and p* as [0.3, None] (assuming single tumor).",
+          "expected_failure_mode": "Old seed behavior would crash on int('?') or float('A') or produce incorrect list.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "file content: NLL=10.0, mu=0.5,0.5, C=2:?, p*=0.3,A"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Load a THetA file with placeholder '?' in C and 'A' in p*, and verify the parsed dictionary contains C=[[2, None]] and p*=[0.3, None]."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a test with placeholder values and compare the output dictionary."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

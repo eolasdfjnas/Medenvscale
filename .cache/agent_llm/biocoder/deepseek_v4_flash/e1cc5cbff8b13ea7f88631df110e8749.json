@@ -1,0 +1,16 @@
+{
+  "role": "assistant",
+  "content": "",
+  "reasoning_content": "Let me understand the task. I need to monkey-patch the `Chromosome._draw_label` method in Biopython's BasicChromosome module so that the label is drawn above the chromosome instead of below. The method signature is:\n\n```python\ndef bc_chromosome_draw_label(self, cur_drawing, label_name)\n```\n\nI need to understand what the original `_draw_label` method does and modify it to draw the label above.\n\nLet me first check if I can access the BioPython library to understand the original implementation.",
+  "tool_calls": [
+    {
+      "index": 0,
+      "id": "call_00_WjMEFMent4nPmoGjDzLe9527",
+      "type": "function",
+      "function": {
+        "name": "get_task_context",
+        "arguments": "{\"window\": 4000}"
+      }
+    }
+  ]
+}

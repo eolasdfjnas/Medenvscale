@@ -1,0 +1,22 @@
+{
+  "scaled_executable_gold_code": "import configparser\nimport os\n\ndef serialize(config, path):\n    \"\"\"\n    save the configuration on file\n\n    :param config: the config to save\n    :type config: :class:`ConfigParserWithComments` object\n    :param str path: where to store the configuration\n    :return: number of bytes written\n    :rtype: int\n    :raises TypeError: if config is None\n    \"\"\"\n    if config is None:\n        raise TypeError('config must not be None')\n    with open(path, 'w') as file:\n        for section in sorted(config.sections()):\n            file.write(f'[{section}]\\n')\n            for key, value in sorted(config[section].items()):\n                file.write(f'{key}={value}\\n')\n            file.write('\\n')\n    return os.path.getsize(path)\n\n\ndef main():\n    # Create a configuration with three sections and options\n    config = configparser.ConfigParser()\n    config['General'] = {\n        'version': '1.0',\n        'enabled': 'yes'\n    }\n    config['User'] = {\n        'name': 'Alice',\n        'email': 'alice@example.com'\n    }\n    config['Database.Config'] = {\n        'host': 'localhost',\n        'port': '5432',\n        'connection string': 'dbname=test'\n    }\n\n    # Define the output file path\n    path = 'test_config.ini'\n\n    # Save the configuration to disk\n    bytes_written = serialize(config, path)\n\n    # Verify that the file was created and print its contents\n    if os.path.exists(path):\n        with open(path, 'r') as f:\n            content = f.read()\n        print('Configuration file content:')\n        print(content)\n        print(f'Bytes written: {bytes_written}')\n    else:\n        print('Failed to create configuration file.')\n\n    # Also test with None to verify robustness\n    try:\n        serialize(None, path)\n        print('No exception raised for None config - FAIL')\n    except TypeError:\n        print('TypeError raised for None config - PASS')\n    except Exception as e:\n        print(f'Wrong exception: {e}')\n\n\nif __name__ == '__main__':\n    main()\n",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Operators D, C, A added special chars in config, ordered format with '=' delimiter and byte count return, and TypeError on None config.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_644_M4_d_01",
+    "env_medagentgym_train_644_M4_c_02",
+    "env_medagentgym_train_644_M4_a_03"
+  ],
+  "covered_requirements": [
+    "Increase data complexity by adding a section with options containing special characters, such as dots and spaces.",
+    "Add computational constraints: serialize must write sections in alphabetical order, use '=' delimiter with no spaces, and return the number of bytes written.",
+    "Add adversarial robustness: serialize must raise a TypeError if config is None."
+  ],
+  "implementation_notes": [
+    "Custom serialization loops over sections and options in sorted order, using '=' without spaces; includes None check and returns file size."
+  ],
+  "assumptions": []
+}

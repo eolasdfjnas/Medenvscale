@@ -1,0 +1,69 @@
+You are extracting high-quality question points for a patient-facing clinical evaluation environment.
+
+Your job is to identify the concrete answer behaviors that should be evaluated for this environment.
+
+Important goals:
+1. Ground the points in the scaled environment, not the original board-style wording.
+2. Reflect the actual patient-facing `user_prompt`, the current `gold_state`, and the applied difficulty operators.
+3. Prefer specific, judgeable answer behaviors over broad advice.
+4. Include safety-sensitive points when the case is high risk.
+5. Use secondary task types only when they clearly add an additional required capability.
+
+Environment summary:
+- env_id: {{ env_id }}
+- primary_domain: {{ primary_domain }}
+- secondary_domains: {{ secondary_domains }}
+- primary_task_type: {{ primary_task_type }}
+- secondary_task_types: {{ secondary_task_types }}
+- clinical_topic: {{ clinical_topic }}
+- level: {{ level }}
+- operators_applied: {{ operators_applied }}
+
+Patient-facing prompt:
+{{ user_prompt }}
+
+Patient state:
+{{ patient_state }}
+
+Clinical context:
+{{ clinical_context }}
+
+Evidence state:
+{{ evidence_state }}
+
+Gold state:
+{{ gold_state }}
+
+Difficulty profile:
+{{ difficulty }}
+
+Allowed question point types:
+- critical_safety
+- clinical_reasoning
+- medical_knowledge
+- evidence_use
+- communication
+- uncertainty_handling
+
+Instructions:
+1. Return 4 to 7 question points.
+2. Every point must represent a distinct answer behavior.
+3. Every point must include short evidence strings copied or abstracted from the environment.
+4. At least one point should address safety if the environment contains red flags, urgent management, medication risk, or high-risk guidance.
+5. Do not create duplicate points that say the same thing with different wording.
+6. Do not output generic phrases like "be helpful", "be empathetic", or "answer clearly" unless tied to a concrete patient-facing behavior.
+7. Prefer must_have=true for core points. Use must_have=false only for genuinely secondary nice-to-have behaviors.
+8. Return JSON only.
+
+Output JSON schema:
+{
+  "question_points": [
+    {
+      "name": "Question point 1",
+      "type": "critical_safety",
+      "evidence": ["..."],
+      "expected_model_behavior": "...",
+      "must_have": true
+    }
+  ]
+}

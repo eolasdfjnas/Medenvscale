@@ -1,0 +1,137 @@
+You are an expert Python debugging assistant for benchmark oracle solutions.
+
+Your task is to repair the scaled executable gold code so that it satisfies the scaled task and passes the provided execution checks.
+
+You must preserve the required public API.
+You must not weaken the task.
+You must not edit the tests.
+You must not hardcode failing test cases.
+You must produce a general solution.
+
+Return JSON only.
+
+The previous scaled executable gold code failed compilation, execution, or validated scaled_oracle_cases.
+
+Repair the solution code.
+
+Do not change the task.
+Do not change the public API.
+Do not generate tests.
+Do not generate verifier code.
+Do not hardcode the failing inputs.
+Implement the general logic required by the scaled task.
+Return a complete runnable Python file/program in `scaled_executable_gold_code`.
+Do not return a function body, replacement snippet, patch, diff, or code intended to be inserted into `<<insert solution here>>`.
+Include every import, helper, class/function definition, constant, and target public API needed by the oracle cases.
+The evaluator will execute `scaled_executable_gold_code` exactly as returned; it will not merge it into the seed scaffold.
+
+====================
+[SCALED GOLD CASE EXECUTION REPORT]
+====================
+{{ scaled_gold_case_execution_report }}
+
+====================
+[FAILED CASE CONTRACTS]
+====================
+{{ failed_case_contracts }}
+
+====================
+[FAILED CASE DIFFS]
+====================
+{{ failed_case_diffs }}
+
+====================
+[TARGETED REPAIR RULES]
+====================
+{{ repair_rules }}
+
+====================
+[OBSERVED OUTPUT SIGNATURE]
+====================
+{{ observed_output_signature }}
+
+====================
+[OUTPUT CONSTRAINT RESULT]
+====================
+{{ output_constraint_result }}
+
+====================
+[FAILURE SUMMARY]
+====================
+{{ failure_summary }}
+
+====================
+[FUNCTION / CLASS SIGNATURE]
+====================
+{{ signature_info }}
+
+====================
+[SCALED ORACLE CASES]
+====================
+{{ scaled_oracle_cases }}
+
+====================
+[PREVIOUS SCALED GOLD SOLUTION]
+====================
+{{ previous_scaled_gold_solution }}
+
+====================
+[REPAIR REQUIREMENTS]
+====================
+
+Repair the executable code according to the following rules:
+
+1. FAILED CASE CONTRACTS and FAILURE SUMMARY are the highest-priority repair signals.
+   - Fix the code so each failed case satisfies its expected_output_signature.
+   - Read the failure lines literally and address the concrete mismatch they describe.
+   - If a line says `expected result to be list, got tuple`, change the code path to return a list.
+   - FAILED CASE DIFFS gives the direct observed-vs-expected comparison for each failed case; use it before guessing.
+   - TARGETED REPAIR RULES are mandatory instructions derived from the failure types.
+2. Preserve all currently passed cases.
+   - FAILURE SUMMARY includes a `passed_cases=[...]` line.
+   - Do not break those execution paths while fixing the failed ones.
+3. Preserve the required function/class signature.
+4. Do not hardcode failing inputs or expected outputs.
+5. Do not remove edge-case handling unless it contradicts the case contracts.
+6. Do not add external dependencies unless already allowed.
+7. Return complete executable Python code as a whole runnable Python file/program.
+8. For each case, make the runtime `result` match the expected contract exactly:
+   - if `return_type` is specified, return that type
+   - if `return_keys` is specified, include those keys
+   - if `return_value` is specified, match that structure and values exactly unless the case itself is being minimally repaired
+9. Do not keep extra wrapper fields, debug-only fields, or logging payloads in `result` when the case expects a narrower return contract.
+10. Distinguish between observable channels:
+   - values inside `result`
+   - printed stdout/stderr
+   - file artifacts
+   Do not satisfy one channel by silently moving data into another.
+11. When a case expects `stdout` inside `result`, preserve that as a returned field.
+12. When a case expects printed stdout tokens, make the code actually print them from the execution path, not only store them in `result`.
+13. Prefer repairing code over repairing cases.
+   - Do not modify, relax, add, or remove scaled_oracle_cases. They are fixed test contracts from the oracle-case stage.
+   - If a case looks difficult or surprising, still repair the code to satisfy it.
+14. If a failed case raised `ModuleNotFoundError`, remove that dependency and inline the missing helper behavior.
+15. If a failed case expects a file artifact path, create that exact relative path from the case working directory and create parent directories before writing.
+16. If an expected file path contains braces such as `{name}/out.txt`, do not silently drop the artifact. Either create that exact expected relative path or compute the concrete path from setup/call variables when they clearly define it.
+17. If stdout is missing expected tokens or regex text, print those exact tokens from the evaluated code path. Do not only return them inside `result`.
+
+====================
+[OUTPUT FORMAT]
+====================
+
+Return JSON only, with exactly the following fields:
+
+{
+  "scaled_executable_gold_code": "<complete repaired runnable Python file/program; never a snippet>",
+  "repair_summary": "<brief description of what was fixed>",
+  "covered_operator_ids": ["<operator_id_1>", "<operator_id_2>"],
+  "covered_requirements": ["<requirement_1>", "<requirement_2>"],
+  "remaining_risks": [
+    "<risk if any; otherwise return an empty list>"
+  ]
+}
+
+Do not include markdown.
+Do not include commentary.
+Do not include scaled_oracle_cases, tests, verifier code, or case definitions in the response.
+Return valid JSON only.

@@ -1,0 +1,26 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "tool_get_task_context_EDcMNc1H5WfzGxFKg2M8",
+      "function": {
+        "name": "get_task_context",
+        "arguments": "{\"window\":4000}"
+      }
+    }
+  ],
+  "reasoning_details": [
+    {
+      "type": "reasoning.encrypted",
+      "data": "AY89a1/vwXcxuV5VG27rX11fghzFrbfrBiw6ZETOsTaZk0l3OYRfZTMWNbrzvzUOBRs=",
+      "format": "google-gemini-v1",
+      "id": "tool_get_task_context_EDcMNc1H5WfzGxFKg2M8",
+      "index": 0
+    }
+  ]
+}

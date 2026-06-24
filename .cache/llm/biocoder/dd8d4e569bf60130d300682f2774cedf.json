@@ -1,0 +1,80 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_case_extra_and_duplicate",
+      "description": "Test mapRow with an extra column ('Modifications') and multiple calls to verify deduplication in protein_mapping.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_835_M4_d_01,env_medagentgym_train_835_M4_c_02",
+      "axis": "D,C",
+      "semantic_intent": "Test that the function handles an extra column gracefully and prevents duplicate peptide entries in protein_mapping when called multiple times.",
+      "target_constraint": "The function must not crash with extra columns and must deduplicate peptide names in protein_mapping.",
+      "expected_failure_mode": "Naive implementations may crash due to index out of range or produce duplicate entries.",
+      "setup_code": "header = [\n    'FullPeptideName',\n    'aggr_Fragment_Annotation',\n    'aggr_prec_Fragment_Annotation',\n    'Charge',\n    'ProteinName',\n    'Modifications'\n]\nrow = ['PEPTIDESEQ', 'b1;b2;b3;', 'p1;p2;', '2', 'P12345', 'Acetyl']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping  = {}\nprotein_mapping    = {}",
+      "call_code": "mapRow(\n    this_row=row,\n    header_dict=header_dict,\n    precursors_mapping=precursors_mapping,\n    sequences_mapping=sequences_mapping,\n    protein_mapping=protein_mapping\n)\nmapRow(\n    this_row=row,\n    header_dict=header_dict,\n    precursors_mapping=precursors_mapping,\n    sequences_mapping=sequences_mapping,\n    protein_mapping=protein_mapping\n)\nprint('Precursors Mapping:', precursors_mapping)\nprint('Sequences Mapping:', sequences_mapping)\nprint('Protein Mapping:', protein_mapping)",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must include a variant where the row contains an extra column not referenced in the problem description.",
+        "Scaled executable cases must include a variant where mapRow is called multiple times to check deduplication."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [
+          "Precursors Mapping: {'PEPTIDESEQ/2': ['b1', 'b2', 'b3'], 'PEPTIDESEQ/2_pr': ['p1', 'p2']}",
+          "Sequences Mapping: {'PEPTIDESEQ': ['PEPTIDESEQ/2', 'PEPTIDESEQ/2_pr', 'PEPTIDESEQ/2', 'PEPTIDESEQ/2_pr']}",
+          "Protein Mapping: {'P12345': ['PEPTIDESEQ']}"
+        ],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "scaled_case_missing_charge",
+      "description": "Test mapRow when 'Charge' column is missing; charge should default to '0'.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_835_M4_a_03",
+      "axis": "A",
+      "semantic_intent": "Test that the function correctly defaults charge to '0' when the 'Charge' column is absent.",
+      "target_constraint": "When 'Charge' is not in header_dict, the function should use '0' as charge state and create keys with '/0'.",
+      "expected_failure_mode": "If the function assumes 'Charge' exists, it will raise KeyError or produce incorrect keys.",
+      "setup_code": "header = [\n    'FullPeptideName',\n    'aggr_Fragment_Annotation',\n    'aggr_prec_Fragment_Annotation',\n    'ProteinName'\n]\nrow = ['PEPTIDESEQ', 'b1;b2;b3;', 'p1;p2;', 'P12345']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping  = {}\nprotein_mapping    = {}",
+      "call_code": "mapRow(\n    this_row=row,\n    header_dict=header_dict,\n    precursors_mapping=precursors_mapping,\n    sequences_mapping=sequences_mapping,\n    protein_mapping=protein_mapping\n)\nprint('Precursors Mapping:', precursors_mapping)\nprint('Sequences Mapping:', sequences_mapping)\nprint('Protein Mapping:', protein_mapping)",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must include a variant where the 'Charge' column is missing."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [
+          "Precursors Mapping: {'PEPTIDESEQ/0': ['b1', 'b2', 'b3'], 'PEPTIDESEQ/0_pr': ['p1', 'p2']}",
+          "Sequences Mapping: {'PEPTIDESEQ': ['PEPTIDESEQ/0', 'PEPTIDESEQ/0_pr']}",
+          "Protein Mapping: {'P12345': ['PEPTIDESEQ']}"
+        ],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "scaled_case_missing_protein",
+      "description": "Test mapRow when 'ProteinName' column is missing; protein_mapping should remain empty.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_835_M4_a_04",
+      "axis": "A",
+      "semantic_intent": "Test that the function does not attempt to update protein_mapping when 'ProteinName' column is absent.",
+      "target_constraint": "When 'ProteinName' is not in header_dict, the protein_mapping should remain unchanged (empty dict).",
+      "expected_failure_mode": "If the function assumes 'ProteinName' exists, it will raise KeyError or try to access a non-existent index.",
+      "setup_code": "header = [\n    'FullPeptideName',\n    'aggr_Fragment_Annotation',\n    'aggr_prec_Fragment_Annotation',\n    'Charge'\n]\nrow = ['PEPTIDESEQ', 'b1;b2;b3;', 'p1;p2;', '2']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping  = {}\nprotein_mapping    = {}",
+      "call_code": "mapRow(\n    this_row=row,\n    header_dict=header_dict,\n    precursors_mapping=precursors_mapping,\n    sequences_mapping=sequences_mapping,\n    protein_mapping=protein_mapping\n)\nprint('Precursors Mapping:', precursors_mapping)\nprint('Sequences Mapping:', sequences_mapping)\nprint('Protein Mapping:', protein_mapping)",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must include a variant where the 'ProteinName' column is missing."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [
+          "Precursors Mapping: {'PEPTIDESEQ/2': ['b1', 'b2', 'b3'], 'PEPTIDESEQ/2_pr': ['p1', 'p2']}",
+          "Sequences Mapping: {'PEPTIDESEQ': ['PEPTIDESEQ/2', 'PEPTIDESEQ/2_pr']}",
+          "Protein Mapping: {}"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

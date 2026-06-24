@@ -1,0 +1,19 @@
+default_backend: openai_compatible
+api:
+  base_url: https://openrouter.ai/api/v1     #https://api.deepseek.com                        #https://maas-api.cn-huabei-1.xf-yun.com/v2
+  api_key_env: AGENT_LLM_API_KEY
+  model: openai/gpt-4o-mini-2024-07-18     # google/gemini-3-flash-preview   # xopqwen35v35b / deepseek-v4-flash
+  timeout_seconds: 60
+  max_retries: 5
+  temperature: 0.2
+  response_format: text
+local:
+  enabled: false
+mock:
+  enabled: true
+  deterministic: true
+cache:
+  dir: .cache/agent_llm
+trace:
+  enabled: true
+  path: data/processed/agent_generation_trace.jsonl

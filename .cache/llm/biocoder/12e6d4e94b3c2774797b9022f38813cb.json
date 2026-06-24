@@ -1,0 +1,32 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_case_non_string_params",
+      "description": "Test that deblur_system_call correctly handles non-string params (integers) and pathlib.Path input_fp by converting all items to strings.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_838_M2_d_01",
+      "axis": "D",
+      "semantic_intent": "Verify that the function correctly converts non-string inputs to strings in the command list.",
+      "target_constraint": "All elements in the command list must be strings, regardless of input types.",
+      "expected_failure_mode": "Without conversion, integer items cause TypeError or produce command list with integers.",
+      "setup_code": "logging.basicConfig(level=logging.DEBUG)\nfrom pathlib import Path\ninput_fp = Path('test_sequences.fasta')\nwith open(input_fp, 'w') as f:\n    f.write('>seq1\\nACTG\\n>seq2\\nTGCA\\n')\nparams = [10, '--min-size', 50]",
+      "call_code": "stdout, stderr, returncode = deblur_system_call(params, input_fp)\nprint('STDOUT:', stdout)\nprint('STDERR:', stderr)\nprint('Return code:', returncode)\nresult = {'stdout': stdout, 'stderr': stderr, 'returncode': returncode}",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must include at least one test with non-string params (e.g., integers) and a pathlib.Path input_fp. The test must check that the returned stdout contains the command list with all string representations."
+      ],
+      "expected_output_signature": {
+        "return_value": {
+          "stdout": "Executed command: ['deblur', 'workflow', '--seqs-fp', 'test_sequences.fasta', '--is-worker-thread', '--keep-tmp-files', '10', '--min-size', '50']",
+          "stderr": "",
+          "returncode": 0
+        },
+        "stdout_contains": [
+          "STDOUT: Executed command: ['deblur', 'workflow', '--seqs-fp', 'test_sequences.fasta', '--is-worker-thread', '--keep-tmp-files', '10', '--min-size', '50']",
+          "STDERR:",
+          "Return code: 0"
+        ]
+      }
+    }
+  ]
+}

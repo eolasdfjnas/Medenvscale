@@ -1,0 +1,16 @@
+{
+  "role": "assistant",
+  "content": "",
+  "reasoning_content": "",
+  "tool_calls": [
+    {
+      "index": 0,
+      "id": "call_00_ET_rfafv2Y1OaFNw642H1no7234",
+      "type": "function",
+      "function": {
+        "name": "read_resource_file",
+        "arguments": "{\"path\": \"/home/zengjiaqi/miniconda3/envs/latentmas/lib/python3.10/site-packages/Bio/Graphics/BasicChromosome.py\", \"max_bytes\": 15000}"
+      }
+    }
+  ]
+}

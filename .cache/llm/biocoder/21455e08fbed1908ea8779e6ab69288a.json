@@ -1,0 +1,55 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Verify the main seed flow with non-default penalties and penalties dict override, including an unknown key.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_509_M4_c_01,env_medagentgym_train_509_M4_c_02,env_medagentgym_train_509_M4_a_01,env_medagentgym_train_509_M4_v_05,env_medagentgym_train_509_M4_v_02",
+      "axis": "C,A,V",
+      "semantic_intent": "The function correctly applies penalties to each added reaction, with db_penalty, ex_penalty, tp_penalty defaults overridden by penalties dict.",
+      "target_constraint": "Weights must include all db, ex, tp reactions with correct penalties, with overrides from penalties dict even for keys not in added reactions.",
+      "expected_failure_mode": "Solution may miss reactions, wrong penalty values, or not handle penalties dict keys that don't correspond to added reactions.",
+      "setup_code": "model = DummyNativeModel()",
+      "call_code": "extended_model, weights = create_extended_model(\n    model,\n    db_penalty=5,\n    ex_penalty=2,\n    tp_penalty=3,\n    penalties={\"c1_db_rxn\": 10}\n)\nresult = weights",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must expose the new computation and contract constraints introduced by this operator.",
+        "Scaled executable cases must expose the new anti-shortcut robustness requirement introduced by this operator.",
+        "Scaled executable cases must include at least one variant test case with different model configuration.",
+        "Scaled executable cases must provide stronger executable verification coverage for this operator."
+      ],
+      "expected_output_signature": {
+        "return_value": {
+          "c2_db_rxn": 5,
+          "c1_db_rxn": 10,
+          "c1_e_tp": 3,
+          "e_ex": 2
+        },
+        "stdout_contains": []
+      }
+    },
+    {
+      "case_id": "coverage_extension_defaults",
+      "description": "Test edge case with empty compartments and boundaries, all penalty parameters defaulting to 1, no penalties dict.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_509_M4_c_01,env_medagentgym_train_509_M4_c_02,env_medagentgym_train_509_M4_a_01",
+      "axis": "C,A",
+      "semantic_intent": "The function correctly handles empty compartments and boundaries, applying default penalty of 1 to the only exchange reaction.",
+      "target_constraint": "When compartments list is empty, db_added is empty; when boundaries list is empty, tp_added is empty; ex_added still present; all unspecified penalties default to 1.",
+      "expected_failure_mode": "Solution may assume at least one compartment or boundary, or fail to default penalties to 1.",
+      "setup_code": "model = DummyNativeModel()\nmodel.compartments = []\nmodel.compartment_boundaries = []",
+      "call_code": "extended_model, weights = create_extended_model(model)\nresult = weights",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must expose the new computation and contract constraints introduced by this operator.",
+        "Scaled executable cases must expose the new anti-shortcut robustness requirement introduced by this operator."
+      ],
+      "expected_output_signature": {
+        "return_value": {
+          "e_ex": 1
+        },
+        "stdout_contains": []
+      }
+    }
+  ]
+}

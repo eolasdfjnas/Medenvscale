@@ -1,0 +1,37 @@
+{
+  "primary_domain": "bioinformatics_sequence_structure",
+  "secondary_domains": [
+    {
+      "domain": "omics_measurement_analysis",
+      "relevance": 0.6
+    },
+    {
+      "domain": "scientific_software_engineering",
+      "relevance": 0.5
+    }
+  ],
+  "primary_task_type": "structured_data_processing",
+  "solution_form": "function_implementation",
+  "secondary_task_types": [
+    {
+      "task_type": "code_validation_and_utility",
+      "relevance": 0.5
+    }
+  ],
+  "domain_concepts": [
+    "single-cell RNA-seq",
+    "cell barcode",
+    "UMI",
+    "read ID",
+    "string parsing",
+    "error handling"
+  ],
+  "required_capabilities": [
+    "string manipulation",
+    "exception handling",
+    "domain knowledge of scRNA-seq"
+  ],
+  "verifier_type_hint": "unit_test",
+  "routing_reason": "The task involves extracting biologically meaningful information from sequencing read identifiers, a common task in bioinformatics, and requires string parsing and error handling skills.",
+  "confidence": 0.9
+}

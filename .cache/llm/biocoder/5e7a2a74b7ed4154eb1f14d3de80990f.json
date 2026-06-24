@@ -1,0 +1,313 @@
+{
+  "operator_instances": [
+    {
+      "axis": "V",
+      "operator_type": "add_edge_case_inputs",
+      "operator_intensity": 1,
+      "transformation_goal": "Strengthen verification by adding edge-case read IDs with varying separator occurrences, empty fields, and non-standard separators.",
+      "rationale": "The seed task only tests one good and one bad (too few separators) case. Adding edge cases ensures the function correctly handles more complex inputs, such as multiple separators or empty fields, which are common in real single-cell data.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {
+          "verifier_type_hint": "unit_test",
+          "additional_cases": [
+            {
+              "case_id": "edge_case_many_separators",
+              "description": "Read ID with more than two separators; the last two fields should still be extracted correctly.",
+              "setup_code": "read_id = 'prefix_a_b_c_d_e_f'  # 5 separators, last two: e and f\nsep = '_'",
+              "call_code": "umi, cb = get_cell_umi_read_string(read_id, sep)\nresult = {'umi': umi, 'cell_barcode': cb}",
+              "expected_output_signature": {
+                "return_value": {
+                  "umi": "b'f'",
+                  "cell_barcode": "b'e'"
+                },
+                "stdout_contains": null,
+                "file_artifacts": []
+              }
+            },
+            {
+              "case_id": "edge_case_empty_field",
+              "description": "Read ID with empty field as UMI (e.g., trailing separator).",
+              "setup_code": "read_id = 'prefix_CB123_'\nsep = '_'",
+              "call_code": "umi, cb = get_cell_umi_read_string(read_id, sep)\nresult = {'umi': umi, 'cell_barcode': cb}",
+              "expected_output_signature": {
+                "return_value": {
+                  "umi": "b''",
+                  "cell_barcode": "b'CB123'"
+                },
+                "stdout_contains": null,
+                "file_artifacts": []
+              }
+            },
+            {
+              "case_id": "edge_case_no_separator",
+              "description": "Read ID with no separator should raise ValueError.",
+              "setup_code": "read_id = 'justanidentifier'\nsep = '_'",
+              "call_code": "try:\n    get_cell_umi_read_string(read_id, sep)\n    raise AssertionError('ValueError not raised')\nexcept ValueError as e:\n    result = {'error': str(e)}",
+              "expected_output_signature": {
+                "return_value": {
+                  "error": "Could not extract UMI or CB from the read ID, pleasecheck UMI and CB are encoded in the read name:justanidentifier"
+                },
+                "stdout_contains": null,
+                "file_artifacts": []
+              }
+            },
+            {
+              "case_id": "edge_case_different_separator",
+              "description": "Use a non-default separator (e.g., '|') and extract correctly.",
+              "setup_code": "read_id = 'prefix|CB456|UMIxyz'\nsep = '|'",
+              "call_code": "umi, cb = get_cell_umi_read_string(read_id, sep)\nresult = {'umi': umi, 'cell_barcode': cb}",
+              "expected_output_signature": {
+                "return_value": {
+                  "umi": "b'UMIxyz'",
+                  "cell_barcode": "b'CB456'"
+                },
+                "stdout_contains": null,
+                "file_artifacts": []
+              }
+            }
+          ]
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          "edge_case_many_separators",
+          "edge_case_empty_field",
+          "edge_case_no_separator",
+          "edge_case_different_separator"
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "V1_edge_case_many_separators",
+          "semantic_intent": "Verify that the function correctly extracts the last two fields even when there are many separators.",
+          "target_constraint": "The function must always take the last two fields after splitting by the given separator.",
+          "expected_failure_mode": "A naive implementation that takes the first two fields would fail.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "read_id = 'prefix_a_b_c_d_e_f'"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Read ID with 5 underscores; last two fields are 'e' and 'f'."
+        },
+        {
+          "spec_id": "V1_edge_case_empty_field",
+          "semantic_intent": "Verify that the function can handle empty fields (e.g., trailing separator).",
+          "target_constraint": "The function should not crash on empty fields; it should return empty bytes for the UMI if the field is empty.",
+          "expected_failure_mode": "Some implementations might raise IndexError or mis-split.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "read_id = 'prefix_CB123_'"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Read ID ending with separator; last field empty, second last is cell barcode."
+        },
+        {
+          "spec_id": "V1_edge_case_no_separator",
+          "semantic_intent": "Verify that a read ID with no separator raises ValueError.",
+          "target_constraint": "If the read_id has fewer than two separators, raise ValueError.",
+          "expected_failure_mode": "Implementations might return something else or crash differently.",
+          "test_template_type": "exception_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "read_id = 'justanidentifier'"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "exception_expected"
+          },
+          "test_case_description": "No separator present; expect ValueError."
+        },
+        {
+          "spec_id": "V1_edge_case_different_separator",
+          "semantic_intent": "Verify that the function works with a non-default separator.",
+          "target_constraint": "The function must use the provided separator parameter correctly.",
+          "expected_failure_mode": "Hardcoded '_' separator would fail.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "read_id = 'prefix|CB456|UMIxyz', sep='|'"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Separator set to '|', extract correct fields."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new edge-case inputs introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "V",
+      "operator_type": "strengthen_output_checks",
+      "operator_intensity": 1,
+      "transformation_goal": "Add stricter verifier checks on the exact bytes returned and the exception message content.",
+      "rationale": "The seed verifier only checks stdout and a loose return value. Strengthening ensures the function returns bytes objects with exact content and that the exception message includes the read ID.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {
+          "verifier_type_hint": "unit_test",
+          "additional_checks": [
+            {
+              "check_id": "check_bytes_encoding",
+              "description": "Ensure that the returned values are bytes with correct UTF-8 encoding.",
+              "type": "object_state_test",
+              "eval_expression": "isinstance(umi, bytes) and isinstance(cell_barcode, bytes)",
+              "expected_value": true
+            },
+            {
+              "check_id": "check_exception_message_contains_read_id",
+              "description": "For invalid read IDs, the ValueError message must contain the read_id string.",
+              "type": "exception_test",
+              "exception_class": "ValueError",
+              "eval_expression": "read_id in str(e)",
+              "expected_value": true
+            }
+          ]
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          "check_bytes_encoding",
+          "check_exception_message_contains_read_id"
+        ],
+        "new_hidden_tests": [],
+        "exception_tests": [
+          {
+            "exception_class": "ValueError",
+            "condition": "read_id = 'incomplete'",
+            "expected_message_contains": "incomplete"
+          }
+        ],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [
+          {
+            "object_key": "umi",
+            "condition": "read_id_good case",
+            "expected_type": "bytes",
+            "expected_value": "b'UMIACTGGA'"
+          },
+          {
+            "object_key": "cell_barcode",
+            "condition": "read_id_good case",
+            "expected_type": "bytes",
+            "expected_value": "b'CB10123'"
+          }
+        ],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "V2_check_bytes_encoding",
+          "semantic_intent": "Verify that the function always returns bytes objects, not strings or other types.",
+          "target_constraint": "Return type must be bytes for both elements.",
+          "expected_failure_mode": "If the function returns strings, the test fails.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "read_id_good"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "strict_type_check"
+          },
+          "test_case_description": "Check that umi and cell_barcode are bytes."
+        },
+        {
+          "spec_id": "V2_check_exception_message",
+          "semantic_intent": "Verify that the exception message includes the problematic read ID.",
+          "target_constraint": "The ValueError message must contain the read_id string.",
+          "expected_failure_mode": "If the exception message is generic or missing read_id, test fails.",
+          "test_template_type": "exception_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "read_id_bad"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "exception_check_message_contains"
+          },
+          "test_case_description": "Check ValueError message contains read ID."
+        }
+      ],
+      "output_requirements": [
+        "Scaled cases must check exact types and exception message content."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

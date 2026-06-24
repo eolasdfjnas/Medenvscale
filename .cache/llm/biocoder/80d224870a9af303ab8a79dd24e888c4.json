@@ -1,0 +1,180 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "multi_tumor_case",
+      "operator_intensity": 1,
+      "transformation_goal": "Introduce a file with multiple tumor fractions, requiring the parser to handle multi-sample C and p* lists.",
+      "rationale": "The seed task only tests a single tumor fraction. Increasing to two tumors tests the transposing logic in the gold solution and ensures the function correctly parses nested structures in C and p*.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "type": "file",
+              "name": "theta_multi.txt",
+              "content": "NLL\tmu\tC\tp*\n15.3\t0.5,0.3,0.2\t2,3:1,2:4,1\t0.2,0.15,0.1:0.1,0.05,0.4\n"
+            }
+          ]
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {
+          "seed_execution_case": {
+            "setup_code": "sample = (\n    \"NLL\\tmu\\tC\\tp*\\n\"\n    \"15.3\\t0.5,0.3,0.2\\t2,3:1,2:4,1\\t0.2,0.15,0.1:0.1,0.05,0.4\\n\"\n)\nfname = \"theta_multi.txt\"\nwith open(fname, \"w\") as f:\n    f.write(sample)",
+            "call_code": "result = parse_theta_results(fname)\nprint(result)\nos.remove(fname)",
+            "expected_output_signature": {
+              "stdout_contains": [
+                "{'NLL': 15.3, 'mu_normal': 0.5, 'mu_tumors': [0.3, 0.2], 'C': [[2, 1, 4], [3, 2, 1]], 'p*': [[0.2, 0.15, 0.1], [0.1, 0.05, 0.4]]}"
+              ]
+            }
+          }
+        },
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_multi_tumor",
+          "semantic_intent": "Test parsing of multi-tumor THetA data with correct transposition of C and p*.",
+          "target_constraint": "The function must correctly parse C as a list of lists (tumors x regions) and p* similarly.",
+          "expected_failure_mode": "Parsing without transposition would produce wrong structure.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "A file with 2 tumor fractions, 3 regions, all numeric."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the multi-tumor parsing requirement introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "D",
+      "operator_type": "placeholder_handling",
+      "operator_intensity": 1,
+      "transformation_goal": "Introduce placeholders (alphabetic in p*, non-digit in C) to test None conversion.",
+      "rationale": "The problem specifies that C may contain placeholders instead of digits and p* may contain alphabetic placeholders. The seed case only uses digits and numeric probabilities. This operator adds non-numeric entries to ensure the parser correctly outputs None.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "type": "file",
+              "name": "theta_placeholder.txt",
+              "content": "NLL\tmu\tC\tp*\n8.2\t0.6,0.4\t2:X:3\t0.1,A,0.2\n"
+            }
+          ]
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {
+          "seed_execution_case": {
+            "setup_code": "sample = (\n    \"NLL\\tmu\\tC\\tp*\\n\"\n    \"8.2\\t0.6,0.4\\t2:X:3\\t0.1,A,0.2\\n\"\n)\nfname = \"theta_placeholder.txt\"\nwith open(fname, \"w\") as f:\n    f.write(sample)",
+            "call_code": "result = parse_theta_results(fname)\nprint(result)\nos.remove(fname)",
+            "expected_output_signature": {
+              "stdout_contains": [
+                "{'NLL': 8.2, 'mu_normal': 0.6, 'mu_tumors': [0.4], 'C': [[2, None, 3]], 'p*': [0.1, None, 0.2]}"
+              ]
+            }
+          }
+        },
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_placeholder",
+          "semantic_intent": "Test parsing with non-numeric placeholders in C and p*.",
+          "target_constraint": "The function must output None for entries that are not integers (C) or not floats (p*).",
+          "expected_failure_mode": "Hardcoding or failing to handle non-digit/non-float would raise exception or produce incorrect types.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "A file with 'X' in C and 'A' in p*, expecting None."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the placeholder handling requirement introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

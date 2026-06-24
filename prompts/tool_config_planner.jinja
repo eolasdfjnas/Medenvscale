@@ -1,0 +1,85 @@
+You are planning tools for a MedAgentGym-style executable agent task.
+
+Return JSON only.
+
+Your task is to decide the allowed tools, tool-call budget, and output requirement for this sample.
+
+Seed task:
+{{ seed_task }}
+
+Base environment:
+{{ base_environment }}
+
+Domain:
+{{ domain }}
+
+Secondary domains:
+{{ secondary_domains }}
+
+Task type:
+{{ task_type }}
+
+Solution form:
+{{ solution_form }}
+
+Resource manifest:
+{{ resource_manifest }}
+
+Scaling plan:
+{{ scaling_plan }}
+
+M-level tool budget bounds:
+{{ tool_budget_bounds }}
+
+Candidate agent tools:
+{{ candidate_agent_tools }}
+
+Evaluator-only internal tools (never exposed to the agent, shown only for context):
+{{ evaluator_only_tools }}
+
+Rules:
+1. Choose tools that are useful for the current task and difficulty level.
+2. Harder M-levels may have more tools and higher tool-call budgets.
+3. Use selected_axes and axis_intensity to decide whether public context inspection, public resource reading, or stricter validation is needed.
+4. If D is high and resources exist, include read_resource_file.
+5. If C is high, include run_custom_test for public edge-case probing.
+6. If V is high, include validate_candidate_code and run_custom_test, but never reveal hidden tests.
+7. If A is high, avoid shortcut-prone tools and require validation.
+9. Primary domain is the main domain-specific driver for tool choice.
+10. Secondary domains may add only supplementary tools and must not dominate tool selection.
+11. Secondary domains must not add more domain-specific tools than the primary domain adds.
+12. Choose allowed_tools only from Candidate agent tools.
+13. Never include evaluator-only internal tools in allowed_tools.
+14. Any tool not listed in allowed_tools is unavailable to the agent.
+14. Output must fit within the M-level tool budget bounds.
+
+Output JSON:
+{
+  "allowed_tools": [
+    {
+      "tool_name": "run_custom_test",
+      "description": "...",
+      "input_schema": {},
+      "output_schema": {},
+      "when_to_use": "...",
+      "limitations": [],
+      "examples": []
+    }
+  ],
+  "tool_budget": {
+    "max_total_tool_calls": 0,
+    "max_calls_per_tool": {},
+    "max_consecutive_calls_per_tool": {},
+    "max_debug_calls": 0,
+    "max_validation_calls": 0
+  },
+  "output_requirement": {
+    "output_format": "code",
+    "required_fields": [],
+    "forbidden_fields": [],
+    "json_schema": null,
+    "strict": true
+  },
+  "tool_choice_reason": "...",
+  "budget_reason": "..."
+}

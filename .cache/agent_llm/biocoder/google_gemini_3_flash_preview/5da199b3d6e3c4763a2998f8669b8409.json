@@ -1,0 +1,26 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "tool_run_custom_test_0888lUKNpA8H1Fy58kGD",
+      "function": {
+        "name": "run_custom_test",
+        "arguments": "{\"test_snippet\":\"# No specific test needed yet, just checking if it runs.\\nprint(\\\"Success\\\")\\n\",\"code\":\"from Bio.Graphics import BasicChromosome as BC\\nfrom Bio.Graphics.BasicChromosome import Chromosome\\nfrom reportlab.graphics.shapes import Drawing, String\\nfrom reportlab.lib.units import inch\\nimport inspect\\n\\ndef bc_chromosome_draw_label(self, cur_drawing, label_name):\\n    # Calculate center x position\\n    x = (self.start_x_position + self.end_x_position) / 2.0\\n    # Calculate y position above the chromosome\\n    # By default, Biopython draws it below. \\n    # Let's see how it's normally implemented.\\n    y = self.start_y_position + 0.2 * self.title_size\\n    \\n    label = String(x, y, label_name,\\n                   fontName=self.title_font,\\n                   fontSize=self.title_size,\\n                   textAnchor='middle')\\n    cur_drawing.add(label)\\n\\ndef main():\\n    # Monkey-patch the drawing method\\n    Chromosome._draw_label = bc_chromosome_draw_label\\n\\n    # Prepare drawing canvas\\n    dwg = Drawing(400, 100)\\n\\n    # Create a chromosome and set drawing coordinates\\n    chrom = Chromosome('Chr1')\\n    chrom.start_x_position = 50\\n    chrom.end_x_position   = 350\\n    chrom.start_y_position = 20\\n    chrom.title_size       = 14\\n\\n    # Draw label above the chromosome\\n    chrom._draw_label(dwg, 'Chromosome 1')\\n\\n    # Save to SVG for verification\\n    # dwg.save(formats=['svg'], outDir='.', fnRoot='test_chrom_label')\\n    # print('SVG saved as test_chrom_label.svg')\\n\\nif __name__ == '__main__':\\n    main()\\n\"}"
+      }
+    }
+  ],
+  "reasoning_details": [
+    {
+      "type": "reasoning.encrypted",
+      "data": "AY89a1+AwG9datvDw6wliN8dzoXoaOcOJREtZoHSRWzPtSPB34aKjBZcRIOk+0o/MWo=",
+      "format": "google-gemini-v1",
+      "id": "tool_run_custom_test_0888lUKNpA8H1Fy58kGD",
+      "index": 0
+    }
+  ]
+}

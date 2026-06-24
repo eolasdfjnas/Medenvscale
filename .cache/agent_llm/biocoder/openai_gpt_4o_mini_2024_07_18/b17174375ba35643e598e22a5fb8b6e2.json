@@ -1,0 +1,6 @@
+{
+  "role": "assistant",
+  "content": "```python\nnum_matches = _get_num_matches(db, mz_values, adducts, tolerance)\n```",
+  "refusal": null,
+  "reasoning": null
+}

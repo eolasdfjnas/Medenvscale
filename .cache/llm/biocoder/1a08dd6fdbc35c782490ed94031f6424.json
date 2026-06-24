@@ -1,0 +1,20 @@
+{
+  "scaled_executable_gold_code": "from statistics import median\nfrom collections import Counter\n\ndef median_absolute_deviation(data):\n    med = median(data)\n    deviations = [abs(x - med) for x in data]\n    return median(deviations)\n\ndef compute_probs(datalist):\n    # Filter positive values only\n    pos_data = [x for x in datalist if x > 0]\n    if not pos_data:\n        return [], []\n    med = median(pos_data)\n    mad = median_absolute_deviation(pos_data)\n    freq = Counter(pos_data)\n    FILTER_MINREADS = 100\n    FILTER_MEDDEV_M = 10\n    values = []\n    probs = []\n    for item in sorted(freq.keys()):\n        if item <= med + FILTER_MEDDEV_M * mad and freq[item] >= FILTER_MINREADS:\n            values.append(item)\n            probs.append(freq[item])\n    total = sum(probs)\n    if total > 0:\n        probs = [p / total for p in probs]\n    return values, probs\n\ndef main():\n    # Sample list of fragment lengths observed from paired-end reads\n    datalist = [8]*200 + [10]*120 + [12]*150 + [15]*90 + [20]*50\n    # Compute filtered fragment lengths and their probabilities\n    values, probs = compute_probs(datalist)\n    print(\"Selected fragment lengths:\", values)\n    print(\"Their probabilities:\", probs)\n\nif __name__ == \"__main__\":\n    main()",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Modified compute_probs to use Counter for O(n) counting, return sorted values, and handle empty/negative inputs gracefully.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_811_M3_c_01",
+    "env_medagentgym_train_811_M3_a_02"
+  ],
+  "covered_requirements": [
+    "Require that the function counts frequencies efficiently (O(n)) and returns sorted output values.",
+    "Ensure the function handles empty list and negative fragment lengths gracefully."
+  ],
+  "implementation_notes": [
+    "Used collections.Counter for O(n) frequency counting. Filtered out non-positive values before median/MAD computation. Added early return for empty list."
+  ],
+  "assumptions": []
+}

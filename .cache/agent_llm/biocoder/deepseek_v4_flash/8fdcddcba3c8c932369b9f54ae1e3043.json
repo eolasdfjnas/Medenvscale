@@ -1,0 +1,16 @@
+{
+  "role": "assistant",
+  "content": "",
+  "reasoning_content": "All tests pass. Let me also test the error handling for _system_call exceptions.",
+  "tool_calls": [
+    {
+      "index": 0,
+      "id": "call_00_82hEi4tyc0jQOiMaCHxF3253",
+      "type": "function",
+      "function": {
+        "name": "run_custom_test",
+        "arguments": "{\"code\": \"import logging\\nimport multiprocessing as mp\\nimport os\\n\\n# Custom mock _system_call that raises an exception\\noriginal_system_call = None\\n\\ndef test_system_call_error():\\n    # Override _system_call to raise an exception\\n    import builtins\\n    global original_system_call\\n    \\n    # We need to import the module's _system_call\\n    # Let's just define a local version\\n    \\n    def _system_call_error(command):\\n        raise RuntimeError(\\\"Simulated system call failure\\\")\\n    \\n    # Save original\\n    import __main__\\n    \\n    # Let's just test the concept with a custom module\\n    pass\\n\\n# Instead, let's verify the try/except works by creating a scenario\\n# We'll test the function directly\\n\\n# Define a version that uses a custom _system_call\\ndef make_testable_deblur(system_call_func):\\n    def deblur_system_call(params, input_fp):\\n        if not os.path.exists(input_fp):\\n            raise FileNotFoundError(f\\\"Input file {input_fp} does not exist.\\\")\\n        \\n        conflicting_prefixes = ('--seqs-fp', '--is-worker-thread', '--keep-tmp-files')\\n        for param in params:\\n            for prefix in conflicting_prefixes:\\n                if param == prefix or param.startswith(prefix + '='):\\n                    raise ValueError(f\\\"Parameter '{param}' conflicts with reserved flags.\\\")\\n        \\n        command = ['deblur', 'workflow', '--seqs-fp', input_fp, '--is-worker-thread', '--keep-tmp-files']\\n        command.extend(params)\\n        \\n        log_command = ['deblur', 'workflow', '--seqs-fp', os.path.basename(input_fp), '--is-worker-thread', '--keep-tmp-files']\\n        log_command.extend(params)\\n        logging.info(f\\\"Running command: {log_command}\\\")\\n        \\n        try:\\n            stdout, stderr, returncode = system_call_func(command)\\n            return (stdout, stderr, returncode)\\n        except Exception as e:\\n            logging.error(str(e))\\n            return (str(command), str(e), 1)\\n    return deblur_system_call\\n\\n# Test error handling\\ndef error_system_call(command):\\n    raise RuntimeError(\\\"Simulated failure\\\")\\n\\ndeblur_with_error = make_testable_deblur(error_system_call)\\n\\ninput_fp = 'test_sequences.fasta'\\nwith open(input_fp, 'w') as f:\\n    f.write(\\\">seq1\\\\nACTG\\\\n>seq2\\\\nTGCA\\\\n\\\")\\n\\nresult = deblur_with_error(['--min-size', '50'], input_fp)\\nprint(\\\"Error handling test - Result:\\\", result)\\n# Should be (command_string, \\\"Simulated failure\\\", 1)\\nassert result[2] == 1, f\\\"Expected return code 1, got {result[2]}\\\"\\nassert \\\"Simulated failure\\\" in result[1], f\\\"Expected error message, got {result[1]}\\\"\\nprint(\\\"Error handling test passed!\\\")\\n\\nos.remove(input_fp)\"}"
+      }
+    }
+  ]
+}

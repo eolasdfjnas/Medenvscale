@@ -1,0 +1,241 @@
+{
+  "operator_instances": [
+    {
+      "axis": "V",
+      "operator_type": "add_oracle_cases",
+      "operator_intensity": 2,
+      "transformation_goal": "Strengthen verification by adding multiple executable test covering edge conditions: empty transitions, missing columns, charge state NA, multiple rows, duplicate protein entries, and trailing semicolons.",
+      "rationale": "The seed test only covers one normal row. To ensure robustness, the verifier must validate edge cases that are explicitly mentioned in the spec (empty transitions, charge NA, no transitions return early, duplicate avoidance). Adding these cases increases the verification complexity (V axis).",
+      "state_updates": {
+        "test_state_patch": {
+          "hidden_tests": [
+            {
+              "case_id": "test_empty_transitions",
+              "description": "Row with empty fragment annotation (no semicolons) and empty precursor.",
+              "setup_code": "header = ['FullPeptideName','aggr_Fragment_Annotation','aggr_prec_Fragment_Annotation','Charge','ProteinName']\nrow = ['PEPTIDE2', '', '', '1', 'P99999']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping = {}\nprotein_mapping = {}",
+              "call_code": "mapRow(row, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nprint('Precursors:', precursors_mapping)\nprint('Sequences:', sequences_mapping)\nprint('Protein:', protein_mapping)",
+              "expected_output_signature": {
+                "stdout_contains": [
+                  "Precursors: {}",
+                  "Sequences: {}",
+                  "Protein: {}"
+                ]
+              }
+            },
+            {
+              "case_id": "test_charge_na",
+              "description": "Row with charge 'NA' should default to '0'.",
+              "setup_code": "header = ['FullPeptideName','aggr_Fragment_Annotation','aggr_prec_Fragment_Annotation','Charge','ProteinName']\nrow = ['PEPTIDE3', 'b1;b2', 'p1;', 'NA', 'P88888']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping = {}\nprotein_mapping = {}",
+              "call_code": "mapRow(row, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nprint('Precursors:', precursors_mapping)\nprint('Sequences:', sequences_mapping)\nprint('Protein:', protein_mapping)",
+              "expected_output_signature": {
+                "stdout_contains": [
+                  "Precursors: {'PEPTIDE3/0': ['b1', 'b2'], 'PEPTIDE3/0_pr': ['p1']}",
+                  "Sequences: {'PEPTIDE3': ['PEPTIDE3/0', 'PEPTIDE3/0_pr']}",
+                  "Protein: {'P88888': ['PEPTIDE3']}"
+                ]
+              }
+            },
+            {
+              "case_id": "test_charge_empty",
+              "description": "Row with empty charge string should default to '0'.",
+              "setup_code": "header = ['FullPeptideName','aggr_Fragment_Annotation','aggr_prec_Fragment_Annotation','Charge','ProteinName']\nrow = ['PEPTIDE4', 'c1;c2', '', '', 'P77777']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping = {}\nprotein_mapping = {}",
+              "call_code": "mapRow(row, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nprint('Precursors:', precursors_mapping)\nprint('Sequences:', sequences_mapping)\nprint('Protein:', protein_mapping)",
+              "expected_output_signature": {
+                "stdout_contains": [
+                  "Precursors: {'PEPTIDE4/0': ['c1', 'c2'], 'PEPTIDE4/0_pr': []}",
+                  "Sequences: {'PEPTIDE4': ['PEPTIDE4/0', 'PEPTIDE4/0_pr']}",
+                  "Protein: {'P77777': ['PEPTIDE4']}"
+                ]
+              }
+            },
+            {
+              "case_id": "test_duplicate_protein",
+              "description": "Row with same protein and peptide should not duplicate entry in protein_mapping.",
+              "setup_code": "header = ['FullPeptideName','aggr_Fragment_Annotation','aggr_prec_Fragment_Annotation','Charge','ProteinName']\nrow1 = ['PEPTIDE5', 'd1;d2', 'e1;', '3', 'P66666']\nrow2 = ['PEPTIDE5', 'd1;d2', 'e1;', '3', 'P66666']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping = {}\nprotein_mapping = {}\nmapRow(row1, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nmapRow(row2, header_dict, precursors_mapping, sequences_mapping, protein_mapping)",
+              "call_code": "print('Precursors:', precursors_mapping)\nprint('Sequences:', sequences_mapping)\nprint('Protein:', protein_mapping)",
+              "expected_output_signature": {
+                "stdout_contains": [
+                  "Precursors: {'PEPTIDE5/3': ['d1', 'd2'], 'PEPTIDE5/3_pr': ['e1']}",
+                  "Sequences: {'PEPTIDE5': ['PEPTIDE5/3', 'PEPTIDE5/3_pr']}",
+                  "Protein: {'P66666': ['PEPTIDE5']}"
+                ]
+              }
+            },
+            {
+              "case_id": "test_multiple_rows",
+              "description": "Two different peptides mapping to same protein should both appear in protein_mapping.",
+              "setup_code": "header = ['FullPeptideName','aggr_Fragment_Annotation','aggr_prec_Fragment_Annotation','Charge','ProteinName']\nrow1 = ['PEPTIDE_A', 'f1;f2', '', '1', 'P55555']\nrow2 = ['PEPTIDE_B', 'g1;g2', '', '2', 'P55555']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping = {}\nprotein_mapping = {}\nmapRow(row1, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nmapRow(row2, header_dict, precursors_mapping, sequences_mapping, protein_mapping)",
+              "call_code": "print('Precursors:', precursors_mapping)\nprint('Sequences:', sequences_mapping)\nprint('Protein:', protein_mapping)",
+              "expected_output_signature": {
+                "stdout_contains": [
+                  "Precursors: {'PEPTIDE_A/1': ['f1', 'f2'], 'PEPTIDE_A/1_pr': [], 'PEPTIDE_B/2': ['g1', 'g2'], 'PEPTIDE_B/2_pr': []}",
+                  "Sequences: {'PEPTIDE_A': ['PEPTIDE_A/1', 'PEPTIDE_A/1_pr'], 'PEPTIDE_B': ['PEPTIDE_B/2', 'PEPTIDE_B/2_pr']}",
+                  "Protein: {'P55555': ['PEPTIDE_A', 'PEPTIDE_B']}"
+                ]
+              }
+            },
+            {
+              "case_id": "test_trailing_semicolons",
+              "description": "Trailing semicolons should be stripped from both fragment and precursor annotations.",
+              "setup_code": "header = ['FullPeptideName','aggr_Fragment_Annotation','aggr_prec_Fragment_Annotation','Charge','ProteinName']\nrow = ['PEPTIDE6', 'h1;h2;', 'i1;i2;i3;', '4', 'P44444']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping = {}\nprotein_mapping = {}",
+              "call_code": "mapRow(row, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nprint('Precursors:', precursors_mapping)\nprint('Sequences:', sequences_mapping)\nprint('Protein:', protein_mapping)",
+              "expected_output_signature": {
+                "stdout_contains": [
+                  "Precursors: {'PEPTIDE6/4': ['h1', 'h2'], 'PEPTIDE6/4_pr': ['i1', 'i2', 'i3']}",
+                  "Sequences: {'PEPTIDE6': ['PEPTIDE6/4', 'PEPTIDE6/4_pr']}",
+                  "Protein: {'P44444': ['PEPTIDE6']}"
+                ]
+              }
+            }
+          ]
+        },
+        "verifier_state_patch": {
+          "verifier_type_hint": "unit_test",
+          "robust_verifier_required": true
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          "test_empty_transitions",
+          "test_charge_na",
+          "test_charge_empty",
+          "test_duplicate_protein",
+          "test_multiple_rows",
+          "test_trailing_semicolons"
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "test_empty_transitions",
+          "semantic_intent": "Verify that mapRow returns early when fragment annotation is empty (no transitions).",
+          "target_constraint": "If after splitting fragment annotation the transitions list is empty, function should return without modifying mappings.",
+          "expected_failure_mode": "Naive implementations might still add keys with empty lists or cause errors.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "row with empty fragment annotation"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Row with no semicolons in fragment annotation should leave mappings empty."
+        },
+        {
+          "spec_id": "test_charge_na",
+          "semantic_intent": "Verify that charge 'NA' defaults to '0'.",
+          "target_constraint": "Charge state must become '0' when string is 'NA' or empty.",
+          "expected_failure_mode": "Implementations may not handle 'NA' and leave it as is, causing key mismatch.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "row with charge 'NA'"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Charge NA should map to key with '0'."
+        },
+        {
+          "spec_id": "test_charge_empty",
+          "semantic_intent": "Verify that empty charge defaults to '0'.",
+          "target_constraint": "Charge state must become '0' when empty string.",
+          "expected_failure_mode": "Implementations may treat empty as numeric 0 or leave empty.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "row with empty charge string"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Empty charge should default to '0'."
+        },
+        {
+          "spec_id": "test_duplicate_protein",
+          "semantic_intent": "Verify that protein_mapping avoids duplicates.",
+          "target_constraint": "If the same peptide is added twice under the same protein, it should appear only once.",
+          "expected_failure_mode": "Naive append would create duplicate peptide entries.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "two identical rows"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Duplicate rows should not duplicate peptide in protein_mapping."
+        },
+        {
+          "spec_id": "test_multiple_rows",
+          "semantic_intent": "Verify multiple rows correctly populate mappings.",
+          "target_constraint": "Multiple distinct peptides under same protein each appear.",
+          "expected_failure_mode": "Overwriting instead of appending.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "two different rows with same protein"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Two different peptides should both appear in protein_mapping."
+        },
+        {
+          "spec_id": "test_trailing_semicolons",
+          "semantic_intent": "Verify trailing semicolons are removed from both fragment and precursor annotations.",
+          "target_constraint": "Split result should have empty last element removed.",
+          "expected_failure_mode": "Implementations may keep empty string as last element.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "row with trailing semicolons"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Trailing semicolons should be stripped."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must cover empty transitions, charge NA and empty, duplicate protein, multiple rows, trailing semicolons."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "verifier_strength": "Increased from single case to six edge cases."
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

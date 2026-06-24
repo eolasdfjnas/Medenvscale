@@ -1,0 +1,141 @@
+{
+  "operator_instances": [
+    {
+      "axis": "C",
+      "operator_type": "add_compression_format_handling",
+      "operator_intensity": 2,
+      "transformation_goal": "Increase computation/constraint complexity by requiring automatic detection of compression format and appropriate flag selection, plus rejection of non-tar files.",
+      "rationale": "The original task uses 'tar -xf' which handles both uncompressed and compressed archives automatically. Adding explicit compression detection forces the solution to check file extensions and adjust flags, increasing algorithmic complexity. This aligns with the high C weight by introducing conditional logic and error handling for invalid extensions.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "using subprocess.check_call",
+            "exception handling",
+            "file path manipulation",
+            "file extension detection",
+            "conditional flag selection"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import os\nimport tarfile\nimport tempfile\nfrom subprocess import check_call, CalledProcessError\nclass GenipeError(Exception):\n    pass\n<<insert solution here>>\ndef main():"
+        },
+        "gold_state_patch": {
+          "operator_mode": "gold_compatible"
+        },
+        "verifier_state_patch": {
+          "verifier_type_hint": "unit_test",
+          "hidden_tests_mode": "explicit"
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_id": "hidden_compressed_tar",
+            "description": "Extract a .tar.gz archive and verify correct extraction.",
+            "setup_code": "import tarfile; import os; import tempfile\nwith tempfile.TemporaryDirectory() as tmp_dir:\n    src_dir = os.path.join(tmp_dir, 'src')\n    os.mkdir(src_dir)\n    with open(os.path.join(src_dir, 'test.txt'), 'w') as f: f.write('data')\n    tar_path = os.path.join(tmp_dir, 'archive.tar.gz')\n    with tarfile.open(tar_path, 'w:gz') as tar:\n        tar.add(src_dir, arcname='src')\n    dst_dir = os.path.join(tmp_dir, 'dst')\n    os.mkdir(dst_dir)\n    # store paths for call\n    import builtins\n    builtins._test_tar_path = tar_path\n    builtins._test_dst_dir = dst_dir",
+            "call_code": "untar_file(_test_dst_dir, _test_tar_path)",
+            "expected_output": null,
+            "expected_stdout": null,
+            "expected_exception": null,
+            "post_condition": "import os; assert os.path.isfile(os.path.join(_test_dst_dir, 'src', 'test.txt')), 'Extraction failed'"
+          },
+          {
+            "test_id": "hidden_invalid_extension",
+            "description": "Call with a non-.tar file extension and expect GenipeError.",
+            "setup_code": "import os; import tempfile\nwith tempfile.TemporaryDirectory() as tmp_dir:\n    fake_path = os.path.join(tmp_dir, 'notatar.txt')\n    with open(fake_path, 'w') as f: f.write('')\n    import builtins\n    builtins._fake_path = fake_path",
+            "call_code": "untar_file('/tmp', _fake_path)",
+            "expected_output": null,
+            "expected_stdout": null,
+            "expected_exception": "GenipeError"
+          }
+        ],
+        "exception_tests": [
+          {
+            "exception_type": "GenipeError",
+            "description": "Raise GenipeError for non-.tar file"
+          }
+        ],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [
+          {
+            "description": "Check extracted file existence",
+            "file_path_template": "{dest_dir}/src/test.txt",
+            "expected_content": "data"
+          }
+        ],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Old solution without extension check will attempt to extract non-tar file and either fail silently or produce incorrect output.",
+          "Old solution without compression flag detection may fail to extract .tar.gz archives (though 'tar -xf' actually handles them, so this is a stretch; but requirement is explicit flag selection, so old solution passes by chance but not by design)."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "compressed_tar_extraction",
+          "semantic_intent": "The solution must correctly extract a .tar.gz archive.",
+          "target_constraint": "Function must detect .gz extension and use appropriate flag (e.g., -z) or handle automatically.",
+          "expected_failure_mode": "If solution uses plain 'tar -xf' without -z, it may still work because tar auto-detects; but if we enforce explicit flag, old solution fails.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "compressed_tar_archive"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Extract a .tar.gz file and verify file content."
+        },
+        {
+          "spec_id": "invalid_extension_rejection",
+          "semantic_intent": "The solution must reject non-tar file extensions and raise GenipeError.",
+          "target_constraint": "Function must check that the file extension is .tar (or .tar.gz, .tar.bz2) and raise GenipeError otherwise.",
+          "expected_failure_mode": "Old solution would attempt extraction of any file, possibly causing unexpected errors or no error.",
+          "test_template_type": "exception_case",
+          "input_variant": {
+            "kind": "exception_variant",
+            "value": "non_tar_file"
+          },
+          "expected_behavior": {
+            "kind": "oracle_exception",
+            "exception_type": "GenipeError"
+          },
+          "test_case_description": "Call with a .txt file and expect GenipeError."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include at least one compressed archive (e.g., .tar.gz) and one non-tar file to test extension rejection."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "new_solution_behavior": "Automatic detection of compression from extension, appropriate flag selection, rejection of non-tar files."
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

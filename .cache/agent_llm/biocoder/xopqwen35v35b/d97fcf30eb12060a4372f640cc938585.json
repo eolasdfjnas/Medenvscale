@@ -1,0 +1,17 @@
+{
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+    {
+      "index": 0,
+      "id": "call_be7f0bee414540e9b71c0158",
+      "type": "function",
+      "function": {
+        "name": "get_task_context",
+        "arguments": "{\"window\": 4000}"
+      }
+    }
+  ],
+  "reasoning_content": "",
+  "plugins_content": null
+}

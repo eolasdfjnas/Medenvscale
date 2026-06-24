@@ -1,0 +1,75 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_multi_valid",
+      "description": "Test parsing multiple valid lines and returning a list of dictionaries.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_59_M3_d_01,env_medagentgym_train_59_M3_c_02",
+      "axis": "D,C",
+      "semantic_intent": "Verify that the function correctly parses multiple data lines, validates constraints, and returns a list.",
+      "target_constraint": "The returned list must contain one dictionary per data line, each with correct parsed values and mu sum = 1, C and p* lengths equal.",
+      "expected_failure_mode": "Old seed code returns a single dictionary or does not validate mu sum or length.",
+      "setup_code": "sample = (\n    \"NLL\\tmu\\tC\\tp*\\n\"\n    \"12.5\\t0.4,0.6\\t2:3\\t0.1,0.2\\n\"\n    \"15.3\\t0.5,0.5\\t2:3\\t0.3,0.2\\n\"\n)\nfname = \"theta_test.txt\"\nwith open(fname, \"w\") as f:\n    f.write(sample)",
+      "call_code": "result = parse_theta_results(fname)\nprint(result)\nos.remove(fname)",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Modify the input file to contain multiple data lines, requiring the function to parse all lines and return a list of dictionaries.",
+        "Add numeric constraints that mu values must sum to 1 within tolerance, and that the number of copy number states equals the number of probabilities; raise ValueError if violated."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [
+          "{'NLL': 12.5, 'mu_normal': 0.4, 'mu_tumors': [0.6], 'C': [[2, 3]], 'p*': [0.1, 0.2]}",
+          "{'NLL': 15.3, 'mu_normal': 0.5, 'mu_tumors': [0.5], 'C': [[2, 3]], 'p*': [0.3, 0.2]}"
+        ],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "scaled_case_mu_sum_violation",
+      "description": "Test that a line with mu sum not equal to 1 raises ValueError.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_59_M3_c_02",
+      "axis": "C",
+      "semantic_intent": "Verify that the function raises ValueError when mu values do not sum to 1 within tolerance.",
+      "target_constraint": "For any line, mu_normal + sum(mu_tumors) must equal 1 within 1e-9 tolerance; otherwise ValueError.",
+      "expected_failure_mode": "Old seed code accepts invalid mu sums silently.",
+      "setup_code": "sample = (\n    \"NLL\\tmu\\tC\\tp*\\n\"\n    \"12.5\\t0.4,0.7\\t2:3\\t0.1,0.2\\n\"\n)\nfname = \"theta_test.txt\"\nwith open(fname, \"w\") as f:\n    f.write(sample)",
+      "call_code": "try:\n    result = parse_theta_results(fname)\n    print(result)\nexcept ValueError as e:\n    print(\"ValueError:\", e)\nos.remove(fname)",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Add numeric constraints that mu values must sum to 1 within tolerance, and that the number of copy number states equals the number of probabilities; raise ValueError if violated."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [
+          "ValueError: mu values do not sum to 1"
+        ],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "scaled_case_length_mismatch",
+      "description": "Test that a line with mismatched lengths between C and p* raises ValueError.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_59_M3_c_02",
+      "axis": "C",
+      "semantic_intent": "Verify that the function raises ValueError when flattened C length does not equal flattened p* length.",
+      "target_constraint": "After flattening, the number of copy number entries must equal the number of probability entries; otherwise ValueError.",
+      "expected_failure_mode": "Old seed code accepts mismatched lengths silently.",
+      "setup_code": "sample = (\n    \"NLL\\tmu\\tC\\tp*\\n\"\n    \"12.5\\t0.4,0.6\\t2:3\\t0.1,0.2,0.3\\n\"\n)\nfname = \"theta_test.txt\"\nwith open(fname, \"w\") as f:\n    f.write(sample)",
+      "call_code": "try:\n    result = parse_theta_results(fname)\n    print(result)\nexcept ValueError as e:\n    print(\"ValueError:\", e)\nos.remove(fname)",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Add numeric constraints that mu values must sum to 1 within tolerance, and that the number of copy number states equals the number of probabilities; raise ValueError if violated."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [
+          "ValueError: Length mismatch"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

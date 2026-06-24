@@ -1,0 +1,19 @@
+{
+  "scaled_executable_gold_code": "def get_default_error_profile():\n    default_profile = [1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005]\n    try:\n        import json\n        with open('default_error_profile.json', 'r') as f:\n            profile = json.load(f)\n    except FileNotFoundError:\n        profile = default_profile\n    if not isinstance(profile, list) or len(profile) != 12:\n        raise ValueError(\"Error profile must be a list of 12 elements\")\n    if any(not isinstance(v, (int, float)) or v < 0 or v > 1 for v in profile):\n        raise ValueError(\"All error profile values must be numeric and in [0,1]\")\n    for i in range(1, len(profile)):\n        if profile[i] > profile[i-1]:\n            raise ValueError(\"Error profile must be non-increasing\")\n    return list(profile)\n",
+  "repair_summary": "Moved import json inside function to avoid adding it as a global variable, preserving globals unchanged.",
+  "covered_operator_ids": [
+    "env_medagentgym_train_841_M4_d_01",
+    "env_medagentgym_train_841_M4_c_02",
+    "env_medagentgym_train_841_M4_a_03",
+    "env_medagentgym_train_841_M4_a_04",
+    "env_medagentgym_train_841_M4_a_05"
+  ],
+  "covered_requirements": [
+    "Scaled executable cases must include scenarios with and without the default_error_profile.json file.",
+    "Scaled executable cases must include both a valid profile and an invalid profile that should trigger a ValueError.",
+    "Scaled executable cases must include a test where the returned list is mutated and then the function is called again to verify unchanged output.",
+    "Scaled executable cases must capture global state before and after function call and assert no modification.",
+    "Scaled executable cases must call the function twice and compare results for equality and non-identity."
+  ],
+  "remaining_risks": []
+}

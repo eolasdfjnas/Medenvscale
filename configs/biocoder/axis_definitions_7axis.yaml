@@ -1,0 +1,38 @@
+axis_max_intensity:
+  H: 3
+  R: 3
+  I: 3
+  E: 3
+  C: 3
+  A: 3
+  V: 3
+
+axis_definitions:
+  D:
+    name: "Data / Input Complexity"
+    description: >
+      Increase complexity in input files, data structures, formats, missing values,
+      malformed records, multi-file inputs, or content-based parsing requirements.
+      This axis covers the old E axis and the input-related part of I.
+
+  C:
+    name: "Computation / Constraint Complexity"
+    description: >
+      Increase complexity in algorithmic behavior, parameter rules, output contracts,
+      edge-case handling, ordering constraints, numeric constraints, or multi-step logic.
+      This axis covers the old C axis and most of H.
+
+  A:
+    name: "Adversarial / Robustness Complexity"
+    description: >
+      Increase robustness requirements against shortcuts, hardcoding, conflicting inputs,
+      randomized names, duplicated parameters, misleading metadata, or brittle assumptions.
+      This axis covers the old A axis and the adversarial part of I.
+
+  V:
+    name: "Verification / Oracle Complexity"
+    description: >
+      Increase the strength of executable oracle cases, expected output signatures,
+      file artifact checks, stdout/stderr checks, exception checks, and coverage across
+      normal, edge, and adversarial cases.
+      This axis keeps the old V axis.

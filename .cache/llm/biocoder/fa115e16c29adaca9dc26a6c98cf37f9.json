@@ -1,0 +1,307 @@
+{
+  "operator_instances": [
+    {
+      "axis": "C",
+      "operator_type": "add_missing_charge_validation",
+      "operator_intensity": 1,
+      "transformation_goal": "Require the function to raise a ValueError if any compound's charge is not found in the compound_charge dictionary, rather than returning NaN.",
+      "rationale": "Increases constraint complexity by enforcing explicit error handling for missing data, which mimics real-world robustness requirements in computational chemistry.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "understanding of biochemical reactions",
+            "iterate over list of tuples",
+            "dictionary lookup",
+            "numerical summation",
+            "handling missing charges with ValueError"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {
+          "operator_mode": "gold_compatible",
+          "scaled_gold_solution": "def reaction_charge(reaction, compound_charge):\n    \"\"\"Calculate the overall charge for the specified reaction.\n\n    Args:\n        reaction: :class:`psamm.reaction.Reaction`.\n        compound_charge: a map from each compound to charge values.\n\n    Raises:\n        ValueError: if a compound's charge is missing.\n    \"\"\"\n    charge_sum = 0.0\n    for compound, value in reaction.compounds:\n        charge = compound_charge.get(compound.name)\n        if charge is None:\n            raise ValueError(f\"Charge for compound {compound.name} not found\")\n        charge_sum += charge * float(value)\n    return charge_sum"
+        },
+        "verifier_state_patch": {
+          "hidden_tests_mode": "selective_hidden"
+        },
+        "test_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          {
+            "check_type": "exception_expected",
+            "description": "Test that function raises ValueError when a compound's charge is missing.",
+            "setup_code": "h2o = Compound('H2O')\nreaction = Reaction([(h2o, 1)])\ncompound_charge = {'H2O': None}  # missing, actually None not in dict test better:",
+            "call_code": "net_charge = reaction_charge(Reaction([(Compound('X'), 1)]), {})",
+            "expected_exception": {
+              "type": "ValueError",
+              "message_contains": "not found"
+            }
+          }
+        ],
+        "new_hidden_tests": [
+          {
+            "test_id": "missing_charge_test",
+            "test_type": "exception",
+            "setup": "unknown = Compound('Unknown')\nr = Reaction([(unknown, 1)])\ncharge_map = {'Known': 1.0}",
+            "call": "result = reaction_charge(r, charge_map)",
+            "expected": "ValueError",
+            "failure_message": "Should raise ValueError when charge missing"
+          }
+        ],
+        "exception_tests": [
+          {
+            "exception_type": "ValueError",
+            "expected_message_contains": "not found",
+            "test_case": "reaction_charge(Reaction([(Compound('X'),1)]), {})"
+          }
+        ],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Old solution returning NaN instead of raising ValueError will fail the new exception test."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "Ensure the function raises a ValueError when a compound's charge is not in the dictionary.",
+          "target_constraint": "For any compound in the reaction, its name must exist in compound_charge; otherwise raise ValueError.",
+          "expected_failure_mode": "The old implementation returns NaN silently, which is incorrect per the new specification.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant",
+            "description": "Add a reaction with a compound not present in compound_charge."
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "exception"
+          },
+          "test_case_description": "Call reaction_charge on a reaction containing a compound whose charge is missing; expect ValueError."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "behavior_change": "Function now raises ValueError instead of returning NaN when charge is missing."
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": false,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "V",
+      "operator_type": "add_edge_case_tests",
+      "operator_intensity": 1,
+      "transformation_goal": "Strengthen the verifier with additional test cases covering edge scenarios: empty reaction, single compound with zero coefficient, multiple identical compounds, and fractional charges.",
+      "rationale": "Increases verification coverage to ensure the solution handles common edge cases in biochemical reaction charge calculations.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "understanding of biochemical reactions",
+            "iterate over list of tuples",
+            "dictionary lookup",
+            "numerical summation",
+            "handling missing charges with ValueError",
+            "handling edge cases like empty reaction"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {
+          "hidden_tests_mode": "selective_hidden",
+          "scaled_oracle_cases": [
+            {
+              "case_id": "edge_empty_reaction",
+              "description": "Reaction with no compounds should return 0.0",
+              "setup_code": "empty_reaction = Reaction([])\ncompound_charge = {}",
+              "call_code": "result = reaction_charge(empty_reaction, compound_charge)",
+              "expected_output_signature": {
+                "return_value": 0.0,
+                "stdout_contains": [],
+                "file_artifacts": []
+              }
+            },
+            {
+              "case_id": "edge_zero_coefficient",
+              "description": "Compound with zero coefficient should contribute zero charge.",
+              "setup_code": "na = Compound('Na')\nr = Reaction([(na, 0)])\ncharge = {'Na': 1.0}",
+              "call_code": "result = reaction_charge(r, charge)",
+              "expected_output_signature": {
+                "return_value": 0.0
+              }
+            },
+            {
+              "case_id": "edge_multi_identical",
+              "description": "Multiple entries of same compound should be summed.",
+              "setup_code": "h = Compound('H')\nr = Reaction([(h, 1), (h, 1)])\ncharge = {'H': 1.0}",
+              "call_code": "result = reaction_charge(r, charge)",
+              "expected_output_signature": {
+                "return_value": 2.0
+              }
+            },
+            {
+              "case_id": "edge_fractional_charge",
+              "description": "Fractional charges should be handled.",
+              "setup_code": "ca = Compound('Ca')\nr = Reaction([(ca, 1)])\ncharge = {'Ca': 2.5}",
+              "call_code": "result = reaction_charge(r, charge)",
+              "expected_output_signature": {
+                "return_value": 2.5
+              }
+            }
+          ],
+          "validated_oracle_cases": []
+        },
+        "test_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          {
+            "check_type": "numerical_equality",
+            "description": "Empty reaction returns 0.0",
+            "setup_code": "empty_reaction = Reaction([])\ncharge_map = {}",
+            "call_code": "result = reaction_charge(empty_reaction, charge_map)",
+            "expected": 0.0
+          },
+          {
+            "check_type": "numerical_equality",
+            "description": "Zero coefficient returns 0.0",
+            "setup_code": "r = Reaction([(Compound('A'), 0)])\ncm = {'A': 5.0}",
+            "call_code": "result = reaction_charge(r, cm)",
+            "expected": 0.0
+          },
+          {
+            "check_type": "numerical_equality",
+            "description": "Duplicate compounds sum charges",
+            "setup_code": "r = Reaction([(Compound('A'), 1), (Compound('A'), 2)])\ncm = {'A': 1.0}",
+            "call_code": "result = reaction_charge(r, cm)",
+            "expected": 3.0
+          },
+          {
+            "check_type": "numerical_equality",
+            "description": "Fractional charges",
+            "setup_code": "r = Reaction([(Compound('A'), 1)])\ncm = {'A': 0.5}",
+            "call_code": "result = reaction_charge(r, cm)",
+            "expected": 0.5
+          }
+        ],
+        "new_hidden_tests": [
+          {
+            "test_id": "edge_empty",
+            "test_type": "numerical_equality",
+            "setup": "empty_reaction = Reaction([]); charge_map = {}",
+            "call": "result = reaction_charge(empty_reaction, charge_map)",
+            "expected": 0.0,
+            "failure_message": "Empty reaction should give 0.0"
+          },
+          {
+            "test_id": "edge_zero_coeff",
+            "test_type": "numerical_equality",
+            "setup": "r = Reaction([(Compound('X'), 0)]); cm = {'X': 1.0}",
+            "call": "result = reaction_charge(r, cm)",
+            "expected": 0.0,
+            "failure_message": "Zero coefficient should yield 0.0"
+          },
+          {
+            "test_id": "edge_duplicate",
+            "test_type": "numerical_equality",
+            "setup": "r = Reaction([(Compound('Y'), 2), (Compound('Y'), 3)]); cm = {'Y': 2.0}",
+            "call": "result = reaction_charge(r, cm)",
+            "expected": 10.0,
+            "failure_message": "Duplicate compounds must sum"
+          },
+          {
+            "test_id": "edge_fractional",
+            "test_type": "numerical_equality",
+            "setup": "r = Reaction([(Compound('Z'), 1)]); cm = {'Z': 1.5}",
+            "call": "result = reaction_charge(r, cm)",
+            "expected": 1.5,
+            "failure_message": "Fractional charges must be supported"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Solutions that assume at least one compound will fail on empty reaction.",
+          "Solutions that ignore coefficient zero will return non-zero.",
+          "Solutions that deduplicate compounds will give wrong sum."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_v_spec_1",
+          "semantic_intent": "Verify that the function correctly computes net charge for edge cases: empty reaction, zero coefficient, duplicate compounds, and fractional charges.",
+          "target_constraint": "The function must handle these scenarios without errors and return correct numerical results.",
+          "expected_failure_mode": "Old solutions that assume non-empty reactions or ignore coefficient zero will produce wrong results.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant",
+            "description": "Add edge case reactions to the test suite."
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "numerical_equality"
+          },
+          "test_case_description": "Run reaction_charge on empty reaction, zero coefficient, duplicate compounds, and fractional charge; expect correct numerical outputs."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the new requirement introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "verification_coverage": "Increased to cover edge cases."
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": false,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

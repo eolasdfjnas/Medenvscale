@@ -1,0 +1,15 @@
+default_dataset: biocoder
+trainer: trl_sft
+dataset_path: data/splits/sft_train.jsonl
+eval_path: data/splits/sft_dev.jsonl
+output_dir: experiments/sft
+model_name_or_path: Qwen/Qwen2.5-1.5B-Instruct
+max_steps: 50
+learning_rate: 2.0e-4
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 4
+lora:
+  enabled: true
+  r: 8
+  alpha: 16
+  dropout: 0.05

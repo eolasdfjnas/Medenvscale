@@ -1,0 +1,26 @@
+{
+  "scaled_executable_gold_code": "def get_cell_umi_read_string(read_id, sep='_', max_umi_len=10):\n    \"\"\"Extract the UMI and cell barcode from the read id using the specified separator.\n\n    Args:\n        read_id (str): Read identifier string.\n        sep (str): Separator between fields (default '_').\n        max_umi_len (int): Maximum length of UMI to return (default 10).\n\n    Returns:\n        tuple: (UMI_bytes, cell_barcode_bytes)\n\n    Raises:\n        ValueError: If insufficient fields, empty fields, or fields shorter than 2 characters.\n    \"\"\"\n    # Strip leading/trailing whitespace\n    read_id = read_id.strip()\n    parts = read_id.split(sep)\n    if len(parts) < 2:\n        raise ValueError(f'Insufficient fields in read ID: {read_id}')\n    umi = parts[-1]\n    cell_barcode = parts[-2]\n    if umi == '' or cell_barcode == '':\n        raise ValueError(f'Empty field encountered in last two fields: {parts[-2:]}')\n    if len(umi) < 2 or len(cell_barcode) < 2:\n        raise ValueError(f'Last two fields must have at least 2 characters each: {parts[-2:]}')\n    umi = umi[:max_umi_len]\n    return umi.encode('utf-8'), cell_barcode.encode('utf-8')\n\n\nif __name__ == \"__main__\":\n    # Demonstration of the function\n    read_id_good = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB10123_UMIACTGGA'\n    read_id_bad = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001'\n    sep = '_'\n\n    # Test with a valid read ID\n    umi, cell_barcode = get_cell_umi_read_string(read_id_good, sep)\n    print(\"Good read -> UMI bytes:\", umi, \"Cell barcode bytes:\", cell_barcode)\n\n    # Test with an invalid read ID to demonstrate error handling\n    try:\n        get_cell_umi_read_string(read_id_bad, sep)\n    except ValueError as e:\n        print(\"Expected error for bad read ID:\", e)\n\n    # Additional tests for scaled requirements\n    # Whitespace\n    read_id_ws = '  NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB10123_UMIACTGGA  '\n    umi_ws, cb_ws = get_cell_umi_read_string(read_id_ws, sep)\n    print(\"Whitespace test passed\")\n\n    # Multi-field\n    read_id_multi = 'A_B_C_CB1_UMI1'\n    umi_multi, cb_multi = get_cell_umi_read_string(read_id_multi, sep)\n    print(\"Multi-field test passed\")\n\n    # Multi-char separator\n    read_id_multi_sep = 'A--B--C'\n    umi_ms, cb_ms = get_cell_umi_read_string(read_id_multi_sep, '--')\n    print(\"Multi-char separator test passed\")\n\n    # Short fields\n    try:\n        get_cell_umi_read_string('A_B_C', sep)\n    except ValueError:\n        print(\"Short fields test passed\")\n\n    # max_umi_len\n    read_id_long = 'prefix_CB_UMIABCDEFGHIJKLMN'\n    umi_long, cb_long = get_cell_umi_read_string(read_id_long, sep, max_umi_len=5)\n    print(\"max_umi_len test passed\")\n\n    # Empty fields due to consecutive separators\n    try:\n        get_cell_umi_read_string('A__B', sep)\n    except ValueError:\n        print(\"Consecutive separators test passed\")\n\n    # Trailing separator\n    try:\n        get_cell_umi_read_string('A_B_', sep)\n    except ValueError:\n        print(\"Trailing separator test passed\")\n\n    print(\"All demonstrations completed.\")",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Added whitespace stripping, multi-character separator support, field length constraints, max_umi_len parameter, and empty field detection to meet scaled task requirements.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_879_M4_d_01",
+    "env_medagentgym_train_879_M4_c_02",
+    "env_medagentgym_train_879_M4_a_03"
+  ],
+  "covered_requirements": [
+    "Scaled executable cases must cover whitespace handling, variable field counts, and insufficient fields.",
+    "Scaled executable cases must check field length constraints, multi-char separators, and max_umi_len parameter.",
+    "Scaled executable cases must include tests with consecutive separators and trailing separators yielding empty fields."
+  ],
+  "implementation_notes": [
+    "Function strips whitespace from read_id before splitting.",
+    "Splits by separator (any string) and extracts last two fields.",
+    "Raises ValueError if fewer than 2 fields, if either last two fields are empty, or if either field has fewer than 2 characters.",
+    "Truncates UMI to max_umi_len (default 10) before encoding.",
+    "Returns tuple of (UMI_bytes, cell_barcode_bytes)."
+  ],
+  "assumptions": []
+}

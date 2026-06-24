@@ -1,0 +1,54 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_main_sci_notation_missing_url",
+      "description": "Test that the function handles m/z values in scientific notation and works when LIPIDMAPS_URL global is not defined, returning the same count as decimal representation.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_764_M4_c_01,env_medagentgym_train_764_M4_a_02",
+      "axis": "C,A",
+      "semantic_intent": "Verify that the function correctly interprets scientific notation m/z values and uses a default URL when LIPIDMAPS_URL is missing, producing the same match count as the seed case.",
+      "target_constraint": "The function must interpret '1e2' as 100.0 and return 315 unique matches, and must not raise a NameError when LIPIDMAPS_URL is undefined.",
+      "expected_failure_mode": "If the function relies on LIPIDMAPS_URL without fallback, a NameError occurs; if it fails to parse scientific notation, the API may return 0 or different count.",
+      "setup_code": "if 'LIPIDMAPS_URL' in globals(): del LIPIDMAPS_URL",
+      "call_code": "db = 'GLYCOLIPIDS'\nmz_values = '1e2\\n2e2\\n3e2'\nadducts = 'M+H,M+Na'\ntolerance = 0.01\nnum_matches = _get_num_matches(db, mz_values, adducts, tolerance)\nprint(f'Number of unique m/z matches: {num_matches}')\nresult = num_matches",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must include a case with scientific notation m/z values.",
+        "Scaled executable cases must include a test case where LIPIDMAPS_URL is undefined."
+      ],
+      "expected_output_signature": {
+        "return_type": "int",
+        "return_value": 315,
+        "stdout_contains": [
+          "Number of unique m/z matches: 315"
+        ],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "scaled_zero_match",
+      "description": "Test that the function returns 0 when no m/z values match any database entry, and stdout indicates zero matches.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_764_M4_v_03",
+      "axis": "V",
+      "semantic_intent": "Verify that the function correctly returns 0 and prints 'Number of unique m/z matches: 0' when no input m/z value matches any entry in the database.",
+      "target_constraint": "The function must return integer 0 and the stdout must contain 'Number of unique m/z matches: 0'.",
+      "expected_failure_mode": "If the function returns a positive number, throws an exception, or prints a different message, the test fails.",
+      "setup_code": "",
+      "call_code": "db = 'GLYCOLIPIDS'\nmz_values = '999.0\\n999.1'\nadducts = 'M+H'\ntolerance = 0.01\nnum_matches = _get_num_matches(db, mz_values, adducts, tolerance)\nprint(f'Number of unique m/z matches: {num_matches}')\nresult = num_matches",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must include a zero-match test case.",
+        "The verifier must check both return value and stdout."
+      ],
+      "expected_output_signature": {
+        "return_type": "int",
+        "return_value": 0,
+        "stdout_contains": [
+          "Number of unique m/z matches: 0"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

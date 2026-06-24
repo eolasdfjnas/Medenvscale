@@ -1,0 +1,25 @@
+{
+  "scaled_executable_gold_code": "import json\n\ndef get_default_error_profile():\n    \"\"\"Return the default error profile for deblurring based on Illumina run data.\n    Returns a new list each call.\"\"\"\n    return [1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005]\n\ndef main():\n    # Retrieve the default Illumina error profile\n    profile = get_default_error_profile()\n    print(\"Default Illumina error profile:\", profile)\n    # Verify the structure and key values\n    assert isinstance(profile, list), \"Profile should be a list\"\n    assert len(profile) == 12, \"Profile should contain 12 entries\"\n    assert profile[0] == 1, \"First entry should be 1\"\n    assert profile[-1] == 0.0005, \"Last entry should be 0.0005\"\n    # Additional scaled constraints\n    assert all(isinstance(v, (int, float)) for v in profile), \"All entries must be numeric\"\n    assert all(v >= 0 for v in profile), \"All entries must be non-negative\"\n    # Check function returns a new list each call\n    another_profile = get_default_error_profile()\n    assert another_profile is not profile, \"Function must return a new list each call\"\n    # Check that modifying a different returned list does not affect result\n    yet_another = get_default_error_profile()\n    yet_another[0] = 999\n    assert profile[0] == 1, \"Original profile should remain unchanged\"\n    # Save to a JSON file for downstream analysis\n    with open(\"error_profile.json\", \"w\") as f:\n        json.dump(profile, f)\n    print(\"Profile saved successfully to error_profile.json\")\n\nif __name__ == \"__main__\":\n    main()",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "The seed code used a global mutable list, violating the scaled requirement that each call returns a fresh independent list. Additionally, scaled cases require numeric type and non-negativity checks. The new code ensures a new list is created each invocation.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_841_M4_d_01",
+    "env_medagentgym_train_841_M4_c_01",
+    "env_medagentgym_train_841_M4_a_01",
+    "env_medagentgym_train_841_M4_a_02"
+  ],
+  "covered_requirements": [
+    "Scaled executable cases must expose the new input/data complexity introduced by this operator.",
+    "Scaled executable cases must expose the new computation and contract constraints introduced by this operator.",
+    "Scaled executable cases must expose the new anti-shortcut robustness requirement introduced by this operator."
+  ],
+  "implementation_notes": [
+    "Return a new list literal each call to avoid shared mutable state.",
+    "Included assertions to verify numeric type, non-negativity, and independence across calls.",
+    "Preserved original seed behavior (printing, JSON saving) and added scaled constraints."
+  ],
+  "assumptions": []
+}

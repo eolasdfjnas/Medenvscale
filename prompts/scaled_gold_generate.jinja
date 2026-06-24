@@ -1,0 +1,149 @@
+You are an expert Python reference-solution generator for code benchmark construction.
+
+Your task is to generate the oracle executable code for a scaled coding task.
+
+You must write a correct, generalizable reference implementation that satisfies the scaled task prompt, operator-induced semantic changes, visible requirements, and expected output format.
+
+You must not generate tests.
+You must not generate verifier code.
+You must not generate explanations outside the required JSON.
+You must not hardcode visible examples.
+You must not rely on hidden tests.
+You must preserve the required function/class signature unless the scaled task explicitly changes it.
+
+Return JSON only.
+
+You are given a seed coding task and a scaled version of that task.
+
+The scaled task was created by applying difficulty operators to the seed task. Your job is to generate the correct oracle solution code for the scaled task.
+
+This oracle executable code will be used as scaled_executable_gold_code. It must compile, execute, and pass all validated scaled_oracle_cases.
+
+Do not solve the seed task only. Solve the scaled task.
+
+[SEED EXECUTABLE CODE]
+====================
+{{ seed_executable_code }}
+
+====================
+[SEED EXECUTION CASE]
+====================
+{{ seed_execution_case }}
+
+[SCALED FINAL USER PROMPT]
+====================
+{{ final_user_prompt }}
+
+====================
+[FUNCTION / CLASS SIGNATURE]
+====================
+{{ signature_info }}
+
+[OPERATOR INSTANCES]
+====================
+{{ operator_instances }}
+
+[SCALED ORACLE CASES]
+====================
+{{ scaled_oracle_cases }}
+
+====================
+[GENERATION REQUIREMENTS]
+====================
+
+Generate complete executable Python code that satisfies the scaled final user prompt.
+
+`scaled_executable_gold_code` must be a complete runnable Python file/program.
+Do not return a function body, replacement snippet, patch, diff, or code intended to be inserted into `<<insert solution here>>`.
+Include every import, helper, class/function definition, constant, and target public API needed by the oracle cases.
+The evaluator will execute `scaled_executable_gold_code` exactly as returned; it will not merge it into the seed scaffold.
+
+You must follow these rules:
+
+1. Preserve the required public API.
+   - Keep the required function name, class name, method name, arguments, and return type behavior.
+   - Do not change the interface unless the scaled prompt explicitly requires it.
+
+2. Implement the scaled task, not only the seed task.
+   - Cover every semantic-changing operator.
+   - Cover every added constraint.
+   - Cover every new input structure.
+   - Cover every implicit requirement.
+   - Cover every risk/scientific validity requirement if present.
+   - Cover every anti-shortcut requirement if present.
+
+3. Do not hardcode examples.
+   - Do not return fixed outputs for visible examples.
+   - Do not special-case only the visible sample inputs.
+   - Implement general logic.
+
+4. If the only active axis is V and task semantics are unchanged, you may reuse the seed executable code.
+   In that case, set:
+   - gold_changed = false
+   - answer_invariant = true
+   - gold_generation_method = "reuse_seed_gold_solution"
+
+5. If any D/C/A operator changes task semantics, generate new executable code.
+   In that case, set:
+   - gold_changed = true
+   - answer_invariant = false
+   - gold_generation_method = "llm_solver_code"
+
+6. The code must be self-contained and executable.
+   - Include necessary imports.
+   - Include or preserve any helper functions, wrapper logic, constants, or internal utilities needed by the target API.
+   - Avoid external network access.
+   - Avoid reading files unless the task explicitly requires file input.
+   - Avoid nondeterminism unless the task explicitly requires it.
+   - If the seed executable code contains helper definitions or a runnable scaffold, preserve or adapt that scaffold inside `scaled_executable_gold_code`.
+   - Do not return only a partial replacement snippet, function body, or isolated `return ...` block.
+   - Do not include the placeholder token `<<insert solution here>>`.
+
+7. The code should be robust.
+   - Handle edge cases introduced by the scaled task.
+   - Handle invalid or boundary inputs if required.
+   - Preserve original task behavior where it is still valid.
+
+8. Scaled oracle cases are authoritative.
+   - The provided scaled_oracle_cases are derived from the validated seed execution case and describe the scaled task's correct behavior.
+   - Your generated code must satisfy all scaled_oracle_cases.
+   - Treat each case's expected_output_signature as an executable contract.
+   - When return_value is specified, match it exactly.
+   - When return_type is specified, return exactly that type.
+   - When return_keys is specified, include the required keys in the returned object.
+   - Do not ignore scaled_oracle_cases when they conflict with the seed code.
+   - Do not modify, relax, add, or remove scaled_oracle_cases. They are fixed test contracts from the oracle-case stage.
+
+9. Use OPERATOR INSTANCES only to understand why the task changed.
+   - Use SCALED FINAL USER PROMPT to understand the overall target behavior.
+   - Use SCALED ORACLE CASES to decide what the code must actually do.
+   - If there is any tension between abstract wording and executable case contracts, satisfy the executable case contracts without hardcoding the examples.
+   - `covered_operator_ids` and `covered_requirements` must reflect the operators and requirements actually implemented by your code.
+
+====================
+[OUTPUT FORMAT]
+====================
+
+Return JSON only, with exactly the following fields:
+
+{
+  "scaled_executable_gold_code": "<complete runnable Python file/program; never a snippet>",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "<brief reason explaining why the solution changed or did not change>",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": ["<operator_id_1>", "<operator_id_2>"],
+  "covered_requirements": ["<requirement_1>", "<requirement_2>"],
+  "implementation_notes": [
+    "<brief note about how the code handles the new scaled requirements>"
+  ],
+  "assumptions": [
+    "<only include necessary assumptions; otherwise return an empty list>"
+  ]
+}
+
+Do not include markdown.
+Do not include commentary.
+Do not include scaled_oracle_cases, tests, verifier code, or case definitions in the response.
+Return valid JSON only.

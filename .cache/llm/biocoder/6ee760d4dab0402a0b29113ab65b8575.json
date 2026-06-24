@@ -1,0 +1,9 @@
+{
+  "scaled_executable_gold_code": "import numpy as np\n\n# Define global variables for the test case\nkln = np.arange(3 * 4 * 5, dtype=np.float64).reshape(3, 4, 5)\nN_k = np.array([2, 4, 3], dtype=np.int64)\n\ndef kln_to_kn(kln, N_k=None, cleanup=False):\n    \"\"\"Convert KxLxN_max array to a 2D array of shape (L, N).\n\n    Parameters\n    ----------\n    kln : np.ndarray, shape=(K, L, N_max)\n    N_k : np.array, optional\n        Number of samples per group (length K).\n    cleanup : bool, optional\n        If True, delete input array to free memory.\n\n    Returns\n    -------\n    np.ndarray\n        The reshaped array of shape (L, N).\n    \"\"\"\n    K, L, N_max = np.shape(kln)\n    if N_k is None:\n        N_k = N_max * np.ones(K, dtype=np.int64)\n    N = np.sum(N_k)\n    kn = np.zeros((L, N), dtype=np.float64)\n    i = 0\n    for k in range(K):\n        for ik in range(N_k[k]):\n            kn[:, i] = kln[k, :, ik]\n            i += 1\n    if cleanup:\n        del kln\n    return kn",
+  "repair_summary": "Changed kln_to_kn to return the numpy array `kn` instead of its string representation. This fixes the AttributeError when accessing .shape on the result.",
+  "covered_operator_ids": [],
+  "covered_requirements": [
+    "Validate original seed behavior for kln_to_kn."
+  ],
+  "remaining_risks": []
+}

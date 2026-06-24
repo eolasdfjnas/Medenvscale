@@ -1,0 +1,52 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Test extraction of a .tar.gz archive into an existing directory, verifying file content.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_255_M3_d_01",
+      "axis": "D",
+      "semantic_intent": "Ensure the function can extract a gzip-compressed tar archive.",
+      "target_constraint": "The function must correctly extract files from a .tar.gz archive.",
+      "expected_failure_mode": "A solution that only works with uncompressed .tar files would fail because tar would be called without the --gunzip flag if not using auto-detection. The gold solution uses plain 'tar -xf' which auto-detects compression, so it passes.",
+      "setup_code": "",
+      "call_code": "with tempfile.TemporaryDirectory() as tmp_dir:\n    # Create a source directory with a file\n    source_dir = os.path.join(tmp_dir, 'source')\n    os.mkdir(source_dir)\n    test_file = os.path.join(source_dir, 'hello.txt')\n    with open(test_file, 'w') as f:\n        f.write('Hello, world!')\n\n    # Create a gzip-compressed tar archive\n    tar_path = os.path.join(tmp_dir, 'archive.tar.gz')\n    with tarfile.open(tar_path, 'w:gz') as tar:\n        tar.add(source_dir, arcname='source')\n\n    # Prepare the extraction directory\n    extract_dir = os.path.join(tmp_dir, 'dest')\n    os.mkdir(extract_dir)\n\n    # Call the solution to extract\n    untar_file(extract_dir, tar_path)\n\n    # Verify extraction\n    extracted_file = os.path.join(extract_dir, 'source', 'hello.txt')\n    assert os.path.isfile(extracted_file), 'File was not extracted correctly.'\n    print('Extraction succeeded:', open(extracted_file).read())\nresult = None",
+      "assertion_code": "",
+      "covered_requirements": [
+        "The scaled executable case must use a .tar.gz archive as input and verify extraction success."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [
+          "Extraction succeeded: Hello, world!"
+        ],
+        "file_artifacts": [
+          {
+            "path": "os.path.join(extract_dir, 'source', 'hello.txt')"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "coverage_missing_dir",
+      "description": "Test that untar_file raises GenipeError when the target directory does not exist.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_255_M3_a_02",
+      "axis": "A",
+      "semantic_intent": "Ensure the function raises GenipeError when the destination directory does not exist.",
+      "target_constraint": "The function must not create the directory; it must raise an error.",
+      "expected_failure_mode": "A solution that creates the directory (e.g., using os.makedirs) would not raise an error and would incorrectly succeed. The gold solution will raise GenipeError because tar fails (tar -C nonexistent_dir fails).",
+      "setup_code": "",
+      "call_code": "with tempfile.TemporaryDirectory() as tmp_dir:\n    # Create a source directory with a file\n    source_dir = os.path.join(tmp_dir, 'source')\n    os.mkdir(source_dir)\n    test_file = os.path.join(source_dir, 'hello.txt')\n    with open(test_file, 'w') as f:\n        f.write('Hello, world!')\n\n    # Create a tar archive\n    tar_path = os.path.join(tmp_dir, 'archive.tar')\n    with tarfile.open(tar_path, 'w') as tar:\n        tar.add(source_dir, arcname='source')\n\n    # Use a non-existent directory\n    nonexistent_dir = os.path.join(tmp_dir, 'nonexistent')\n    try:\n        untar_file(nonexistent_dir, tar_path)\n        result = 'no error'\n    except GenipeError as e:\n        result = str(e)\nresult = result",
+      "assertion_code": "assert 'Could not extract' in result, f\"Expected GenipeError, got '{result}'\"",
+      "covered_requirements": [
+        "The scaled executable case must include a test where the target directory does not exist, and verify that a GenipeError is raised."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

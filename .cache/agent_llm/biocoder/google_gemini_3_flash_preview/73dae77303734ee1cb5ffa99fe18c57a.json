@@ -1,0 +1,26 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "9t90m2l0",
+      "function": {
+        "name": "run_custom_test",
+        "arguments": "{\"code\":\"import os\\nimport tarfile\\nimport tempfile\\nfrom subprocess import check_call, CalledProcessError\\n\\nclass GenipeError(Exception):\\n    pass\\n\\ndef untar_file(path, fn):\\n    if not os.path.exists(path):\\n        os.makedirs(path)\\n    \\n    cmd = ['tar']\\n    if fn.endswith('.tar.gz') or fn.endswith('.tgz'):\\n        cmd.append('-xzf')\\n    elif fn.endswith('.tar.bz2') or fn.endswith('.tbz'):\\n        cmd.append('-xjf')\\n    else:\\n        cmd.append('-xf')\\n    \\n    cmd.extend([fn, '-C', path])\\n    \\n    try:\\n        check_call(cmd)\\n    except CalledProcessError as e:\\n        raise GenipeError(f\\\"Failed to extract {fn} to {path}: {e}\\\")\\n\\ndef main():\\n    with tempfile.TemporaryDirectory() as tmp_dir:\\n        # Test 1: Standard tar and existing directory\\n        source_dir = os.path.join(tmp_dir, 'source1')\\n        os.mkdir(source_dir)\\n        with open(os.path.join(source_dir, 'f1.txt'), 'w') as f: f.write('v1')\\n        tar_path = os.path.join(tmp_dir, 'archive.tar')\\n        with tarfile.open(tar_path, 'w') as tar:\\n            tar.add(source_dir, arcname='source1')\\n        \\n        dest1 = os.path.join(tmp_dir, 'dest1')\\n        os.mkdir(dest1)\\n        untar_file(dest1, tar_path)\\n        assert os.path.exists(os.path.join(dest1, 'source1', 'f1.txt'))\\n\\n        # Test 2: .tar.gz and automatic directory creation\\n        source_dir2 = os.path.join(tmp_dir, 'source2')\\n        os.mkdir(source_dir2)\\n        with open(os.path.join(source_dir2, 'f2.txt'), 'w') as f: f.write('v2')\\n        tgz_path = os.path.join(tmp_dir, 'archive.tar.gz')\\n        with tarfile.open(tgz_path, 'w:gz') as tar:\\n            tar.add(source_dir2, arcname='source2')\\n        \\n        dest2 = os.path.join(tmp_dir, 'dest2_new')\\n        untar_file(dest2, tgz_path)\\n        assert os.path.exists(os.path.join(dest2, 'source2', 'f2.txt'))\\n        \\n        print(\\\"Tests passed!\\\")\\n\\nif __name__ == '__main__':\\n    main()\\n\",\"test_snippet\":\"main()\"}"
+      }
+    }
+  ],
+  "reasoning_details": [
+    {
+      "type": "reasoning.encrypted",
+      "data": "EjQKMgEMOdbHcUUWPPhoCkx3yRvo84EktSf2UKiygUfwaSM5Kh1huBE/D5fbmSW4BbxqmJny",
+      "format": "google-gemini-v1",
+      "id": "9t90m2l0",
+      "index": 0
+    }
+  ]
+}

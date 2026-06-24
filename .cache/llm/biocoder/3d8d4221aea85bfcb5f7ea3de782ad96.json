@@ -1,0 +1,347 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "add_missing_optional_columns",
+      "operator_intensity": 1,
+      "transformation_goal": "Introduce missing optional columns in the CSV header to test robust header parsing.",
+      "rationale": "The original task assumes all columns are present. Real data may have missing optional columns like 'aggr_prec_Fragment_Annotation' or 'Charge'. This operator removes some columns to ensure the function handles missing keys gracefully.",
+      "state_updates": {
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "filename": "test_data.csv",
+              "content": "FullPeptideName,aggr_Fragment_Annotation,ProteinName\nPEPTIDE1,b1;b2;,P12345\nPEPTIDE2,,P12346",
+              "description": "CSV with missing optional columns aggr_prec_Fragment_Annotation and Charge."
+            }
+          ]
+        },
+        "task_state_patch": {
+          "required_capabilities": [
+            "understand proteomics data structures",
+            "parse semicolon-separated lists",
+            "dictionary manipulation",
+            "conditional logic",
+            "handle missing optional columns"
+          ]
+        },
+        "visible_state_patch": {
+          "context_summary": "The header may not include all columns. The function must check for column existence."
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "KeyError if missing column accessed without check",
+          "Incorrect default handling for missing fields"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_missing_columns",
+          "semantic_intent": "The function should correctly process rows even when optional columns are missing from the header.",
+          "target_constraint": "If a column is missing from header_dict, the function should not raise KeyError and should use default values (empty list for annotations, '0' for charge).",
+          "expected_failure_mode": "A naive implementation that directly indexes header_dict without checking existence will crash with KeyError.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "header = ['FullPeptideName','aggr_Fragment_Annotation','ProteinName']; row with charge missing"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Test with header missing optional columns aggr_prec_Fragment_Annotation and Charge."
+        }
+      ],
+      "output_requirements": [
+        "Add a test case where optional columns are missing and verify no error occurs."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "description": "Increases data complexity by requiring header-key existence checks."
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "D",
+      "operator_type": "add_malformed_data_values",
+      "operator_intensity": 1,
+      "transformation_goal": "Introduce malformed data values such as empty annotations, NA/empty charge, and missing protein name to test edge-case handling.",
+      "rationale": "Real proteomics data often contains missing or malformed values. This operator adds a row with empty fragment annotations, charge set to 'NA', and missing protein name to ensure the function handles these edge cases gracefully.",
+      "state_updates": {
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "filename": "test_data.csv",
+              "content": "FullPeptideName,aggr_Fragment_Annotation,aggr_prec_Fragment_Annotation,Charge,ProteinName\nPEPTIDE1,b1;b2;,p1;,2,P12345\nPEPTIDE2,;,;,NA,\nPEPTIDE3,b1;,,,0,P12346",
+              "description": "CSV with edge cases: empty annotations, NA charge, missing protein name."
+            }
+          ]
+        },
+        "task_state_patch": {
+          "required_capabilities": [
+            "understand proteomics data structures",
+            "parse semicolon-separated lists",
+            "dictionary manipulation",
+            "conditional logic",
+            "handle malformed or empty data values"
+          ]
+        },
+        "visible_state_patch": {
+          "context_summary": "Row data may have empty strings, 'NA' for charge, or missing protein name."
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "IndexError or incorrect list splitting when annotations are empty",
+          "Not defaulting charge to '0' when 'NA'",
+          "KeyError when accessing missing protein name"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_malformed",
+          "semantic_intent": "The function should correctly process rows with empty annotations, non-numeric charge, and missing protein name without errors.",
+          "target_constraint": "For empty fragment annotations, function should return early (step 4). For empty precursor annotations, should treat as empty list. For 'NA' or empty charge, default to '0'. For missing protein name, skip updating protein_mapping.",
+          "expected_failure_mode": "A naive implementation may crash on split(';') on empty string (returns ['']) and not remove trailing empty, or may not check for None/empty protein name.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "row with ';' as fragment annotation (single semicolon) and charge 'NA'"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Test with row where fragment annotation is just ';' (one semicolon), which after split gives ['', ''] and after removing empty trailing becomes []. Should return early."
+        }
+      ],
+      "output_requirements": [
+        "Add test cases with malformed data and verify correct handling."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "description": "Increases data complexity by requiring robust handling of edge-case values."
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "add_dedup_constraint_in_sequences_mapping",
+      "operator_intensity": 1,
+      "transformation_goal": "Add a constraint that sequences_mapping should not contain duplicate keys for the same peptide_name.",
+      "rationale": "The original implementation appends keys to the list for peptide_name, which can lead to duplicates if the same peptide is processed multiple times with the same charge. Real applications often require unique lists. This operator adds a requirement to avoid duplicates in sequences_mapping.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "understand proteomics data structures",
+            "parse semicolon-separated lists",
+            "dictionary manipulation",
+            "conditional logic",
+            "avoid duplicates in list values"
+          ]
+        },
+        "visible_state_patch": {
+          "context_summary": "Ensure that sequences_mapping[peptide_name] contains unique keys (no duplicates)."
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Duplicate entries in sequences_mapping list for same peptide_name when processing the same row twice"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_no_duplicates",
+          "semantic_intent": "After processing the same row twice, sequences_mapping[peptide_name] should not contain duplicate keys.",
+          "target_constraint": "When appending keys to sequences_mapping, check if the key already exists in the list before appending.",
+          "expected_failure_mode": "A naive implementation that just extends the list without dedup will produce duplicates.",
+          "test_template_type": "replay_case",
+          "input_variant": {
+            "kind": "replay",
+            "value": "Call mapRow twice with identical row and verify sequences_mapping[peptide_name] has no duplicates."
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "dedup"
+          },
+          "test_case_description": "Test that calling mapRow twice on the same row results in unique keys in sequences_mapping list."
+        }
+      ],
+      "output_requirements": [
+        "Add a test case that calls mapRow twice with identical row and verifies uniqueness."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "description": "Increases computation complexity by adding a deduplication constraint."
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "add_whitespace_and_case_insensitivity",
+      "operator_intensity": 1,
+      "transformation_goal": "Introduce whitespace and case variations in column names and data values to test robustness.",
+      "rationale": "Real CSV files may have extra spaces in column names or values, or mixed case. A robust function should handle these by stripping whitespace and using case-insensitive matching. This operator adds such adversarial inputs.",
+      "state_updates": {
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "filename": "test_data.csv",
+              "content": "FullPeptideName , aggr_Fragment_Annotation, aggr_prec_Fragment_Annotation, Charge, ProteinName\nPEPTIDE1, b1;b2;, p1;, 2, P12345\nPEPTIDE2, , , NA, P12346",
+              "description": "CSV with spaces around column names and values, and mixed case in column names (e.g., 'fullpeptidename' might appear)."
+            }
+          ]
+        },
+        "task_state_patch": {
+          "required_capabilities": [
+            "understand proteomics data structures",
+            "parse semicolon-separated lists",
+            "dictionary manipulation",
+            "conditional logic",
+            "handle whitespace and case insensitivity"
+          ]
+        },
+        "visible_state_patch": {
+          "context_summary": "Column names and data values may have leading/trailing whitespace or inconsistent casing. The function should handle this by stripping and case-insensitive matching."
+        }
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_moses": [
+          "KeyError if column name has whitespace",
+          "Incorrect mapping if case doesn't match exactly"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_a_spec_whitespace",
+          "semantic_intent": "The function should correctly map columns even when column names have extra spaces.",
+          "target_constraint": "header_dict should be built after stripping whitespace from column names, and the function should use stripped keys for lookup.",
+          "expected_failure_mode": "If the function uses raw header_dict exactly as provided, it will miss columns with spaces.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "header with spaces: [' FullPeptideName ', 'aggr_Fragment_Annotation', ...]"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Test with header containing spaces around column names."
+        }
+      ],
+      "output_requirements": [
+        "Add test case with whitespace in column names and verify correct parsing."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {
+        "description": "Increases adversarial complexity by requiring robustness to whitespace and case."
+      },
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

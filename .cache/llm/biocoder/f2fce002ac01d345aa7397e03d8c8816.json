@@ -1,0 +1,210 @@
+{
+  "operator_instances": [
+    {
+      "axis": "C",
+      "operator_type": "non_increasing_profile_check",
+      "operator_intensity": 1,
+      "transformation_goal": "Add constraint that the returned error profile must be non-increasing (each subsequent value <= previous) to reflect realistic Illumina error behavior.",
+      "rationale": "In Illumina sequencing, error rates tend to decrease along read positions; adding this constraint ensures the function models realistic biology.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "python_programming",
+            "basic_data_structures",
+            "understanding_of_sequencing_error_rates",
+            "monotonicity_constraint"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          {
+            "check_type": "monotonic_non_increasing",
+            "target": "return value",
+            "description": "Verify that the returned list is non-increasing (each element <= previous)."
+          }
+        ],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "If the function returns a profile that increases at any position (e.g., [0.01, 0.02, ...]), the monotonicity check will fail."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "Prove that the error profile is non-increasing.",
+          "target_constraint": "For all i from 1 to len(profile)-1: profile[i] <= profile[i-1].",
+          "expected_failure_mode": "An implementation that returns any increasing adjacent pair will fail the check.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "seed_case_main"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Replay the main flow and add assertion that profile is non-increasing."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a monotonicity assertion."
+      ],
+      "output_constraint_spec": {
+        "checks": [
+          {
+            "constraint": "non_increasing",
+            "description": "The returned list must be non-increasing."
+          }
+        ]
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "V",
+      "operator_type": "enhanced_verifier_cases",
+      "operator_intensity": 1,
+      "transformation_goal": "Add stronger verifier: check that all values are probabilities (0 to 1) and that the output file contains the correct JSON list with monotonicity.",
+      "rationale": "The current verifier only checks first and last values plus structure. Adding range and monotonicity checks improves robustness.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {
+          "verifier_type_hint": "assertion_based",
+          "additional_checks": [
+            "range check [0,1]",
+            "monotonic non-increasing",
+            "file content check"
+          ]
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          {
+            "check_type": "range_check",
+            "target": "return value",
+            "description": "Each value must be >= 0 and <= 1."
+          },
+          {
+            "check_type": "monotonic_non_increasing",
+            "target": "return value",
+            "description": "The profile must be non-increasing."
+          },
+          {
+            "check_type": "file_content",
+            "target": "error_profile.json",
+            "description": "The file must contain a JSON list matching the returned profile (exact equality)."
+          }
+        ],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [
+          {
+            "path": "error_profile.json",
+            "content_assertion": "json_list_equal",
+            "expected_source": "return value of get_default_error_profile()"
+          }
+        ],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Any value outside [0,1] fails range check.",
+          "Increasing sequence fails monotonicity.",
+          "Mismatch between file content and returned list fails file check."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_v_spec_1",
+          "semantic_intent": "Verify the profile values are valid probabilities and monotonic.",
+          "target_constraint": "All values between 0 and 1, non-increasing, and file output matches.",
+          "expected_failure_mode": "Hardcoded non-probability values or mismatched file will fail.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "seed_case_main"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Execute main flow and run all new verifier checks."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include range, monotonicity, and file content assertions."
+      ],
+      "output_constraint_spec": {
+        "checks": [
+          {
+            "constraint": "range_0_1",
+            "description": "Each value must be >= 0 and <= 1."
+          },
+          {
+            "constraint": "non_increasing",
+            "description": "The list must be non-increasing."
+          },
+          {
+            "constraint": "file_content_match",
+            "description": "error_profile.json must contain the exact same list."
+          }
+        ]
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

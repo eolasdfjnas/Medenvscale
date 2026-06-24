@@ -1,0 +1,303 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "file_based_error_profile",
+      "operator_intensity": 1,
+      "transformation_goal": "Add a data file containing the default error profile, requiring the function to read and parse the file.",
+      "rationale": "The original task hardcodes the profile. Adding a data file increases data complexity and reflects real-world usage where profiles are stored externally.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Write a Python function called get_default_error_profile that returns the default error probability distribution used for deblurring Illumina sequencing data. The function should take no arguments and return a list of 12 numeric values representing typical error rates at successive read positions. The function should read the profile from the file 'default_error_profile.json' if it exists and is valid JSON; otherwise, it should fall back to a hardcoded default: [1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005]. The function must return a new list object on each call to prevent external mutation."
+        },
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "path": "default_error_profile.json",
+              "content": "[1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005]",
+              "encoding": "json"
+            }
+          ]
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context": "import json\n\n# The function should read the default error profile from 'default_error_profile.json'.\n# If the file is missing or malformed, fall back to a hardcoded default.\n# The function must return a new copy of the list on each call to prevent external mutation.\n\n<<insert solution here>>\n\ndef main():\n    # Retrieve the default Illumina error profile\n    profile = get_default_error_profile()\n    print(\"Default Illumina error profile:\", profile)\n    # Verify the structure and key values\n    assert isinstance(profile, list), \"Profile should be a list\"\n    assert len(profile) == 12, \"Profile should contain 12 entries\"\n    assert profile[0] == 1, \"First entry should be 1\"\n    assert profile[-1] == 0.0005, \"Last entry should be 0.0005\"\n    # Save to a JSON file for downstream analysis\n    with open(\"error_profile.json\", \"w\") as f:\n        json.dump(profile, f)\n    print(\"Profile saved successfully to error_profile.json\")\n\nif __name__ == \"__main__\":\n    main()"
+        },
+        "gold_state_patch": {
+          "gold_solution": "def get_default_error_profile():\n    try:\n        with open('default_error_profile.json', 'r') as f:\n            profile = json.load(f)\n    except (FileNotFoundError, json.JSONDecodeError):\n        profile = [1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005]\n    return list(profile)"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          "assert that the function reads from file"
+        ],
+        "new_hidden_tests": [
+          {
+            "test_id": "d_file_based",
+            "test_code": "import os\nif os.path.exists('default_error_profile.json'):\n    profile = get_default_error_profile()\n    assert isinstance(profile, list)\n    assert len(profile) == 12\n    assert profile[0] == 1\n    assert profile[-1] == 0.0005\nelse:\n    raise AssertionError('File missing')"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "d_spec_1",
+          "semantic_intent": "The function must read the error profile from a JSON file.",
+          "target_constraint": "The function must not hardcode the list; it must parse the file.",
+          "expected_failure_mode": "If the function returns a hardcoded list, it will fail when the file is deleted or modified.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "change_file_contents"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Modify the file contents and check that the function returns the new contents."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases should verify file reading behavior."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "defensive_copy_requirement",
+      "operator_intensity": 1,
+      "transformation_goal": "Require the function to return a deep copy of the profile list to prevent external mutation.",
+      "rationale": "The original function returns a mutable list. To ensure robustness, the function should return a new list each time, so that callers cannot modify the internal state.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Write a Python function called get_default_error_profile that returns the default error probability distribution used for deblurring Illumina sequencing data. The function should take no arguments and return a list of 12 numeric values representing typical error rates at successive read positions. The function should read the profile from the file 'default_error_profile.json' if it exists and is valid JSON; otherwise, it should fall back to a hardcoded default: [1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005]. The function must return a new list object on each call to prevent external mutation."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context": "import json\n\n# The function should read the default error profile from 'default_error_profile.json'.\n# If the file is missing or malformed, fall back to a hardcoded default.\n# The function must return a new copy of the list on each call to prevent external mutation.\n\n<<insert solution here>>\n\ndef main():\n    # Retrieve the default Illumina error profile\n    profile = get_default_error_profile()\n    print(\"Default Illumina error profile:\", profile)\n    # Verify the structure and key values\n    assert isinstance(profile, list), \"Profile should be a list\"\n    assert len(profile) == 12, \"Profile should contain 12 entries\"\n    assert profile[0] == 1, \"First entry should be 1\"\n    assert profile[-1] == 0.0005, \"Last entry should be 0.0005\"\n    # Save to a JSON file for downstream analysis\n    with open(\"error_profile.json\", \"w\") as f:\n        json.dump(profile, f)\n    print(\"Profile saved successfully to error_profile.json\")\n\nif __name__ == \"__main__\":\n    main()"
+        },
+        "gold_state_patch": {
+          "gold_solution": "def get_default_error_profile():\n    try:\n        with open('default_error_profile.json', 'r') as f:\n            profile = json.load(f)\n    except (FileNotFoundError, json.JSONDecodeError):\n        profile = [1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005]\n    return list(profile)"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          "identity check"
+        ],
+        "new_hidden_tests": [
+          {
+            "test_id": "c_defensive_copy",
+            "test_code": "a = get_default_error_profile()\nb = get_default_error_profile()\nassert a is not b, 'Should return different objects'\nassert a == b, 'Should have same values'\n# also test mutation isolation\ntry:\n    a[0] = 99\n    c = get_default_error_profile()\n    assert c[0] == 1, 'Subsequent calls should not be affected by mutation'\nexcept:\n    pass"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "c_spec_1",
+          "semantic_intent": "The function must return a new list object on each call.",
+          "target_constraint": "The returned list must be a separate object each time.",
+          "expected_failure_mode": "If the function returns the same list object each time, the identity test will fail.",
+          "test_template_type": "call_variant_case",
+          "input_variant": {
+            "kind": "call_sequence",
+            "value": "two_calls"
+          },
+          "expected_behavior": {
+            "kind": "object_identity",
+            "mode": "different"
+          },
+          "test_case_description": "Call the function twice and check that the returned lists are not the same object."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases should verify defensive copy behavior."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "robust_fallback_and_uncertainty",
+      "operator_intensity": 3,
+      "transformation_goal": "Add robustness requirements: the function must gracefully handle missing or malformed data file by falling back to a hardcoded default, and must not be sensitive to working directory changes.",
+      "rationale": "The function should be robust to common deployment issues such as missing configuration files, corrupted JSON, or relative path changes.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Write a Python function called get_default_error_profile that returns the default error probability distribution used for deblurring Illumina sequencing data. The function should take no arguments and return a list of 12 numeric values representing typical error rates at successive read positions. The function should read the profile from the file 'default_error_profile.json' if it exists and is valid JSON; otherwise, it should fall back to a hardcoded default: [1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005]. The function must return a new list object on each call to prevent external mutation."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context": "import json\n\n# The function should read the default error profile from 'default_error_profile.json'.\n# If the file is missing or malformed, fall back to a hardcoded default.\n# The function must return a new copy of the list on each call to prevent external mutation.\n\n<<insert solution here>>\n\ndef main():\n    # Retrieve the default Illumina error profile\n    profile = get_default_error_profile()\n    print(\"Default Illumina error profile:\", profile)\n    # Verify the structure and key values\n    assert isinstance(profile, list), \"Profile should be a list\"\n    assert len(profile) == 12, \"Profile should contain 12 entries\"\n    assert profile[0] == 1, \"First entry should be 1\"\n    assert profile[-1] == 0.0005, \"Last entry should be 0.0005\"\n    # Save to a JSON file for downstream analysis\n    with open(\"error_profile.json\", \"w\") as f:\n        json.dump(profile, f)\n    print(\"Profile saved successfully to error_profile.json\")\n\nif __name__ == \"__main__\":\n    main()"
+        },
+        "gold_state_patch": {
+          "gold_solution": "def get_default_error_profile():\n    try:\n        with open('default_error_profile.json', 'r') as f:\n            profile = json.load(f)\n    except (FileNotFoundError, json.JSONDecodeError):\n        profile = [1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005]\n    return list(profile)"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [
+          "fallback on missing file",
+          "fallback on malformed file",
+          "working directory independence"
+        ],
+        "new_hidden_tests": [
+          {
+            "test_id": "a_fallback_missing",
+            "test_code": "import os\nif os.path.exists('default_error_profile.json'):\n    os.rename('default_error_profile.json', 'temp_backup.json')\ntry:\n    profile = get_default_error_profile()\n    assert profile == [1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005]\nfinally:\n    if os.path.exists('temp_backup.json'):\n        os.rename('temp_backup.json', 'default_error_profile.json')"
+          },
+          {
+            "test_id": "a_fallback_malformed",
+            "test_code": "with open('default_error_profile.json', 'w') as f:\n    f.write('invalid json')\ntry:\n    profile = get_default_error_profile()\n    assert profile == [1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005]\nfinally:\n    import json\n    with open('default_error_profile.json', 'w') as f:\n        json.dump([1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005], f)"
+          },
+          {
+            "test_id": "a_working_directory",
+            "test_code": "import os\noriginal_dir = os.getcwd()\ntry:\n    os.chdir('/tmp')\n    profile = get_default_error_profile()\n    assert profile == [1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005]\nfinally:\n    os.chdir(original_dir)"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "a_spec_1",
+          "semantic_intent": "The function must fall back to a hardcoded default when the data file is missing.",
+          "target_constraint": "The function must not crash; it must return the default list.",
+          "expected_failure_mode": "If the function strictly requires the file, it will raise an exception or fail the test.",
+          "test_template_type": "state_variant_case",
+          "input_variant": {
+            "kind": "state_variant",
+            "value": "delete_file"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "state_variant"
+          },
+          "test_case_description": "Remove the file and check that the function returns the hardcoded default."
+        },
+        {
+          "spec_id": "a_spec_2",
+          "semantic_intent": "The function must fall back to a hardcoded default when the data file is malformed.",
+          "target_constraint": "The function must parse the file; if it fails, fall back.",
+          "expected_failure_mode": "If the function only reads without fallback, it will raise an exception.",
+          "test_template_type": "state_variant_case",
+          "input_variant": {
+            "kind": "state_variant",
+            "value": "corrupt_file"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "state_variant"
+          },
+          "test_case_description": "Corrupt the file with invalid JSON and check fallback."
+        },
+        {
+          "spec_id": "a_spec_3",
+          "semantic_intent": "The function must be independent of the current working directory.",
+          "target_constraint": "The function should use an absolute path or handle relative paths robustly.",
+          "expected_failure_mode": "If the function uses a relative path without considering the script location, it may fail when called from a different directory.",
+          "test_template_type": "state_variant_case",
+          "input_variant": {
+            "kind": "state_variant",
+            "value": "change_directory"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "state_variant"
+          },
+          "test_case_description": "Change the working directory and call the function; it should still return the default profile (either from file if it exists at absolute path, or fallback)."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases should verify fallback and path robustness."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,314 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "add_extra_column",
+      "operator_intensity": 1,
+      "transformation_goal": "Increase data complexity by adding an optional 'Modifications' column to the CSV header and row, ensuring the function uses header_dict and ignores extraneous columns.",
+      "rationale": "The seed function uses header_dict for column lookup, so adding an extra column tests that the function does not assume a fixed number of columns and can handle additional unrelated data.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "name": "input.csv",
+              "content": "FullPeptideName,aggr_Fragment_Annotation,aggr_prec_Fragment_Annotation,Charge,ProteinName,Modifications\nPEPTIDESEQ,b1;b2;b3;,p1;p2;,2,P12345,Acetyl",
+              "role": "example_input"
+            }
+          ]
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import sys\n\ndef main():\n    # Define a sample CSV header and one data row (with extra 'Modifications' column)\n    header = [\n        'FullPeptideName',\n        'aggr_Fragment_Annotation',\n        'aggr_prec_Fragment_Annotation',\n        'Charge',\n        'ProteinName',\n        'Modifications'\n    ]\n    # Simulated row with extra column\n    row = ['PEPTIDESEQ', 'b1;b2;b3;', 'p1;p2;', '2', 'P12345', 'Acetyl']\n\n    # Build a header lookup\n    header_dict = {name: idx for idx, name in enumerate(header)}\n\n    # Initialize empty mappings\n    precursors_mapping = {}\n    sequences_mapping  = {}\n    protein_mapping    = {}\n\n    # Insert the solution function definition here\n    <<insert solution here>>\n\n    # Call mapRow on our test row\n    mapRow(\n        this_row=row,\n        header_dict=header_dict,\n        precursors_mapping=precursors_mapping,\n        sequences_mapping=sequences_mapping,\n        protein_mapping=protein_mapping\n    )\n\n    # Print out the populated mappings for verification\n    print('Precursors Mapping:', precursors_mapping)\n    print('Sequences Mapping:', sequences_mapping)\n    print('Protein Mapping:', protein_mapping)\n\nif __name__ == '__main__':\n    main()"
+        },
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_1",
+          "semantic_intent": "Test that the function correctly processes a row with an extra column not used in the mapping.",
+          "target_constraint": "The function must not crash and must produce correct mappings even when additional columns are present.",
+          "expected_failure_mode": "A naive implementation that relies on fixed column indices may crash or produce incorrect output.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Run mapRow with a row that includes an extra 'Modifications' column (ignored)."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a variant where the row contains an extra column not referenced in the problem description."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": false,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "explicit_duplicate_handling_constraint",
+      "operator_intensity": 1,
+      "transformation_goal": "Reinforce the constraint that the protein mapping must not contain duplicate peptide names for the same protein, by including a test scenario where the same protein appears multiple times with the same peptide.",
+      "rationale": "The problem states 'avoid duplicates' but does not explicitly test it; this operator adds a test case that validates the deduplication behavior, increasing computational constraint complexity.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Write a function called \"mapRow\" with signature:\n\ndef mapRow(this_row, header_dict, precursors_mapping, sequences_mapping, protein_mapping):\n\nThis function processes a single row of a CSV file that contains proteomics peptide data. The CSV columns may include:\n- \"FullPeptideName\": the peptide sequence\n- \"aggr_Fragment_Annotation\": a semicolon-separated list of fragment transitions\n- \"aggr_prec_Fragment_Annotation\": a semicolon-separated list of precursor transitions\n- \"Charge\": the charge state (an integer or \"NA\"/empty)\n- \"ProteinName\": the name of the originating protein\n\nThe function should:\n1. Extract the peptide name from the \"FullPeptideName\" column.\n2. Split the fragment annotations on ';' into a list `transitions`; remove any empty trailing entries.\n3. Split the precursor annotations on ';' into `pr_transitions`; remove any empty trailing entries.\n4. If no transitions are present, return immediately.\n5. Read the charge state; if it is \"NA\" or empty, default it to \"0\".\n6. Build two keys: `peptide_name/charge_state` and `peptide_name/charge_state_pr`.\n   - Map the first key to `transitions` and the second to `pr_transitions` in `precursors_mapping`.\n7. In `sequences_mapping`, append both keys to the list for `peptide_name`.\n8. In `protein_mapping`, append `peptide_name` to the list for the corresponding protein. **Duplicate peptide names for the same protein must be avoided (i.e., if the peptide is already in the list, do not add it again).**\n\nImplement this function so that it correctly populates the three mappings from the values in a single CSV row."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import sys\n\ndef main():\n    # Define a sample CSV header and one data row\n    header = [\n        'FullPeptideName',\n        'aggr_Fragment_Annotation',\n        'aggr_prec_Fragment_Annotation',\n        'Charge',\n        'ProteinName'\n    ]\n    # Simulated row\n    row = ['PEPTIDESEQ', 'b1;b2;b3;', 'p1;p2;', '2', 'P12345']\n\n    # Build a header lookup\n    header_dict = {name: idx for idx, name in enumerate(header)}\n\n    # Initialize empty mappings\n    precursors_mapping = {}\n    sequences_mapping  = {}\n    protein_mapping    = {}\n\n    # Insert the solution function definition here\n    <<insert solution here>>\n\n    # Call mapRow twice to test duplicate handling\n    mapRow(row, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\n    mapRow(row, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\n\n    # Print out the populated mappings for verification\n    print('Precursors Mapping:', precursors_mapping)\n    print('Sequences Mapping:', sequences_mapping)\n    print('Protein Mapping:', protein_mapping)\n\nif __name__ == '__main__':\n    main()"
+        },
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "Test that the protein mapping does not contain duplicate peptide names when the same row is processed multiple times.",
+          "target_constraint": "After calling mapRow twice with identical rows, the protein mapping for the protein should contain only one instance of the peptide name.",
+          "expected_failure_mode": "If the function does not check for duplicates, the protein mapping will list the peptide twice.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Call mapRow twice with the same row and verify no duplicate peptide in protein mapping."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a variant where mapRow is called multiple times to check deduplication."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": false,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "handle_missing_charge_column",
+      "operator_intensity": 1,
+      "transformation_goal": "Add adversarial robustness by testing that the function works correctly when the 'Charge' column is completely missing from the header and row.",
+      "rationale": "A simplistic implementation might assume the 'Charge' column always exists; this operator ensures the function gracefully defaults to '0' when the column is absent.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "name": "input.csv",
+              "content": "FullPeptideName,aggr_Fragment_Annotation,aggr_prec_Fragment_Annotation,ProteinName\nPEPTIDESEQ,b1;b2;b3;,p1;p2;,P12345",
+              "role": "example_input"
+            }
+          ]
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import sys\n\ndef main():\n    # Header without 'Charge' column\n    header = [\n        'FullPeptideName',\n        'aggr_Fragment_Annotation',\n        'aggr_prec_Fragment_Annotation',\n        'ProteinName'\n    ]\n    # Row without charge\n    row = ['PEPTIDESEQ', 'b1;b2;b3;', 'p1;p2;', 'P12345']\n\n    header_dict = {name: idx for idx, name in enumerate(header)}\n    precursors_mapping = {}\n    sequences_mapping  = {}\n    protein_mapping    = {}\n\n    <<insert solution here>>\n\n    mapRow(row, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\n\n    print('Precursors Mapping:', precursors_mapping)\n    print('Sequences Mapping:', sequences_mapping)\n    print('Protein Mapping:', protein_mapping)\n\nif __name__ == '__main__':\n    main()"
+        },
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_a_spec_1",
+          "semantic_intent": "Test that the function correctly defaults charge to '0' when the 'Charge' column is absent.",
+          "target_constraint": "When 'Charge' is not in header_dict, the function should use '0' as charge state and create keys with '/0'.",
+          "expected_failure_mode": "If the function assumes 'Charge' exists, it will raise KeyError or produce incorrect keys.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Run mapRow with a header that does not include 'Charge' column."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a variant where the 'Charge' column is missing."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": false,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "handle_missing_protein_column",
+      "operator_intensity": 1,
+      "transformation_goal": "Add adversarial robustness by testing that the function works correctly when the 'ProteinName' column is missing from the header and row, and does not attempt to update protein_mapping.",
+      "rationale": "A naive implementation might assume the 'ProteinName' column always exists; this operator ensures the function gracefully skips protein mapping when the column is absent.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {
+          "resource_manifest": [
+            {
+              "name": "input.csv",
+              "content": "FullPeptideName,aggr_Fragment_Annotation,aggr_prec_Fragment_Annotation,Charge\nPEPTIDESEQ,b1;b2;b3;,p1;p2;,2",
+              "role": "example_input"
+            }
+          ]
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import sys\n\ndef main():\n    # Header without 'ProteinName' column\n    header = [\n        'FullPeptideName',\n        'aggr_Fragment_Annotation',\n        'aggr_prec_Fragment_Annotation',\n        'Charge'\n    ]\n    # Row without protein\n    row = ['PEPTIDESEQ', 'b1;b2;b3;', 'p1;p2;', '2']\n\n    header_dict = {name: idx for idx, name in enumerate(header)}\n    precursors_mapping = {}\n    sequences_mapping  = {}\n    protein_mapping    = {}\n\n    <<insert solution here>>\n\n    mapRow(row, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\n\n    print('Precursors Mapping:', precursors_mapping)\n    print('Sequences Mapping:', sequences_mapping)\n    print('Protein Mapping:', protein_mapping)\n\nif __name__ == '__main__':\n    main()"
+        },
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_a_spec_2",
+          "semantic_intent": "Test that the function does not attempt to update protein_mapping when 'ProteinName' column is absent.",
+          "target_constraint": "When 'ProteinName' is not in header_dict, the protein_mapping should remain unchanged (empty dict).",
+          "expected_failure_mode": "If the function assumes 'ProteinName' exists, it will raise KeyError or try to access a non-existent index.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "scaled_seed_case_variant"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Run mapRow with a header that does not include 'ProteinName' column."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a variant where the 'ProteinName' column is missing."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": false,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

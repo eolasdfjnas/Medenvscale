@@ -1,0 +1,28 @@
+{
+  "seed_execution_case": {
+    "case_id": "seed_case_main",
+    "description": "Replay the main flow: create a ConfigParser with two sections, serialize to test_config.ini, then read and print the file content.",
+    "setup_code": "import configparser\nimport os\n\ndef serialize(config, path):\n    with open(path, 'w') as file:\n        config.write(file)\n\nconfig = configparser.ConfigParser()\nconfig['General'] = {\n    'version': '1.0',\n    'enabled': 'yes'\n}\nconfig['User'] = {\n    'name': 'Alice',\n    'email': 'alice@example.com'\n}\npath = 'test_config.ini'",
+    "call_code": "result = serialize(config, path)\n# Verify and print\nif os.path.exists(path):\n    with open(path, 'r') as f:\n        content = f.read()\n    print('Configuration file content:')\n    print(content)\nelse:\n    print('Failed to create configuration file.')",
+    "expected_output_signature": {
+      "return_value": null,
+      "stdout_contains": [
+        "Configuration file content:",
+        "[General]",
+        "version = 1.0",
+        "enabled = yes",
+        "[User]",
+        "name = Alice",
+        "email = alice@example.com"
+      ],
+      "file_artifacts": [
+        {
+          "path": "test_config.ini"
+        }
+      ]
+    },
+    "extraction_method": "llm_reconstructed",
+    "validated_against_ground_truth": false,
+    "assumptions": []
+  }
+}

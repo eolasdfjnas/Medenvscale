@@ -1,0 +1,326 @@
+{
+  "operator_instances": [
+    {
+      "axis": "C",
+      "operator_type": "add_edge_case_handling",
+      "operator_intensity": 3,
+      "transformation_goal": "Ensure the function correctly handles edge cases: empty compartments list, empty compartment_boundaries, and default penalty assignment when parameters are None.",
+      "rationale": "The seed task tests only with non-empty compartments and explicit penalties. To increase computation complexity, we require handling of edge cases to ensure robust implementation.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "Python programming",
+            "dictionary manipulation",
+            "set operations",
+            "understanding of metabolic modeling APIs",
+            "edge case handling"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_id": "test_empty_compartments",
+            "test_type": "functional",
+            "description": "Create a model with empty compartments list. Expect no database reactions added, but exchange and transport reactions still added. Weights should have no database reactions.",
+            "expected_behavior": "stdout contains 'Using artificial exchange' and 'Using artificial transport'; weights dict has no '_db_rxn' keys."
+          },
+          {
+            "test_id": "test_empty_boundaries",
+            "test_type": "functional",
+            "description": "Create a model with empty compartment_boundaries. Expect no transport reactions added. Weights should have no '_tp' keys.",
+            "expected_behavior": "stdout contains 'Using all database reactions' but no 'transport reactions' line; weights has no '_tp' keys."
+          },
+          {
+            "test_id": "test_default_penalties",
+            "test_type": "functional",
+            "description": "Call create_extended_model with all penalty parameters None (or not provided). Expect all weights default to 1.",
+            "expected_behavior": "weights values are 1 for all reactions."
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Function crashes on empty compartments due to iteration over empty set",
+          "Function does not handle empty boundaries",
+          "Weight defaults not applied when penalties are None"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "spec_c_empty_compartments",
+          "semantic_intent": "Verify correct behavior when model.compartments is empty.",
+          "target_constraint": "No database reactions should be added; exchange and transport reactions should still be added if applicable.",
+          "expected_failure_mode": "Seed behavior may add database reactions by iterating over empty set, but should not; or may ignore empty compartments and fail to add exchange/transport.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "model with compartments=[]"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Instantiate DummyNativeModel with compartments set to empty list. Run create_extended_model with default penalties. Verify that no database reactions are in weights, and that exchange and transport reactions are still present in weights."
+        },
+        {
+          "spec_id": "spec_c_empty_boundaries",
+          "semantic_intent": "Verify correct behavior when model.compartment_boundaries is empty.",
+          "target_constraint": "No transport reactions should be added; database and exchange reactions should still be added.",
+          "expected_failure_mode": "Seed behavior may iterate over empty list and add nothing, but may also fail to add exchange reactions.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "model with compartment_boundaries=[]"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Instantiate DummyNativeModel with compartment_boundaries set to empty list. Run create_extended_model with default penalties. Verify that no transport reactions are in weights, and database/exchange reactions are present."
+        },
+        {
+          "spec_id": "spec_c_default_penalties",
+          "semantic_intent": "Verify default penalty assignment when penalty parameters are None.",
+          "target_constraint": "All weights should default to 1 if corresponding penalty is None and no overrides in penalties dict.",
+          "expected_failure_mode": "Seed behavior may raise error if penalty is None, or may not assign default value 1.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "call with all penalty parameters set to None, penalties=None"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Call create_extended_model(model) without providing penalty arguments (or explicitly set to None). Verify that weights dictionary has values equal to 1 for all added reactions."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the edge-case handling requirements introduced by this operator."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "randomize_compartment_ids",
+      "operator_intensity": 1,
+      "transformation_goal": "Require the function to work with arbitrary compartment identifiers by randomizing compartment names in the test case, preventing hardcoded penalty assignments.",
+      "rationale": "The seed test uses fixed compartment ids 'c1','c2'. To increase robustness, we add a hidden test that uses random compartment IDs, forcing the solution to dynamically extract and use model attributes.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_id": "test_random_compartment_ids",
+            "test_type": "functional",
+            "description": "Create a DummyNativeModel with randomly generated compartment IDs (e.g., 'rnd1', 'rnd2'), and ensure that the function correctly adds reactions and assigns penalties without hardcoding specific IDs.",
+            "expected_behavior": "Weights dictionary keys match the random IDs (e.g., 'rnd1_db_rxn', 'rnd2_db_rxn') and values are correctly set according to penalty parameters. The model reactions list contains the added reactions."
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Function fails if compartment IDs are not 'c1' or 'c2'",
+          "Function hardcodes reaction IDs in weight assignment"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "spec_a_random_ids",
+          "semantic_intent": "Verify that the function works with arbitrary compartment identifiers and does not rely on fixed names.",
+          "target_constraint": "The function must dynamically use model.compartments and model.extracellular_compartment to generate reaction IDs.",
+          "expected_failure_mode": "If the solution hardcodes 'c1' or 'c2', the test will fail as those IDs are not present.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "model with compartment IDs set to random strings"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Create a DummyNativeModel where compartment IDs are random strings (e.g., 'x12', 'y34'). Run create_extended_model with specific penalties. Verify that weights dictionary contains keys that are combinations of these random IDs and suffixes, and that values are correct."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must use randomized compartment IDs to ensure no hardcoding."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "V",
+      "operator_type": "add_type_and_state_checks",
+      "operator_intensity": 2,
+      "transformation_goal": "Add executable unit tests that verify the type of returned values, that reactions are actually added to the model, and that penalty overrides work correctly.",
+      "rationale": "The seed verifier only checks stdout. To increase verification complexity, we add tests that programmatically inspect the returned object and the model state, ensuring correctness beyond print statements.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_id": "test_reactions_added",
+            "test_type": "functional",
+            "description": "After calling create_extended_model, verify that the returned model's reactions list contains a set of reaction IDs that correspond to added database, exchange, and transport reactions. Use a simple model with known compartments.",
+            "expected_behavior": "model_extended.reactions is a list containing elements like 'c1_db_rxn', 'c2_db_rxn', 'e_ex', 'c1_e_tp' (actual names depend on input)."
+          },
+          {
+            "test_id": "test_penalty_override",
+            "test_type": "functional",
+            "description": "Call create_extended_model with a penalties dict that overrides a specific reaction. Verify that the returned weights dictionary has the overridden value for that reaction.",
+            "expected_behavior": "weights['c1_db_rxn'] equals the value from penalties dict, not the default db_penalty."
+          },
+          {
+            "test_id": "test_return_type",
+            "test_type": "functional",
+            "description": "Verify that the function returns a tuple of two elements: first is a DummyMetabolicModel (or similar object), second is a dict.",
+            "expected_behavior": "type(result) is tuple; len(result)==2; isinstance(result[0], DummyMetabolicModel); isinstance(result[1], dict)."
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Function does not add reactions to model",
+          "Function returns incorrect type",
+          "Penalty override does not take effect"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "spec_v_reactions_added",
+          "semantic_intent": "Verify that the extended model actually contains the added reactions.",
+          "target_constraint": "The returned model object must have a reactions list that includes all added reaction IDs.",
+          "expected_failure_mode": "If the solution only computes weights but forgets to call model.add_reaction, the test will fail.",
+          "test_template_type": "functional_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "standard DummyNativeModel"
+          },
+          "expected_behavior": {
+            "kind": "object_state",
+            "mode": "reaction_list"
+          },
+          "test_case_description": "Run create_extended_model on a standard DummyNativeModel. Check that model_extended.reactions is a list containing the expected reaction IDs derived from compartments and boundaries."
+        },
+        {
+          "spec_id": "spec_v_penalty_override",
+          "semantic_intent": "Verify that penalty overrides in the penalties dict take precedence.",
+          "target_constraint": "For reaction IDs specified in penalties dict, the weight must equal the provided value, ignoring the default penalty.",
+          "expected_failure_mode": "If the solution assigns default penalty even when override exists.",
+          "test_template_type": "functional_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "call with penalties dict overriding one database reaction"
+          },
+          "expected_behavior": {
+            "kind": "dict_key_value",
+            "mode": "specific_key"
+          },
+          "test_case_description": "Call create_extended_model with db_penalty=5 and penalties={'c1_db_rxn': 10}. Verify that weights['c1_db_rxn'] equals 10, not 5."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include unit tests that check returned type, model reaction list, and penalty override behavior."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Transformed seed case covering all scaled operators: non-default separators, extra fields, multi-character separator, leading/trailing separators.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_879_M3_d_01,env_medagentgym_train_879_M3_d_02,env_medagentgym_train_879_M3_c_03,env_medagentgym_train_879_M3_c_04",
+      "axis": "D,C",
+      "semantic_intent": "Verify that get_cell_umi_read_string handles various separator types, extra fields, multi-character separators, and leading/trailing separators returning the correct UMI and cell barcode bytes.",
+      "target_constraint": "For any string separator (single or multi-character), extract the last two fields as bytes. If the read_id has fewer than two separators, raise ValueError. Leading/trailing separators produce empty fields.",
+      "expected_failure_mode": "Old solution may fail on non-default separators, extra fields, multi-character separators, or leading/trailing separators.",
+      "setup_code": "read_id_good = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB10123_UMIACTGGA'\nread_id_bad = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001'\nread_id_dash = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001-CB10123-UMIACTGGA'\nread_id_colon = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001:CB10123:UMIACTGGA'\nread_id_extra = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001_extra0_CB10123_UMIACTGGA'\nread_id_double_underscore = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001__CB10123__UMIACTGGA'\nread_id_leading = '_CB10123_UMIACTGGA'\nread_id_trailing = 'CB10123_UMIACTGGA_'",
+      "call_code": "umi, cell_barcode = get_cell_umi_read_string(read_id_good, '_')\nprint(\"Good read -> UMI bytes:\", umi, \"Cell barcode bytes:\", cell_barcode)\ntry:\n    get_cell_umi_read_string(read_id_bad, '_')\nexcept ValueError as e:\n    print(\"Expected error for bad read ID:\", e)\numi2, cb2 = get_cell_umi_read_string(read_id_dash, '-')\nprint(\"Dash separator -> UMI bytes:\", umi2, \"Cell barcode bytes:\", cb2)\numi3, cb3 = get_cell_umi_read_string(read_id_colon, ':')\nprint(\"Colon separator -> UMI bytes:\", umi3, \"Cell barcode bytes:\", cb3)\numi4, cb4 = get_cell_umi_read_string(read_id_extra, '_')\nprint(\"Extra fields -> UMI bytes:\", umi4, \"Cell barcode bytes:\", cb4)\numi5, cb5 = get_cell_umi_read_string(read_id_double_underscore, '__')\nprint(\"Double underscore -> UMI bytes:\", umi5, \"Cell barcode bytes:\", cb5)\numi6, cb6 = get_cell_umi_read_string(read_id_leading, '_')\nprint(\"Leading sep -> UMI bytes:\", umi6, \"Cell barcode bytes:\", cb6)\numi7, cb7 = get_cell_umi_read_string(read_id_trailing, '_')\nprint(\"Trailing sep -> UMI bytes:\", umi7, \"Cell barcode bytes:\", cb7)\nresult = {'umi': umi, 'cell_barcode': cell_barcode}",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must include tests with non-default separators.",
+        "Scaled executable cases must include a read ID with more than two fields.",
+        "Scaled executable cases must include a test with a multi-character separator.",
+        "Scaled executable cases must include read IDs with leading and trailing separators."
+      ],
+      "expected_output_signature": {
+        "return_type": null,
+        "return_value": null,
+        "stdout_contains": [
+          "Good read -> UMI bytes: b'UMIACTGGA' Cell barcode bytes: b'CB10123'",
+          "Expected error for bad read ID: Could not extract UMI or CB from the read ID, pleasecheck UMI and CB are encoded in the read name:NB551068:51:H3JTYBGXX:1:11101:10000:1001",
+          "Dash separator -> UMI bytes: b'UMIACTGGA' Cell barcode bytes: b'CB10123'",
+          "Colon separator -> UMI bytes: b'UMIACTGGA' Cell barcode bytes: b'CB10123'",
+          "Extra fields -> UMI bytes: b'UMIACTGGA' Cell barcode bytes: b'CB10123'",
+          "Double underscore -> UMI bytes: b'UMIACTGGA' Cell barcode bytes: b'CB10123'",
+          "Leading sep -> UMI bytes: b'UMIACTGGA' Cell barcode bytes: b'CB10123'",
+          "Trailing sep -> UMI bytes: b'' Cell barcode bytes: b'UMIACTGGA'"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

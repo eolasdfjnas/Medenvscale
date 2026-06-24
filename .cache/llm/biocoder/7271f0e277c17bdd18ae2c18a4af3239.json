@@ -1,0 +1,33 @@
+{
+  "primary_axis_weight_hint": {
+    "D": 5,
+    "C": 4,
+    "V": 3,
+    "A": 2
+  },
+  "secondary_axis_weight_hints": [
+    {
+      "task_type": "structured_data_processing",
+      "relevance": 0.8,
+      "axis_weight_hint": {
+        "D": 5,
+        "C": 4,
+        "V": 3,
+        "A": 2
+      },
+      "reason": "Parsing exchange files involves structured data extraction, so D (data) is most important; C (coding) and V (validation) are also relevant for reading and verifying formats."
+    },
+    {
+      "task_type": "code_validation_and_utility",
+      "relevance": 0.6,
+      "axis_weight_hint": {
+        "C": 5,
+        "A": 4,
+        "V": 3,
+        "D": 2
+      },
+      "reason": "Utility functions and error handling are central, so C (coding) and A (algorithm) are prioritized; V (validation) for raising ParseError, D (data) less so."
+    }
+  ],
+  "axis_weight_reason": "Primary task io_format_and_cli emphasizes detection and handling of file formats (D), implementation (C), verification (V), and automation (A) in descending order according to priority."
+}

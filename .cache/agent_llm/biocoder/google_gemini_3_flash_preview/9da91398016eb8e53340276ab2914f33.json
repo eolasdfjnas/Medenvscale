@@ -1,0 +1,26 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "tool_run_custom_test_YTuiki1JrgPahHTZwMce",
+      "function": {
+        "name": "run_custom_test",
+        "arguments": "{\"code\":\"import configparser\\nimport os\\n\\nclass ConfigParserWithComments(configparser.ConfigParser):\\n    def __init__(self, *args, **kwargs):\\n        super().__init__(*args, **kwargs)\\n        self._comments = {}\\n\\n    def set_comment(self, section, option, comment):\\n        if section not in self._comments:\\n            self._comments[section] = {}\\n        self._comments[section][option] = comment\\n\\n    def write(self, fp, space_around_delimiters=True):\\n        if space_around_delimiters:\\n            d = \\\" {} \\\".format(self._delimiters[0])\\n        else:\\n            d = self._delimiters[0]\\n        for section in self._sections:\\n            fp.write(\\\"[{}]\\\\n\\\".format(section))\\n            for (key, value) in self._sections[section].items():\\n                if section in self._comments and key in self._comments[section]:\\n                    fp.write(\\\"# {}\\\\n\\\".format(self._comments[section][key]))\\n                if key != \\\"__name__\\\":\\n                    fp.write(\\\"{}{}{}\\\\n\\\".format(key, d, str(value).replace('\\\\n', '\\\\n\\\\t')))\\n            fp.write(\\\"\\\\n\\\")\\n\\ndef serialize(config, path):\\n    with open(path, 'w') as configfile:\\n        config.write(configfile)\\n\\ndef main():\\n    config = ConfigParserWithComments()\\n    config['General'] = {\\n        'version': '1.0',\\n        'enabled': 'yes'\\n    }\\n    config.set_comment('General', 'version', 'The version of the application')\\n    \\n    config['User'] = {\\n        'name': 'Alice',\\n        'email': 'alice@example.com',\\n        'special': 'value:with:colons'\\n    }\\n    config.set_comment('User', 'name', 'The user name')\\n\\n    path = 'test_config.ini'\\n    serialize(config, path)\\n\\n    if os.path.exists(path):\\n        with open(path, 'r') as f:\\n            content = f.read()\\n        print('Configuration file content:')\\n        print(content)\\n\\nif __name__ == '__main__':\\n    main()\\n\",\"test_snippet\":\"# Check output\\n\"}"
+      }
+    }
+  ],
+  "reasoning_details": [
+    {
+      "type": "reasoning.encrypted",
+      "data": "AY89a19NpkaHp7jXo1yv1tCIUyFciygUAowx7Ok2y/CX8K+9iymmV92kZRcQ2z/CfZU=",
+      "format": "google-gemini-v1",
+      "id": "tool_run_custom_test_YTuiki1JrgPahHTZwMce",
+      "index": 0
+    }
+  ]
+}

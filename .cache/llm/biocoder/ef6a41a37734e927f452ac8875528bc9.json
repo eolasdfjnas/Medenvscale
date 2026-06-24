@@ -1,0 +1,23 @@
+{
+  "seed_execution_case": {
+    "case_id": "seed_case_main",
+    "description": "Replays the main function flow: creates dummy FASTA, calls deblur_system_call with sample params, and prints results.",
+    "setup_code": "import logging\nimport multiprocessing as mp\n\ndef _system_call(command):\n    stdout = f\"Executed command: {command}\"\n    stderr = \"\"\n    return (stdout, stderr, 0)\n\ndef deblur_system_call(params, input_fp):\n    logger = logging.getLogger(__name__)\n    logger.debug('[%s] deblur system call params %s, input_fp %s' % (mp.current_process().name, params, input_fp))\n    script_name = 'deblur'\n    script_subprogram = 'workflow'\n    command = [script_name, script_subprogram, '--seqs-fp', input_fp, '--is-worker-thread', '--keep-tmp-files']\n    command.extend(params)\n    logger.debug('[%s] running command %s' % (mp.current_process().name, command))\n    return _system_call(command)\n\nlogging.basicConfig(level=logging.DEBUG)\ninput_fp = 'test_sequences.fasta'\nwith open(input_fp, 'w') as f:\n    f.write(\">seq1\\nACTG\\n>seq2\\nTGCA\\n\")",
+    "call_code": "params = ['--min-size', '50']\nresult = deblur_system_call(params, input_fp)\nprint('STDOUT:', result[0])\nprint('STDERR:', result[1])\nprint('Return code:', result[2])",
+    "expected_output_signature": {
+      "return_value": null,
+      "stdout_contains": [
+        "Executed command: ['deblur', 'workflow', '--seqs-fp', 'test_sequences.fasta', '--is-worker-thread', '--keep-tmp-files', '--min-size', '50']",
+        "Return code: 0"
+      ],
+      "file_artifacts": [
+        {
+          "path": "test_sequences.fasta"
+        }
+      ]
+    },
+    "extraction_method": "llm_reconstructed",
+    "validated_against_ground_truth": false,
+    "assumptions": []
+  }
+}

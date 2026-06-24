@@ -1,0 +1,36 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main_num_threads",
+      "description": "Verify deblur_system_call with an optional num_threads parameter adds --num-threads flag to the command.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_838_M2_d_01",
+      "axis": "D",
+      "semantic_intent": "Verify that the function correctly includes the --num-threads flag when num_threads is provided.",
+      "target_constraint": "When num_threads=4, the command list must contain '--num-threads', '4'.",
+      "expected_failure_mode": "A solution that ignores num_threads will not include the flag, or will include it with wrong value.",
+      "setup_code": "logging.basicConfig(level=logging.DEBUG)\ninput_fp = 'test_sequences.fasta'\nwith open(input_fp, 'w') as f:\n    f.write(\">seq1\\nACTG\\n>seq2\\nTGCA\\n\")\nparams = ['--min-size', '50']\nnum_threads = 4",
+      "call_code": "stdout, stderr, returncode = deblur_system_call(params, input_fp, num_threads)\nprint('STDOUT:', stdout)\nprint('STDERR:', stderr)\nprint('Return code:', returncode)\nresult = {'stdout': stdout, 'stderr': stderr, 'returncode': returncode}",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must include a case that provides num_threads and checks the command structure includes '--num-threads' with the correct value.",
+        "Increase input complexity by adding an optional integer parameter `num_threads` that influences command construction."
+      ],
+      "expected_output_signature": {
+        "return_value": {
+          "stdout": "Executed command: ['deblur', 'workflow', '--seqs-fp', 'test_sequences.fasta', '--is-worker-thread', '--keep-tmp-files', '--min-size', '50', '--num-threads', '4']",
+          "stderr": "",
+          "returncode": 0
+        },
+        "stdout_contains": [
+          "--num-threads",
+          "4",
+          "STDOUT: Executed command:",
+          "STDERR:",
+          "Return code: 0"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

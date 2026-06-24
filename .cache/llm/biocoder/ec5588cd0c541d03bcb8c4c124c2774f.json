@@ -1,0 +1,22 @@
+{
+  "scaled_executable_gold_code": "import sys\nimport types\nimport pandas as pd\nimport networkx as nx\n\n# Create a dummy macsypy module for testing\nmacsypy = types.SimpleNamespace(__version__=\"1.2.3\",\n                                solution=types.SimpleNamespace(nx=nx),\n                                __citation__=\"Doe et al., 2023\")\n\n\ndef get_version_message():\n    \"\"\"\n    :return: the long description of the macsyfinder version\n    :rtype: str\n    \"\"\"\n    version = macsypy.__version__\n    py_vers = sys.version.replace('\\n', ' ')\n    # Handle missing NetworkX gracefully\n    if macsypy.solution.nx is not None:\n        nx_vers = macsypy.solution.nx.__version__\n    else:\n        nx_vers = \"unknown\"\n    vers_msg = f\"\"\"Macsyfinder {version}\nusing:\n- Python {py_vers}\n- NetworkX {nx_vers}\n- Pandas {pd.__version__}\n\nMacsyFinder is distributed under the terms of the GNU General Public License (GPLv3).\nSee the COPYING file for details.\n\nIf you use this software please cite:\n{macsypy.__citation__}\nand don't forget to cite models used:\nmacsydata cite <model>\n\"\"\"\n    return vers_msg\n\n\n\ndef main():\n    msg = get_version_message()\n    print(msg)\n    # Verify expected contents\n    assert \"Macsyfinder 1.2.3\" in msg\n    assert \"- Python\" in msg\n    assert \"- NetworkX\" in msg\n    assert \"- Pandas\" in msg\n    assert \"If you use this software please cite\" in msg\n\nif __name__ == \"__main__\":\n    main()\n",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Added handling for macsypy.solution.nx being None to output 'unknown' instead of raising an error, as required by the scaled oracle case.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_611_M2_c_01"
+  ],
+  "covered_requirements": [
+    "Scaled executable cases must expose the new computation and contract constraints introduced by this operator.",
+    "If macsypy.solution.nx is None, the function must output '- NetworkX unknown' without raising an error."
+  ],
+  "implementation_notes": [
+    "Modified get_version_message() to check if macsypy.solution.nx is not None before accessing its __version__ attribute, else use 'unknown'.",
+    "Preserves all original seed behavior for normal case."
+  ],
+  "assumptions": [
+    "The dummy macsypy module is created with solution.nx potentially being None in some test setups."
+  ]
+}

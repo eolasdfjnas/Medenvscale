@@ -1,0 +1,19 @@
+{
+  "scaled_executable_gold_code": "import logging\nimport os\n\nclass FilePathContext:\n    def __init__(self, path):\n        self.filepath = path if isinstance(path, str) else path.filepath\n    def open(self, mode):\n        return open(self.filepath, mode)\n\ndef resolve_format(fmt, filepath):\n    _, ext = os.path.splitext(filepath.lower())\n    if ext in ['.tsv', '.txt']:\n        return 'tsv'\n    if ext in ['.yaml', '.yml']:\n        return 'yaml'\n    return None\n\ndef parse_exchange_table_file(f):\n    header = f.readline()\n    for line in f:\n        parts = line.strip().split('\\t')\n        if len(parts) != 3:\n            continue\n        yield {'compound': parts[0], 'lower': float(parts[1]), 'upper': float(parts[2])}\n\ndef parse_exchange_yaml_file(context, f, default_compartment):\n    for line in f:\n        parts = line.strip().split(':')\n        if len(parts) < 3:\n            continue\n        entry = {\n            'compound': parts[0],\n            'lower': float(parts[1]),\n            'upper': float(parts[2]),\n            'compartment': parts[3] if len(parts) > 3 else default_compartment\n        }\n        yield entry\n\nclass ParseError(Exception):\n    pass\n\nlogger = logging.getLogger(__name__)\n\ndef parse_exchange_file(path, default_compartment):\n    context = FilePathContext(path)\n    format = resolve_format(None, context.filepath)\n    if format == 'tsv':\n        logger.debug('Parsing exchange file {} as TSV'.format(context.filepath))\n        with context.open('r') as f:\n            for entry in parse_exchange_table_file(f):\n                if entry['lower'] > entry['upper']:\n                    raise ValueError(f\"Invalid bounds for {entry['compound']}: lower {entry['lower']} > upper {entry['upper']}\")\n                yield entry\n    elif format == 'yaml':\n        logger.debug('Parsing exchange file {} as YAML'.format(context.filepath))\n        with context.open('r') as f:\n            for entry in parse_exchange_yaml_file(context, f, default_compartment):\n                if entry['lower'] > entry['upper']:\n                    raise ValueError(f\"Invalid bounds for {entry['compound']}: lower {entry['lower']} > upper {entry['upper']}\")\n                yield entry\n    else:\n        raise ParseError('Unable to detect format of exchange file {}'.format(context.filepath))\n\ndef main():\n    tsv_path = 'exchange_limits.tsv'\n    with open(tsv_path, 'w') as f:\n        f.write('compound\\tlower\\tupper\\n')\n        f.write('Glucose\\t-10\\t100\\n')\n        f.write('Lactate\\t0\\t50\\n')\n    print('Parsing TSV file:')\n    for entry in parse_exchange_file(tsv_path, default_compartment='c'):\n        print(entry)\n    yaml_path = 'exchange_limits.yaml'\n    with open(yaml_path, 'w') as f:\n        f.write('Glucose:-10:100:cytosol\\n')\n        f.write('O2:-1000:1000:mitochondria\\n')\n    print('\\nParsing YAML file:')\n    for entry in parse_exchange_file(yaml_path, default_compartment='c'):\n        print(entry)\n\nif __name__ == '__main__':\n    main()",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Added validation that lower <= upper, raising ValueError if violated, as required by the C-axis operator.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_441_M2_c_01"
+  ],
+  "covered_requirements": [
+    "Add a constraint that each parsed entry must satisfy lower <= upper, raising a ValueError if violated."
+  ],
+  "implementation_notes": [
+    "In both TSV and YAML parsing paths, after yielding each entry from the helper generators, we check if lower > upper and raise ValueError with a descriptive message.",
+    "The validation is applied after parsing but before yielding, ensuring only valid entries are output."
+  ],
+  "assumptions": []
+}

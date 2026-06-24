@@ -1,0 +1,16 @@
+{
+  "role": "assistant",
+  "content": "",
+  "reasoning_content": "Let me analyze the task carefully. I need to implement a function `mapRow` that:\n\n1. Extracts the peptide name from the \"FullPeptideName\" column.\n2. Strips whitespace from peptide_name and charge_state.\n3. Splits fragment annotations on ';' into `transitions`; remove empty trailing entries.\n4. Splits precursor annotations on ';' into `pr_transitions`; remove empty trailing entries.\n5. Remove duplicates from transitions and pr_transitions while preserving order.\n6. If no transitions are present (empty list after processing), return immediately.\n7. Read charge state; if \"NA\" or empty, default to \"0\".\n8. Build keys: `peptide_name/charge_state` and `peptide_name/charge_state_pr`.\n9. Map first key to `transitions` and second to `pr_transitions` in `precursors_mapping`.\n10. In `sequences_mapping`, append both keys to the list for `peptide_name`.\n11. In `protein_mapping`, append `peptide_name` to the list for corresponding protein (avoid duplicates).\n\nLet me also consider the stripping requirement: strip whitespace from peptide_name and charge_state before constructing keys.\n\nLet me implement this.",
+  "tool_calls": [
+    {
+      "index": 0,
+      "id": "call_00_d3jWydwncCnroBwYoLYt3561",
+      "type": "function",
+      "function": {
+        "name": "get_task_context",
+        "arguments": "{}"
+      }
+    }
+  ]
+}

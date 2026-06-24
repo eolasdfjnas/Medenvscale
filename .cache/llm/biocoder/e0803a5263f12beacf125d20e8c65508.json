@@ -1,0 +1,23 @@
+{
+  "scaled_executable_gold_code": "import os\nimport tarfile\nimport tempfile\nfrom subprocess import check_call, CalledProcessError\n\nclass GenipeError(Exception):\n    pass\n\ndef untar_file(path, fn):\n    os.makedirs(path, exist_ok=True)\n    comp_flag = ''\n    if fn.endswith('.tar.gz') or fn.endswith('.tgz'):\n        comp_flag = '-z'\n    elif fn.endswith('.tar.bz2') or fn.endswith('.tbz'):\n        comp_flag = '-j'\n    cmd = ['tar', '-C', path, '-x']\n    if comp_flag:\n        cmd.append(comp_flag)\n    cmd.extend(['-f', fn])\n    try:\n        check_call(cmd)\n    except CalledProcessError:\n        raise GenipeError('Could not extract {}'.format(fn))\n\nif __name__ == '__main__':\n    main()\n",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Added detection of compression formats (.tar.gz, .tar.bz2, .tgz, .tbz) to pass appropriate flags to tar, and directory creation if it does not exist.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_255_M2_c_01"
+  ],
+  "covered_requirements": [
+    "Increase computation complexity by requiring automatic detection of compression formats (.tar.gz, .tar.bz2, .tgz, .tbz) and creation of the target directory if it does not exist."
+  ],
+  "implementation_notes": [
+    "Uses os.makedirs with exist_ok=True to create target directory.",
+    "Checks file extension to determine compression flag: .tar.gz or .tgz => -z, .tar.bz2 or .tbz => -j, otherwise no flag.",
+    "Builds tar command accordingly and calls check_call, raising GenipeError on failure."
+  ],
+  "assumptions": [
+    "Only the specified compression formats need to be handled; other formats may cause an error.",
+    "The tar command is available on the system."
+  ]
+}

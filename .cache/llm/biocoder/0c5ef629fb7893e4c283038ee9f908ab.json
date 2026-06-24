@@ -1,0 +1,58 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Verifies that compute_probs returns sorted values and correct probabilities for a typical input, while enforcing efficient O(n) counting (e.g., using Counter) and sorted output.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_811_M3_c_01",
+      "axis": "C",
+      "semantic_intent": "Verify that the function uses O(n) counting and returns sorted values.",
+      "target_constraint": "Efficient counting and sorted output.",
+      "expected_failure_mode": "Using list.count() (O(n^2)) or returning unsorted values.",
+      "setup_code": "",
+      "call_code": "datalist = [8]*200 + [10]*120 + [12]*150 + [15]*90 + [20]*50\nvalues, probs = compute_probs(datalist)\nprint(\"Selected fragment lengths:\", values)\nprint(\"Their probabilities:\", probs)\nresult = {'values': values, 'probs': probs}",
+      "assertion_code": "assert values == sorted(values), 'Values must be sorted'\nexpected_values = [8, 10, 12]\nexpected_probs = [200/450, 120/450, 150/450]\nassert values == expected_values, f'Expected {expected_values}, got {values}'\nfor v, p in zip(probs, expected_probs):\n    assert abs(p - v) < 1e-5, f'Probability mismatch for {v}: expected {p}, got {v}'",
+      "covered_requirements": [
+        "Require that the function counts frequencies efficiently (O(n)) and returns sorted output values."
+      ],
+      "expected_output_signature": {
+        "return_type": null,
+        "return_keys": null,
+        "return_value": null,
+        "stdout_contains": [
+          "Selected fragment lengths: [8, 10, 12]",
+          "Their probabilities: [0.425531914893617, 0.2553191489361702, 0.3191489361702128]"
+        ],
+        "stdout_regex": [],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "scaled_case_robustness",
+      "description": "Verifies that compute_probs handles empty input and negative fragment lengths gracefully, returning empty lists for empty input and ignoring non-positive values.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_811_M3_a_02",
+      "axis": "A",
+      "semantic_intent": "Verify that the function handles empty and negative inputs gracefully without exceptions and returns correct results.",
+      "target_constraint": "Robustness to empty list and non-positive values.",
+      "expected_failure_mode": "Function raises exception on empty input or includes negative values in computation.",
+      "setup_code": "",
+      "call_code": "# Test empty input\nvalues1, probs1 = compute_probs([])\nprint('Empty test:', values1, probs1)\n\n# Test negative values\nvalues2, probs2 = compute_probs([-5]*50 + [8]*100)\nprint('Negative test:', values2, probs2)\n\nresult = {'empty_values': values1, 'empty_probs': probs1, 'neg_values': values2, 'neg_probs': probs2}",
+      "assertion_code": "assert values1 == [] and probs1 == [], f'Empty test failed: {values1}, {probs1}'\nassert values2 == [8] and abs(probs2[0] - 1.0) < 1e-5, f'Negative test failed: {values2}, {probs2}'",
+      "covered_requirements": [
+        "Ensure the function handles empty list and negative fragment lengths gracefully."
+      ],
+      "expected_output_signature": {
+        "return_type": null,
+        "return_keys": null,
+        "return_value": null,
+        "stdout_contains": [
+          "Empty test: [] []",
+          "Negative test: [8] [1.0]"
+        ],
+        "stdout_regex": [],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

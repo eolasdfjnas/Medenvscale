@@ -1,0 +1,13 @@
+{
+  "scaled_executable_gold_code": "import os\nimport tarfile\nimport tempfile\n\nclass GenipeError(Exception):\n    pass\n\ndef untar_file(path, fn):\n    \"\"\"Extracts a tar archive.\n\n    Args:\n        path (str): the path to where the file will be extracted\n        fn (str): the name of the tar archive\n\n    Raises:\n        GenipeError: if extraction fails or target directory does not exist.\n\n    \"\"\"\n    if not os.path.isdir(path):\n        raise GenipeError('Could not extract {}'.format(fn))\n    try:\n        with tarfile.open(fn, 'r:*') as tar:\n            tar.extractall(path=path)\n    except (tarfile.TarError, OSError) as e:\n        raise GenipeError('Could not extract {}'.format(fn))\n",
+  "repair_summary": "Added missing import for tempfile to resolve NameError in test cases. The test cases use tempfile.TemporaryDirectory, which was not defined. Adding the import ensures the test code can execute without error.",
+  "covered_operator_ids": [
+    "env_medagentgym_train_255_M3_d_01",
+    "env_medagentgym_train_255_M3_a_02"
+  ],
+  "covered_requirements": [
+    "The scaled executable case must use a .tar.gz archive as input and verify extraction success.",
+    "The scaled executable case must include a test where the target directory does not exist, and verify that a GenipeError is raised."
+  ],
+  "remaining_risks": []
+}

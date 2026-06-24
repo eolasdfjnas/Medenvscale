@@ -1,0 +1,7 @@
+{
+  "trainer": "trl_dpo",
+  "dataset_path": "data/splits/preference_train.jsonl",
+  "output_dir": "experiments/medqa_en_pilot/dpo",
+  "max_steps": 10,
+  "status": "configured_only"
+}

@@ -1,0 +1,28 @@
+{
+  "scaled_executable_gold_code": "import pandas as pd\n\ndef from_label(label):\n    # placeholder for label conversion\n    return label\n\ndef report_bad_line(parse_func):\n    def parse_line(line):\n        line = line.strip()\n        parts = line.split()\n        chrom, rest = parts[0].split(':')\n        start, end = rest.split('-')\n        gene = parts[1] if len(parts) > 1 else ''\n        return (chrom, int(start), int(end), gene)\n    return parse_line\n\ndef as_handle(path, mode):\n    return open(path, mode)\n\n\ndef read_text(infile):\n    \"\"\"Text coordinate format: \"chr:start-end\", one per line.\n\n    Or sometimes: \"chrom:start-end gene\" or \"chrom:start-end REF>ALT\"\n\n    Coordinate indexing is assumed to be from 1.\n    Comment lines (starting with '#') and empty lines are ignored.\n    Raises ValueError if start > end or if coordinates are malformed.\n    If the second field contains '>' or '=', it is treated as an annotation\n    and the gene column is set to '-', otherwise it is a gene symbol.\n    \"\"\"\n    rows = []\n    with as_handle(infile, 'r') as handle:\n        for line in handle:\n            line = line.strip()\n            if not line or line.startswith('#'):\n                continue\n            parts = line.split()\n            if not parts:\n                continue\n            # parse coordinate part\n            coord_part = parts[0]\n            if ':' not in coord_part or coord_part.count(':') != 1:\n                raise ValueError(f\"Malformed coordinate: {coord_part}\")\n            chrom, rest = coord_part.split(':')\n            if '-' not in rest or rest.count('-') != 1:\n                raise ValueError(f\"Malformed coordinate: {coord_part}\")\n            start_str, end_str = rest.split('-')\n            try:\n                start = int(start_str)\n                end = int(end_str)\n            except ValueError:\n                raise ValueError(f\"Non-integer coordinate: {coord_part}\")\n            if start > end:\n                raise ValueError(f\"start > end in coordinate: {coord_part}\")\n            # determine gene or annotation\n            if len(parts) > 1:\n                second = parts[1]\n                if '>' in second or '=' in second:\n                    gene = '-'\n                else:\n                    gene = second\n            else:\n                gene = '-'\n            rows.append((chrom, start, end, gene))\n    table = pd.DataFrame.from_records(rows, columns=['chromosome', 'start', 'end', 'gene'])\n    return table\n\n\ndef main():\n    # create a sample input file\n    sample_lines = [\n        'chr1:100-200 geneA',\n        'chrom2:300-400',\n        'chr3:500-600 REF>ALT',\n        '# this is a comment',\n        '',\n        '   chr4:700-800   geneB   ',\n        '1:900-1000',\n    ]\n    with open('coords.txt', 'w') as f:\n        for line in sample_lines:\n            f.write(line + '\\n')\n    # call the read_text function\n    df = read_text('coords.txt')\n    print(df)\n\nif __name__ == '__main__':\n    main()\n",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "The scaled task adds requirements to skip comments and empty lines, handle whitespace robustly, accept chromosomes without 'chr' prefix, validate start <= end, distinguish gene symbols from annotations, and raise ValueError for malformed coordinates. The seed solution did not implement these validations or line filtering.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_295_M3_d_01",
+    "env_medagentgym_train_295_M3_c_02"
+  ],
+  "covered_requirements": [
+    "Skip comment lines (starting with '#') and empty lines",
+    "Handle leading/trailing whitespace robustly",
+    "Accept chromosomes with or without 'chr' prefix",
+    "Validate that start <= end (raise ValueError if start > end)",
+    "Distinguish gene symbols from annotations: if optional second field contains '>' or '=', set gene to '-', otherwise keep as gene symbol",
+    "Raise ValueError if coordinate format is malformed (e.g., missing colon, non-integer positions)"
+  ],
+  "implementation_notes": [
+    "The read_text function now iterates over lines, strips whitespace, skips empty and comment lines, then parses each valid line.",
+    "Coordinate validation checks for presence of colon and dash, attempts integer conversion, and ensures start <= end.",
+    "The second field is inspected for '>' or '=' characters to decide if it is an annotation.",
+    "The function still uses the provided as_handle helper for file I/O.",
+    "The original report_bad_line and from_label functions are preserved but not used in the new implementation."
+  ],
+  "assumptions": []
+}

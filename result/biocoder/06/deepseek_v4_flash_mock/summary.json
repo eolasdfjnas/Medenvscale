@@ -1,0 +1,36 @@
+{
+  "model": "deepseek-v4-flash",
+  "mode": "mock",
+  "num_samples": 1,
+  "compile_passed": 1,
+  "execution_passed": 1,
+  "sample_pass_rate": 1.0,
+  "nonzero_case_samples": 1,
+  "nonzero_case_execution_passed": 1,
+  "nonzero_case_sample_pass_rate": 1.0,
+  "passed_cases": 1,
+  "total_cases": 1,
+  "case_pass_rate": 1.0,
+  "evaluation_case_sources": {
+    "seed_execution_case": 1
+  },
+  "levels": {
+    "M1": {
+      "samples": 1,
+      "execution_passed": 1,
+      "zero_case_samples": 0,
+      "sample_pass_rate": 1.0,
+      "case_pass_rate": 1.0,
+      "passed_cases": 1,
+      "total_cases": 1
+    }
+  },
+  "tool_counts": {
+    "submit_final_code": 1
+  },
+  "trace_steps": {
+    "min": 1,
+    "max": 1,
+    "mean": 1.0
+  }
+}

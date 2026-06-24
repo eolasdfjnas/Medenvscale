@@ -1,0 +1,19 @@
+{
+  "dataset_name": "MedAgentGym",
+  "download_method": "local_jsonl_merge_with_code_validation",
+  "rows_written": 20,
+  "input_rows": 20,
+  "accepted_rows": 20,
+  "rejected_rows": 0,
+  "direct_pass_rows": 12,
+  "repaired_pass_rows": 8,
+  "splits_requested": [
+    "train",
+    "test"
+  ],
+  "files_used": [
+    "/archive/zengjiaqi/dataset/medagentgym/biocoder/train_tasks.jsonl",
+    "/archive/zengjiaqi/dataset/medagentgym/biocoder/test_tasks.jsonl"
+  ],
+  "rejected_output": "data/biocoder/raw/prepare_rejected.jsonl"
+}

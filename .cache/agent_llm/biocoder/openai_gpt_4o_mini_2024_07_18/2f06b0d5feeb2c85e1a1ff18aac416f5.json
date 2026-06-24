@@ -1,0 +1,17 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "call_FRp4nQ6nFGpxYLKMi17Jnh8L",
+      "function": {
+        "name": "validate_candidate_code",
+        "arguments": "{\"code\":\"import os\\nimport tarfile\\nimport tempfile\\nfrom subprocess import check_call, CalledProcessError\\n\\nclass GenipeError(Exception):\\n    pass\\n\\ndef untar_file(path, fn):\\n    # Create the destination directory if it does not exist\\n    os.makedirs(path, exist_ok=True)\\n    \\n    # Determine the command based on the file extension\\n    command = ['tar', '-xf', fn, '-C', path]\\n    \\n    try:\\n        # Execute the tar command\\n        check_call(command)\\n    except CalledProcessError:\\n        raise GenipeError(f'Failed to extract {fn} to {path}')\\n\\n\\ndef main():\\n    with tempfile.TemporaryDirectory() as tmp_dir:\\n        # Create a source directory with a file\\n        source_dir = os.path.join(tmp_dir, 'source')\\n        os.mkdir(source_dir)\\n        test_file = os.path.join(source_dir, 'hello.txt')\\n        with open(test_file, 'w') as f:\\n            f.write('Hello, world!')\\n\\n        # Create a tar archive of the source directory\\n        tar_path = os.path.join(tmp_dir, 'archive.tar')\\n        with tarfile.open(tar_path, 'w') as tar:\\n            tar.add(source_dir, arcname='source')\\n\\n        # Prepare the extraction directory\\n        extract_dir = os.path.join(tmp_dir, 'dest')\\n        os.mkdir(extract_dir)\\n\\n        # Call the solution here to extract\\n        untar_file(extract_dir, tar_path)\\n\\n        # Verify extraction\\n        extracted_file = os.path.join(extract_dir, 'source', 'hello.txt')\\n        assert os.path.isfile(extracted_file), 'File was not extracted correctly.'\\n        print('Extraction succeeded:', open(extracted_file).read())\\n\\n        # Test with a compressed tar.gz file\\n        compressed_tar_path = os.path.join(tmp_dir, 'archive.tar.gz')\\n        with tarfile.open(compressed_tar_path, 'w:gz') as tar:\\n            tar.add(source_dir, arcname='source')\\n\\n        # Prepare a new extraction directory that does not exist\\n        new_extract_dir = os.path.join(tmp_dir, 'new_dest')\\n        untar_file(new_extract_dir, compressed_tar_path)\\n\\n        # Verify extraction from compressed tar\\n        extracted_file_compressed = os.path.join(new_extract_dir, 'source', 'hello.txt')\\n        assert os.path.isfile(extracted_file_compressed), 'File was not extracted correctly from compressed tar.'\\n        print('Extraction from compressed tar succeeded:', open(extracted_file_compressed).read())\\n\\nif __name__ == '__main__':\\n    main()\"}"
+      }
+    }
+  ]
+}

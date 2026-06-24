@@ -1,0 +1,57 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "env_medagentgym_train_690_M3_d_01_c_03",
+      "description": "Test BAR with outlier-modified distributions and both uncertainty methods.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_690_M3_d_01,env_medagentgym_train_690_M3_c_03",
+      "axis": "D,C",
+      "semantic_intent": "Prove that the solution can compute free energy difference with outliers and output both BAR and MBAR uncertainties.",
+      "target_constraint": "The BAR function call must succeed and produce a DeltaF close to the true value despite outliers, and both uncertainty methods must be computed and printed.",
+      "expected_failure_mode": "Naive solution may produce NaN or large deviation due to outliers, or only compute one uncertainty method.",
+      "setup_code": "import numpy as np\nfrom my_module import bar\nnp.random.seed(42)\nw_F = np.random.normal(loc=1.0, scale=1.0, size=5000)\nw_R = np.random.normal(loc=-1.0, scale=1.0, size=5000)\nw_F[0]=100.0; w_F[1]=-50.0; w_R[0]=80.0; w_R[1]=-60.0",
+      "call_code": "results_BAR = bar(w_F, w_R, uncertainty_method='BAR')\nresults_MBAR = bar(w_F, w_R, uncertainty_method='MBAR')\nprint(f\"BAR uncertainty method: ΔF = {results_BAR['Delta_f']:.3f} ± {results_BAR['dDelta_f']:.3f} kT\")\nprint(f\"MBAR uncertainty method: ΔF = {results_MBAR['Delta_f']:.3f} ± {results_MBAR['dDelta_f']:.3f} kT\")\nresult = (results_BAR, results_MBAR)",
+      "assertion_code": "assert abs(results_BAR['Delta_f'] - 1.009) / 1.009 < 0.2, f\"BAR Delta_f {results_BAR['Delta_f']} not within 20%\"\nassert abs(results_MBAR['Delta_f'] - 1.009) / 1.009 < 0.2, f\"MBAR Delta_f {results_MBAR['Delta_f']} not within 20%\"",
+      "covered_requirements": [
+        "The scaled executable case must include the outlier-modified data and verify that the function runs without error and returns a result within tolerance.",
+        "Require the solution to compute and print the uncertainty using both 'BAR' and 'MBAR' uncertainty methods, and compare them, thereby increasing algorithmic complexity.",
+        "The scaled case must check that both print statements appear and that the numeric values are reasonable and consistent."
+      ],
+      "expected_output_signature": {
+        "return_type": "tuple",
+        "return_keys": [],
+        "return_value": null,
+        "stdout_contains": [
+          "BAR uncertainty method: ΔF = 1.00",
+          "MBAR uncertainty method: ΔF = 1.00"
+        ],
+        "stdout_regex": [],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "env_medagentgym_train_690_M3_c_02_convergence",
+      "description": "Test that BAR handles convergence failure gracefully with poor overlap distributions.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_690_M3_c_02",
+      "axis": "C",
+      "semantic_intent": "Prove that the solution gracefully handles convergence failures without crashing.",
+      "target_constraint": "The BAR function call must not raise an unhandled exception even when convergence is not achieved within the given tolerance and iterations.",
+      "expected_failure_mode": "Naive solution would throw a ConvergenceError or produce NaN.",
+      "setup_code": "import numpy as np\nfrom my_module import bar\nnp.random.seed(0)\nw_F = np.random.normal(loc=10.0, scale=0.5, size=200)\nw_R = np.random.normal(loc=-10.0, scale=0.5, size=200)",
+      "call_code": "try:\n    results = bar(w_F, w_R, maximum_iterations=50, relative_tolerance=1e-8)\n    error_occurred = False\nexcept Exception:\n    error_occurred = True\nresult = error_occurred",
+      "assertion_code": "assert not error_occurred, \"An exception was raised during BAR computation with poor overlap\"",
+      "covered_requirements": [
+        "The scaled case must include a test with poor overlap and verify no unhandled exception."
+      ],
+      "expected_output_signature": {
+        "return_type": "bool",
+        "return_keys": [],
+        "return_value": false,
+        "stdout_contains": [],
+        "stdout_regex": [],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

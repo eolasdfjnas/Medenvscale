@@ -1,0 +1,116 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Replay the canonical main() seed flow for parse_exchange_file with unambiguous extensions (.tsv, .yaml).",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_441_M2_c_01",
+      "axis": "C",
+      "semantic_intent": "Verify that the function works correctly for files with unambiguous extensions (TSV and YAML).",
+      "target_constraint": "The function must parse TSV and YAML files correctly when extension is unambiguous.",
+      "expected_failure_mode": "N/A (baseline case)",
+      "setup_code": "tsv_path = 'exchange_limits.tsv'\nwith open(tsv_path, 'w') as f:\n    f.write('compound\\tlower\\tupper\\n')\n    f.write('Glucose\\t-10\\t100\\n')\n    f.write('Lactate\\t0\\t50\\n')\nprint('Parsing TSV file:')",
+      "call_code": "for entry in parse_exchange_file(tsv_path, default_compartment='c'):\n    print(entry)\nyaml_path = 'exchange_limits.yaml'\nwith open(yaml_path, 'w') as f:\n    f.write('Glucose:-10:100:cytosol\\n')\n    f.write('O2:-1000:1000:m'+\"\"\"itochondria\\n\"\"\")\nprint('\\nParsing YAML file:')\nfor entry in parse_exchange_file(yaml_path, default_compartment='c'):\n    print(entry)\nresult = None",
+      "assertion_code": "",
+      "covered_requirements": [],
+      "expected_output_signature": {
+        "return_type": null,
+        "return_keys": null,
+        "return_value": null,
+        "stdout_contains": [
+          "Parsing TSV file:",
+          "{'compound': 'Glucose', 'lower': -10.0, 'upper': 100.0}",
+          "{'compound': 'Lactate', 'lower': 0.0, 'upper': 50.0}",
+          "Parsing YAML file:",
+          "{'compound': 'Glucose', 'lower': -10.0, 'upper': 100.0, 'compartment': 'cytosol'}",
+          "{'compound': 'O2', 'lower': -1000.0, 'upper': 1000.0, 'compartment': 'mitochondria'}"
+        ],
+        "file_artifacts": [
+          {
+            "path": "exchange_limits.tsv"
+          },
+          {
+            "path": "exchange_limits.yaml"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "coverage_ambiguous_format",
+      "description": "Test content-based format detection for ambiguous extensions (.txt). Create .txt files with TSV and YAML content; verify they are parsed correctly.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_441_M2_c_01",
+      "axis": "C",
+      "semantic_intent": "Prove that the function can correctly identify TSV and YAML formats in files with ambiguous extension using content (tab or colon presence).",
+      "target_constraint": "The function must read the first line of a file with ambiguous extension and detect tab for TSV, colon for YAML; then parse accordingly.",
+      "expected_failure_mode": "Old seed behavior (extension-only) would treat .txt as TSV regardless of content, thus failing on a .txt file with YAML content.",
+      "setup_code": "import tempfile, os\n# Create .txt file with TSV content\ntsv_txt = 'test_tsv.txt'\nwith open(tsv_txt, 'w') as f:\n    f.write('compound\\tlower\\tupper\\n')\n    f.write('A\\t-1\\t10\\n')\n    f.write('B\\t0\\t5\\n')\n# Create .txt file with YAML-like content\nyaml_txt = 'test_yaml.txt'\nwith open(yaml_txt, 'w') as f:\n    f.write('X:-100:50:cytosol\\n')\n    f.write('Y:0:200:mito\\n')",
+      "call_code": "tsv_result = list(parse_exchange_file('test_tsv.txt', default_compartment='c'))\nyaml_result = list(parse_exchange_file('test_yaml.txt', default_compartment='c'))\nresult = (tsv_result, yaml_result)",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must include at least one case where file extension is ambiguous (e.g., .txt or no extension) and content determines format."
+      ],
+      "expected_output_signature": {
+        "return_type": "tuple",
+        "return_keys": null,
+        "return_value": [
+          [
+            {
+              "compound": "A",
+              "lower": -1.0,
+              "upper": 10.0
+            },
+            {
+              "compound": "B",
+              "lower": 0.0,
+              "upper": 5.0
+            }
+          ],
+          [
+            {
+              "compound": "X",
+              "lower": -100.0,
+              "upper": 50.0,
+              "compartment": "cytosol"
+            },
+            {
+              "compound": "Y",
+              "lower": 0.0,
+              "upper": 200.0,
+              "compartment": "mito"
+            }
+          ]
+        ],
+        "stdout_contains": [],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "coverage_ambiguous_content_fail",
+      "description": "Test that a file with ambiguous extension and content that is neither tab- nor colon-separated raises ParseError.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_441_M2_c_01",
+      "axis": "C",
+      "semantic_intent": "Prove that the function raises ParseError when ambiguous extension content is neither tab nor colon.",
+      "target_constraint": "The function must raise ParseError for ambiguous/unsupported content.",
+      "expected_failure_mode": "Old seed behavior would treat any .txt file as TSV and attempt to parse, possibly yielding nothing or errors.",
+      "setup_code": "import tempfile, os\nfail_file = 'fail.txt'\nwith open(fail_file, 'w') as f:\n    f.write('this is not valid exchange data\\n')",
+      "call_code": "try:\n    list(parse_exchange_file('fail.txt', default_compartment='c'))\n    result = {'error': False}\nexcept ParseError:\n    result = {'error': True}\nexcept Exception:\n    result = {'error': False, 'other_exception': True}",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must include at least one case where content is ambiguous and ParseError is raised."
+      ],
+      "expected_output_signature": {
+        "return_type": "dict",
+        "return_keys": [
+          "error"
+        ],
+        "return_value": {
+          "error": true
+        },
+        "stdout_contains": [],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

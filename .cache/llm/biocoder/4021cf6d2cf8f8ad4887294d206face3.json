@@ -1,0 +1,459 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "add_multiple_tumors_case",
+      "operator_intensity": 1,
+      "transformation_goal": "Introduce a data variant with two tumor fractions to exercise multi-tumor parsing logic.",
+      "rationale": "The seed case only has one tumor fraction. Adding a second tumor fraction increases data complexity and ensures the function correctly handles multiple tumors, including the transpose logic for C and p*.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "parse mu with multiple tumor fractions",
+            "transpose colon-separated copy number states"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "d1_multi_tumor",
+          "semantic_intent": "Verify that the function correctly parses mu, C, and p* for two tumor fractions.",
+          "target_constraint": "mu must contain exactly three values (normal + two tumors), C must be a list of two lists (each inner list length 2), p* must be a list of two lists.",
+          "expected_failure_mode": "If the function assumes only one tumor, it would output flat lists for C and p* instead of nested lists.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "NLL\\tmu\\tC\\tp*\\n12.5\\t0.4,0.3,0.3\\t2:3,1\\t0.1,0.2,0.1\\n"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Input with two tumor fractions: mu = 0.4,0.3,0.3; C = '2:3,1' (colon-separated, with comma inside second group); p* = '0.1,0.2,0.1'"
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include input with multiple tumor fractions and verify nested list output for C and p*."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": false,
+        "must_update_verifier_if_behavior_changes": false,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "D",
+      "operator_type": "add_placeholder_values_case",
+      "operator_intensity": 1,
+      "transformation_goal": "Introduce data variant with placeholder values in C and p* to test None conversion.",
+      "rationale": "The seed case has all valid numeric values. Placeholders (e.g., '-' in C, 'X' in p*) increase data complexity by requiring the parser to output None for non-numeric entries.",
+      "state_updates": {
+        "task_state_patch": {
+          "required_capabilities": [
+            "convert placeholders to None",
+            "handle non-digit in C",
+            "handle alphabetic in p*"
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "d2_placeholders",
+          "semantic_intent": "Verify that the function correctly maps placeholder values in C and p* to None.",
+          "target_constraint": "C entry '-' should be None, p* entry 'X' should be None.",
+          "expected_failure_mode": "If the function does not check non-numeric values, it may raise ValueError or output incorrect type.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "NLL\\tmu\\tC\\tp*\\n12.5\\t0.4,0.6\\t-:3\\tX,0.2\\n"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Input with C = '-:3' and p* = 'X,0.2': expects C -> [[None, 3]], p* -> [None, 0.2]."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include variants with placeholder values and verify None output."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": false,
+        "must_update_verifier_if_behavior_changes": false,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "add_consistency_check",
+      "operator_intensity": 1,
+      "transformation_goal": "Add constraint that the function must validate consistency between number of tumors and number of copy number states/probabilities.",
+      "rationale": "The gold solution currently infers number of tumors from mu but does not explicitly verify that the parsed C and p* have matching dimensions. Adding this check increases computational complexity by enforcing a validation step.",
+      "state_updates": {
+        "task_state_patch": {
+          "output_requirements": [
+            "If the number of tumor fractions does not match the number of elements in each colon-separated group of C or the number of probability values, raise ValueError."
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {
+          "gold_solution": "def parse_theta_results(fname):\n    with open(fname) as handle:\n        header = next(handle).rstrip().split('\\t')\n        body = next(handle).rstrip().split('\\t')\n        assert len(body) == len(header) == 4\n        nll = float(body[0])\n        mu = body[1].split(',')\n        mu_normal = float(mu[0])\n        mu_tumors = list(map(float, mu[1:]))\n        n_tumors = len(mu_tumors)\n        copies_raw = body[2].split(':')\n        probs_raw = body[3].split(',')\n        # For C: each colon-separated group may contain comma-separated values\n        copies = []\n        for group in copies_raw:\n            parts = group.split(',')\n            if n_tumors == 1:\n                copies.append([int(p) if p.isdigit() else None for p in parts])\n            else:\n                if len(parts) != n_tumors:\n                    raise ValueError(f'Expected {n_tumors} values in C group, got {len(parts)}')\n                copies.append([int(p) if p.isdigit() else None for p in parts])\n        # For p*: it's flat comma-separated; if multiple tumors, should be multiple values per group?\n        # Actually p* is just comma-separated list of probabilities\n        probs = []\n        if n_tumors == 1:\n            for p in probs_raw:\n                probs.append(float(p) if not p.isalpha() else None)\n        else:\n            # Assuming p* is also grouped per tumor (semicolon? but seed says comma-separated)\n            # For robustness, we'll treat it as flat; but adjust to match expected format\n            # Simplified: treat as flat list, but require length multiple of n_tumors\n            if len(probs_raw) % n_tumors != 0:\n                raise ValueError('Number of probabilities not multiple of tumors')\n            for i in range(0, len(probs_raw), n_tumors):\n                group = probs_raw[i:i+n_tumors]\n                probs.append([float(p) if not p.isalpha() else None for p in group])\n        return {'NLL': nll, 'mu_normal': mu_normal, 'mu_tumors': mu_tumors, 'C': copies, 'p*': probs}"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "c1_consistency",
+          "semantic_intent": "Verify that the function raises an error when the number of tumors does not match the parsed C or p* dimensions.",
+          "target_constraint": "Input with 2 tumor fractions but C group contains only 1 value should raise ValueError.",
+          "expected_failure_mode": "Without the check, the function may silently produce mismatched output or index error.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "NLL\\tmu\\tC\\tp*\\n12.5\\t0.4,0.3,0.3\\t2:3\\t0.1,0.2,0.1\\n"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "exception"
+          },
+          "test_case_description": "C has two groups: '2' and '3', each with single value, but mu has two tumors, so each C group should have 2 values -> mismatch raises ValueError."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include inputs that trigger consistency checks (mismatched dimensions) and expect exceptions."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": false,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "add_whitespace_robustness",
+      "operator_intensity": 1,
+      "transformation_goal": "Add requirement to handle extra whitespace and blank lines in the input file.",
+      "rationale": "Real-world files may have leading/trailing spaces or empty lines. This operator increases robustness by requiring the parser to strip whitespace and skip blank lines.",
+      "state_updates": {
+        "task_state_patch": {
+          "output_requirements": [
+            "The function must ignore empty lines and strip whitespace from each non-empty line before parsing."
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {
+          "gold_solution": "def parse_theta_results(fname):\n    with open(fname) as handle:\n        lines = [line.strip() for line in handle if line.strip()]\n        if len(lines) < 2:\n            raise ValueError('File must contain header and data line')\n        header = lines[0].split('\\t')\n        body = lines[1].split('\\t')\n        assert len(body) == len(header) == 4\n        nll = float(body[0])\n        mu = body[1].split(',')\n        mu_normal = float(mu[0])\n        mu_tumors = list(map(float, mu[1:]))\n        copies = body[2].split(':')\n        if len(mu_tumors) == 1:\n            copies = [[int(c) if c.isdigit() else None for c in copies]]\n        else:\n            copies = [[int(c) if c.isdigit() else None for c in subcop] for subcop in zip(*[c.split(',') for c in copies])]\n        probs = body[3].split(',')\n        if len(mu_tumors) == 1:\n            probs = [float(p) if not p.isalpha() else None for p in probs]\n        else:\n            probs = [[float(p) if not p.isalpha() else None for p in subprob] for subprob in zip(*[p.split(',') for p in probs])]\n    return {'NLL': nll, 'mu_normal': mu_normal, 'mu_tumors': mu_tumors, 'C': copies, 'p*': probs}"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "a1_whitespace",
+          "semantic_intent": "Verify that the function correctly parses input with leading/trailing spaces and blank lines.",
+          "target_constraint": "Input file with blank line before header and trailing spaces on data line should produce correct output.",
+          "expected_failure_mode": "If the function uses rstrip() only, trailing spaces on data line may affect split; blank line before header may cause assertion error.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "\\nNLL\\tmu\\tC\\tp*\\n  12.5\\t0.4,0.6\\t2:3\\t0.1,0.2  \\n"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "File content: blank line, header, then data line with leading/trailing spaces."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include files with blank lines and extra whitespace, expecting correct parsing."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": false,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "add_varied_placeholders",
+      "operator_intensity": 1,
+      "transformation_goal": "Require the function to recognize multiple placeholder formats (e.g., 'NA', '?', '.', 'na') and convert them to None.",
+      "rationale": "The seed case only tests isdigit/isalpha. Real data may use 'NA', '?', etc. This operator increases robustness by broadening placeholder detection.",
+      "state_updates": {
+        "task_state_patch": {
+          "output_requirements": [
+            "Placeholders in C include non-digit strings like 'NA', '?', '.'; in p* include alphabetic placeholders like 'NA', 'na', 'X'. All should map to None."
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {
+          "gold_solution": "def parse_theta_results(fname):\n    with open(fname) as handle:\n        lines = [line.strip() for line in handle if line.strip()]\n        if len(lines) < 2:\n            raise ValueError('File must contain header and data line')\n        header = lines[0].split('\\t')\n        body = lines[1].split('\\t')\n        assert len(body) == len(header) == 4\n        nll = float(body[0])\n        mu = body[1].split(',')\n        mu_normal = float(mu[0])\n        mu_tumors = list(map(float, mu[1:]))\n        copies = body[2].split(':')\n        if len(mu_tumors) == 1:\n            copies = [[int(c) if c.isdigit() else None for c in copies]]\n        else:\n            copies = [[int(c) if c.isdigit() else None for c in subcop] for subcop in zip(*[c.split(',') for c in copies])]\n        probs = body[3].split(',')\n        if len(mu_tumors) == 1:\n            probs = [float(p) if not p.isalpha() else None for p in probs]\n        else:\n            probs = [[float(p) if not p.isalpha() else None for p in subprob] for subprob in zip(*[p.split(',') for p in probs])]\n    return {'NLL': nll, 'mu_normal': mu_normal, 'mu_tumors': mu_tumors, 'C': copies, 'p*': probs}"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "a2_placeholders",
+          "semantic_intent": "Verify that the function converts various placeholder strings (e.g., 'NA', '?', '.') to None.",
+          "target_constraint": "Input with C='NA:?' and p*='na,0.2' should yield C=[[None, None]], p*=[None, 0.2].",
+          "expected_failure_mode": "Using only isdigit/isalpha, 'NA' isalpha -> None, '?' is not digit nor alpha -> would be None only if non-digit is treated as None; but '.' is not digit nor alpha -> would be None? Actually isdigit false, isalpha false, so condition c.isdigit() fails, else None, so '.' would be None. So gold already handles? But isalpha on '.' is false, so p* '.' would be evaluated to float? Actually gold does if not p.isalpha(): float(p) else None. For '.' float('.') raises ValueError. So '.' would cause error. So we need to adjust. For this operator, we modify gold solution to also treat non-digit, non-alpha but non-numeric strings as None. We'll update gold solution to use try-except for float conversion.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "NLL\\tmu\\tC\\tp*\\n12.5\\t0.4,0.6\\tNA:.\\t.,0.2\\n"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "C has 'NA' and '.', p* has '.' and '0.2' -> expect C=[[None, None]], p*=[None, 0.2]."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include various placeholder strings beyond simple alphabetic/non-digit."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": false,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "add_missing_column_handling",
+      "operator_intensity": 1,
+      "transformation_goal": "Require the function to gracefully handle missing values in columns (e.g., empty fields) by defaulting to None.",
+      "rationale": "The seed solution uses assert for exactly 4 columns. Real files may have empty fields or extra tabs. This operator increases robustness by expecting the function to handle missing columns without assertion error.",
+      "state_updates": {
+        "task_state_patch": {
+          "output_requirements": [
+            "If a field is empty (e.g., two consecutive tabs), parse the missing value as None for mu, C, p*; for NLL, if empty, raise ValueError."
+          ]
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {
+          "gold_solution": "def parse_theta_results(fname):\n    with open(fname) as handle:\n        lines = [line.strip() for line in handle if line.strip()]\n        if len(lines) < 2:\n            raise ValueError('File must contain header and data line')\n        header = lines[0].split('\\t')\n        body = lines[1].split('\\t')\n        # Pad body to 4 columns if missing\n        while len(body) < 4:\n            body.append('')\n        nll_str = body[0].strip()\n        if nll_str == '':\n            raise ValueError('NLL must not be empty')\n        nll = float(nll_str)\n        mu_str = body[1].strip()\n        if mu_str == '':\n            mu_normal = None\n            mu_tumors = []\n        else:\n            mu = mu_str.split(',')\n            mu_normal = float(mu[0]) if mu[0] else None\n            mu_tumors = [float(x) for x in mu[1:] if x]  # skip empty\n        C_str = body[2].strip()\n        probs_str = body[3].strip()\n        if C_str == '':\n            copies = []\n        else:\n            copies = C_str.split(':')\n            if len(mu_tumors) == 1 or len(mu_tumors) == 0:\n                copies = [[int(c) if c.isdigit() else None for c in copies]]\n            else:\n                copies = [[int(c) if c.isdigit() else None for c in subcop] for subcop in zip(*[c.split(',') for c in copies])]\n        if probs_str == '':\n            probs = []\n        else:\n            probs_list = probs_str.split(',')\n            if len(mu_tumors) == 1 or len(mu_tumors) == 0:\n                probs = [float(p) if p and not p.isalpha() else None for p in probs_list]\n            else:\n                probs = [[float(p) if p and not p.isalpha() else None for p in subprob] for subprob in zip(*[p.split(',') for p in probs_list])]\n    return {'NLL': nll, 'mu_normal': mu_normal, 'mu_tumors': mu_tumors, 'C': copies, 'p*': probs}"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "a3_missing_column",
+          "semantic_intent": "Verify that the function handles empty columns gracefully, returning None for missing mu parts and empty lists for missing C/p*.",
+          "target_constraint": "Input with missing mu field (empty between tabs) should yield mu_normal=None, mu_tumors=[]; missing C and p* should yield empty lists.",
+          "expected_failure_mode": "If the function splits on tab and gets fewer than 4 fields, assert will fail; if it splits correctly but does not handle empty strings, it may cause errors.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "NLL\\tmu\\tC\\tp*\\n10.0\\t\\t2:3\\t0.1,0.2\\n"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Data line: NLL=10.0, mu empty, C='2:3', p*='0.1,0.2'. Expect mu_normal=None, mu_tumors=[], C=[[2,3]], p*=[0.1,0.2]."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include inputs with missing fields and verify appropriate default values."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": false,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Replay the canonical main() seed flow for compute_probs with original input order; output values are already sorted.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_811_M2_c_01",
+      "axis": "C",
+      "semantic_intent": "Verify that the output fragment lengths are sorted in ascending order even when input order is coincidentally sorted.",
+      "target_constraint": "The values list must be sorted ascending.",
+      "expected_failure_mode": "A solution that does not sort may still pass if input yields sorted results coincidentally.",
+      "setup_code": "datalist = [8]*200 + [10]*120 + [12]*150 + [15]*90 + [20]*50",
+      "call_code": "values, probs = compute_probs(datalist)\nprint(\"Selected fragment lengths:\", values)\nprint(\"Their probabilities:\", probs)\nresult = {'values': values, 'probs': probs}",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must check that the first returned list is sorted in ascending order."
+      ],
+      "expected_output_signature": {
+        "return_value": {
+          "values": [
+            8,
+            10,
+            12
+          ],
+          "probs": [
+            0.425531914893617,
+            0.2553191489361702,
+            0.3191489361702128
+          ]
+        },
+        "stdout_contains": [
+          "Selected fragment lengths: [8, 10, 12]",
+          "Their probabilities: [0.425531914893617, 0.2553191489361702, 0.3191489361702128]"
+        ],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "scaled_coverage_sort_check",
+      "description": "Verify that output fragment lengths are sorted in ascending order when input data is provided in non-sorted order, ensuring the function explicitly sorts.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_811_M2_c_01",
+      "axis": "C",
+      "semantic_intent": "Verify that the output fragment lengths are sorted in ascending order regardless of input order.",
+      "target_constraint": "The values list must be sorted ascending even when input frequencies are given in a different order.",
+      "expected_failure_mode": "A solution that relies on the natural iteration order of set(datalist) would return values in non-sorted order (e.g., [12, 8, 10]) and fail the assertion or output check.",
+      "setup_code": "datalist = [12]*150 + [8]*200 + [10]*120 + [15]*90 + [20]*50",
+      "call_code": "values, probs = compute_probs(datalist)\nprint(\"Selected fragment lengths:\", values)\nprint(\"Their probabilities:\", probs)\nresult = {'values': values, 'probs': probs}",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must check that the first returned list is sorted in ascending order."
+      ],
+      "expected_output_signature": {
+        "return_value": {
+          "values": [
+            8,
+            10,
+            12
+          ],
+          "probs": [
+            0.425531914893617,
+            0.2553191489361702,
+            0.3191489361702128
+          ]
+        },
+        "stdout_contains": [
+          "Selected fragment lengths: [8, 10, 12]",
+          "Their probabilities: [0.425531914893617, 0.2553191489361702, 0.3191489361702128]"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

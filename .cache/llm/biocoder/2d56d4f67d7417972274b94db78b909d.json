@@ -1,0 +1,116 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Baseline case: single tumor input with valid data, ensuring the function still parses correctly under the new validation constraint.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_59_M3_d_01,env_medagentgym_train_59_M3_c_02",
+      "axis": "D,C",
+      "semantic_intent": "Verify that the function retains correct behavior for single-tumor input after adding multi-tumor support and validation.",
+      "target_constraint": "The function must parse single-tumor files and produce the expected dictionary with flat lists, and must pass the new validation (no mismatch).",
+      "expected_failure_mode": "A solution that only handles multi-tumor or breaks single-tumor parsing would fail.",
+      "setup_code": "sample = (\n    \"NLL\\tmu\\tC\\tp*\\n\"\n    \"12.5\\t0.4,0.6\\t2:3\\t0.1,0.2\\n\"\n)\nfname = \"theta_test.txt\"\nwith open(fname, \"w\") as f:\n    f.write(sample)",
+      "call_code": "result = parse_theta_results(fname)\nprint(result)\nos.remove(fname)",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must test single and multi-tumor inputs.",
+        "Add constraint that validates the number of tumor fractions matches the number of copy number and probability groups, raising errors on mismatch."
+      ],
+      "expected_output_signature": {
+        "return_value": {
+          "NLL": 12.5,
+          "mu_normal": 0.4,
+          "mu_tumors": [
+            0.6
+          ],
+          "C": [
+            [
+              2,
+              3
+            ]
+          ],
+          "p*": [
+            0.1,
+            0.2
+          ]
+        },
+        "stdout_contains": [
+          "{'NLL': 12.5, 'mu_normal': 0.4, 'mu_tumors': [0.6], 'C': [[2, 3]], 'p*': [0.1, 0.2]}"
+        ],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "d_multi_tumor",
+      "description": "Multi-tumor input: verify correct parsing of two tumors with nested lists for C and p*.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_59_M3_d_01",
+      "axis": "D",
+      "semantic_intent": "Verify that the function correctly parses a file with two tumors, returning nested lists for C and p*.",
+      "target_constraint": "The function must handle mu with three values (mu_normal, two tumors), C colon-separated groups each containing comma-separated copies, and p* similarly structured.",
+      "expected_failure_mode": "A naive parser that treats all fields as flat lists would produce incorrect output or crash.",
+      "setup_code": "sample = (\n    \"NLL\\tmu\\tC\\tp*\\n\"\n    \"12.5\\t0.4,0.3,0.3\\t2,4:3,5\\t0.1,0.3:0.2,0.4\\n\"\n)\nfname = \"theta_multi.txt\"\nwith open(fname, \"w\") as f:\n    f.write(sample)",
+      "call_code": "result = parse_theta_results(fname)\nprint(result)\nos.remove(fname)",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must test single and multi-tumor inputs."
+      ],
+      "expected_output_signature": {
+        "return_value": {
+          "NLL": 12.5,
+          "mu_normal": 0.4,
+          "mu_tumors": [
+            0.3,
+            0.3
+          ],
+          "C": [
+            [
+              2,
+              3
+            ],
+            [
+              4,
+              5
+            ]
+          ],
+          "p*": [
+            [
+              0.1,
+              0.2
+            ],
+            [
+              0.3,
+              0.4
+            ]
+          ]
+        },
+        "stdout_contains": [
+          "{'NLL': 12.5, 'mu_normal': 0.4, 'mu_tumors': [0.3, 0.3], 'C': [[2, 3], [4, 5]], 'p*': [[0.1, 0.2], [0.3, 0.4]]}"
+        ],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "c_mismatch",
+      "description": "Mismatch between number of tumors and C groups should raise ValueError.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_59_M3_c_02",
+      "axis": "C",
+      "semantic_intent": "Verify that the function raises ValueError when number of tumor fractions does not match number of colon-separated groups in C and p*.",
+      "target_constraint": "The function must validate that len(mu_tumors) equals number of tumor copy number pairs derived from C structure.",
+      "expected_failure_mode": "A function without validation would parse mismatched input without error, producing incorrect output.",
+      "setup_code": "sample = \"NLL\\tmu\\tC\\tp*\\n12.5\\t0.4,0.6,0.3\\t2:3\\t0.1,0.2\\n\"\nfname = \"theta_bad.txt\"\nwith open(fname, \"w\") as f:\n    f.write(sample)",
+      "call_code": "try:\n    result = parse_theta_results(fname)\n    print(\"Should have raised ValueError\")\nexcept ValueError:\n    print(\"ValueError raised as expected\")\nos.remove(fname)",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must include at least one case that triggers the validation error."
+      ],
+      "expected_output_signature": {
+        "stdout_contains": [
+          "ValueError raised as expected"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

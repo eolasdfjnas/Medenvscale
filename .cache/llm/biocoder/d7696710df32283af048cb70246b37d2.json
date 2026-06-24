@@ -1,0 +1,36 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Comprehensive scaled test covering string coefficients, negative coefficients, duplicate compounds, and missing charge resulting in NaN.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_502_M4_d_01,env_medagentgym_train_502_M4_c_02,env_medagentgym_train_502_M4_a_03,env_medagentgym_train_502_M4_v_04",
+      "axis": "D,C,A,V",
+      "semantic_intent": "Verify that the reaction_charge function correctly handles string coefficients, negative coefficients, duplicate compounds, and missing charge (NaN).",
+      "target_constraint": "Coefficients may be strings, negative, or duplicate; missing charges must yield NaN.",
+      "expected_failure_mode": "A solution that treats coefficients as integers only, assumes positive coefficients, deduplicates compounds, or defaults missing charges to zero will fail at least one test.",
+      "setup_code": "h_plus = Compound('H+')\noh_minus = Compound('OH-')",
+      "call_code": "# Test 1: string coefficients\nr_string = Reaction([(h_plus, '2'), (oh_minus, '1')])\ncharge_dict = {'H+': 1.0, 'OH-': -1.0}\nres1 = reaction_charge(r_string, charge_dict)\nprint(f\"String test: {res1}\")\n\n# Test 2: negative coefficients\nr_neg = Reaction([(h_plus, -1), (oh_minus, 1)])\nres2 = reaction_charge(r_neg, charge_dict)\nprint(f\"Negative test: {res2}\")\n\n# Test 3: duplicate compounds\nr_dup = Reaction([(h_plus, 1), (h_plus, 1)])\ncharge_dict_single = {'H+': 1.0}\nres3 = reaction_charge(r_dup, charge_dict_single)\nprint(f\"Duplicate test: {res3}\")\n\n# Test 4: missing charge\nr_miss = Reaction([(h_plus, 1), (oh_minus, 1)])\ncharge_dict_miss = {'H+': 1.0}\nres4 = reaction_charge(r_miss, charge_dict_miss)\nprint(f\"Missing test: {res4}\")\n\nresult = None",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must include a test with string coefficients.",
+        "Scaled executable cases must include a test with negative coefficients.",
+        "Scaled executable cases must include a test with duplicate compounds.",
+        "Scaled executable cases must include a test for missing charge resulting in NaN."
+      ],
+      "expected_output_signature": {
+        "return_type": null,
+        "return_keys": [],
+        "return_value": null,
+        "stdout_contains": [
+          "String test: 1.0",
+          "Negative test: -2.0",
+          "Duplicate test: 2.0",
+          "Missing test: nan"
+        ],
+        "stdout_regex": [],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

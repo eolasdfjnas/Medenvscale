@@ -1,0 +1,63 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main_v2",
+      "description": "Scaled TMFA problem with expanded model (5 reactions, 3 compounds), flux lower bound clamping for irreversible reactions, sorting, and verification checks.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_388_M4_d_01,env_medagentgym_train_388_M4_c_02,env_medagentgym_train_388_M4_v_04",
+      "axis": "D,C,V",
+      "semantic_intent": "Verify that the function handles a larger model with sorted reactions and compounds, clamps negative flux lower bounds to zero, and passes verification checks.",
+      "target_constraint": "The function must process all reactions and compounds in alphabetical order; for reactions with negative lower bound, set it to 0; reactions must have bounds defined; the output should include all variables and constraints correctly.",
+      "expected_failure_mode": "Without sorting, the variable keys may appear in insertion order. Without clamping, negative bounds persist. Without missing bounds check, the function may fail with KeyError instead of ValueError.",
+      "setup_code": "model = MetabolicModel()\nmodel.reactions = ['R1', 'R2', 'R3', 'R4', 'R5']\nmodel.limits = {'R1': (-10, 100), 'R2': (0, 50), 'R3': (-5, 20), 'R4': (10, 200), 'R5': (-100, -10)}\nmodel.compounds = ['A', 'B', 'C']\nmodel.matrix = {\n    ('A', 'R1'): -1, ('B', 'R1'): 1, ('C', 'R1'): 0,\n    ('A', 'R2'): 2, ('B', 'R2'): -2, ('C', 'R2'): 0,\n    ('A', 'R3'): 0, ('B', 'R3'): -1, ('C', 'R3'): 1,\n    ('A', 'R4'): 1, ('B', 'R4'): 0, ('C', 'R4'): -1,\n    ('A', 'R5'): -1, ('B', 'R5'): 2, ('C', 'R5'): -2\n}\nmodel.extra_attribute = 'ignore_me'\nsolver = Solver('glpk')",
+      "call_code": "prob, v, zi, dgri, xij, compounds = make_tmfa_problem(model, solver)\nprint(\"Namespaces:\", list(prob.namespaces.keys()))\nprint(\"Flux vars:\", v.vars)\nprint(\"Binary vars:\", zi.vars)\nprint(\"Gibbs vars:\", dgri.vars)\nprint(\"Concentration vars:\", xij.vars)\nprint(\"Compounds:\", compounds)\nresult = {'prob': prob, 'v': v, 'zi': zi, 'dgri': dgri, 'xij': xij, 'compounds': compounds}",
+      "assertion_code": "assert len(v.vars) == 5\nassert len(zi.vars) == 5\nassert len(dgri.vars) == 5\nassert len(xij.vars) == 3\nassert len(prob.constraints) == 3\n# Check clamping\nassert v.vars[('R1',)]['lower'] == 0\nassert v.vars[('R3',)]['lower'] == 0\nassert v.vars[('R5',)]['lower'] == 0\nassert v.vars[('R2',)]['lower'] == 0\nassert v.vars[('R4',)]['lower'] == 10\n# Check that keys are in alphabetical order\nassert list(v.vars.keys()) == [('R1',), ('R2',), ('R3',), ('R4',), ('R5',)]\nassert [k[0] for k in zi.vars.keys()] == ['R1','R2','R3','R4','R5']\nassert [k[0] for k in dgri.vars.keys()] == ['R1','R2','R3','R4','R5']\nassert [k[0] for k in xij.vars.keys()] == ['A','B','C']",
+      "covered_requirements": [
+        "Increase data complexity by enlarging the model and adding extra attributes that the function should ignore.",
+        "Add constraint that irreversible reactions must have non-negative lower bound for flux variable.",
+        "Add multiple executable test cases covering normal, edge, and adversarial scenarios to strengthen verification."
+      ],
+      "expected_output_signature": {
+        "return_type": null,
+        "return_keys": null,
+        "return_value": null,
+        "stdout_contains": [
+          "Namespaces: ['flux', 'zi', 'dgri', 'xij']",
+          "Flux vars: {('R1',): {'lower': 0, 'upper': 100, 'type': 'Continuous'}, ('R2',): {'lower': 0, 'upper': 50, 'type': 'Continuous'}, ('R3',): {'lower': 0, 'upper': 20, 'type': 'Continuous'}, ('R4',): {'lower': 10, 'upper': 200, 'type': 'Continuous'}, ('R5',): {'lower': 0, 'upper': -10, 'type': 'Continuous'}}",
+          "Binary vars: {('R1',): {'lower': 0, 'upper': 1, 'type': 'Binary'}, ('R2',): {'lower': 0, 'upper': 1, 'type': 'Binary'}, ('R3',): {'lower': 0, 'upper': 1, 'type': 'Binary'}, ('R4',): {'lower': 0, 'upper': 1, 'type': 'Binary'}, ('R5',): {'lower': 0, 'upper': 1, 'type': 'Binary'}}",
+          "Gibbs vars: {('R1',): {'lower': -1000, 'upper': 1000, 'type': 'Continuous'}, ('R2',): {'lower': -1000, 'upper': 1000, 'type': 'Continuous'}, ('R3',): {'lower': -1000, 'upper': 1000, 'type': 'Continuous'}, ('R4',): {'lower': -1000, 'upper': 1000, 'type': 'Continuous'}, ('R5',): {'lower': -1000, 'upper': 1000, 'type': 'Continuous'}}",
+          "Concentration vars: {('A',): {'lower': -50, 'upper': 50, 'type': 'Continuous'}, ('B',): {'lower': -50, 'upper': 50, 'type': 'Continuous'}, ('C',): {'lower': -50, 'upper': 50, 'type': 'Continuous'}}",
+          "Compounds: ['A', 'B', 'C']"
+        ],
+        "stdout_regex": [],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "scaled_case_missing_bounds",
+      "description": "Test that the function raises ValueError when a reaction is missing bounds.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_388_M4_a_03",
+      "axis": "A",
+      "semantic_intent": "Verify that the function raises ValueError if any reaction lacks bounds in mm_irreversible.limits.",
+      "target_constraint": "The function must raise ValueError when a reaction in mm_irreversible.reactions is not present in mm_irreversible.limits.",
+      "expected_failure_mode": "Without the check, the function may proceed with KeyError or use a default value, violating the robust contract.",
+      "setup_code": "model = MetabolicModel()\ndel model.limits['R1']\nsolver = Solver('glpk')",
+      "call_code": "try:\n    make_tmfa_problem(model, solver)\n    result = {'error': False}\nexcept ValueError:\n    result = {'error': True}",
+      "assertion_code": "assert result['error'] == True",
+      "covered_requirements": [
+        "Ensure the function raises an error when a reaction is missing bounds."
+      ],
+      "expected_output_signature": {
+        "return_type": null,
+        "return_keys": null,
+        "return_value": {
+          "error": true
+        },
+        "stdout_contains": [],
+        "stdout_regex": [],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

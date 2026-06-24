@@ -1,0 +1,10 @@
+{
+  "primary_axis_weight_hint": {
+    "D": 2,
+    "C": 5,
+    "A": 4,
+    "V": 3
+  },
+  "secondary_axis_weight_hints": [],
+  "axis_weight_reason": "Primary task type is code_validation_and_utility, with axis priority C > A > V > D. C (correctness) is most important for validation, followed by A (accuracy), V (verbosity), and D (density) least relevant."
+}

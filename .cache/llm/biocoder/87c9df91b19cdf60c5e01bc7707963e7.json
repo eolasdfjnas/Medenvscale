@@ -1,0 +1,38 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_main_combined",
+      "description": "Combined scaled oracle case covering separator in fields, bytes input, validation constraints, and output order.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_879_M3_d_01,env_medagentgym_train_879_M3_d_02,env_medagentgym_train_879_M3_c_03,env_medagentgym_train_879_M3_c_04",
+      "axis": "D,C",
+      "semantic_intent": "Verify that the function correctly handles separator in fields, bytes input, validation constraints, and output order.",
+      "target_constraint": "The function must use rsplit with maxsplit=2, accept bytes, validate UMI and CB formats, and return (UMI_bytes, CB_bytes) in that order.",
+      "expected_failure_mode": "If any of these constraints are violated, the function will produce wrong results or fail.",
+      "setup_code": "",
+      "call_code": "# Test 1: Basic valid string\numi1, cb1 = get_cell_umi_read_string('NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB10123_UMIACTGGA', '_')\nprint(\"Basic test - UMI:\", umi1, \"CB:\", cb1)\n\n# Test 2: Separator in fields\nread_id_sep = 'NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB_10123_UMI_ACTGGA'\numi2, cb2 = get_cell_umi_read_string(read_id_sep, '_')\nprint(\"Sep in fields - UMI:\", umi2, \"CB:\", cb2)\n\n# Test 3: Bytes input\nread_id_bytes = b'NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB10123_UMIACTGGA'\numi3, cb3 = get_cell_umi_read_string(read_id_bytes, '_')\nprint(\"Bytes input - UMI:\", umi3, \"CB:\", cb3)\n\n# Test 4: Invalid UMI (contains X)\ntry:\n    get_cell_umi_read_string('NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB10123_UMIACTGX', '_')\nexcept ValueError as e:\n    print(\"Invalid UMI error:\", e)\n\n# Test 5: Invalid cell barcode (too short)\ntry:\n    get_cell_umi_read_string('NB551068:51:H3JTYBGXX:1:11101:10000:1001_AB_UMIACTGGA', '_')\nexcept ValueError as e:\n    print(\"Invalid CB error:\", e)\n\n# Test 6: Order check - explicitly verify order\nresult = get_cell_umi_read_string('NB551068:51:H3JTYBGXX:1:11101:10000:1001_CB10123_UMIACTGGA', '_')\nassert result[0] == b'UMIACTGGA' and result[1] == b'CB10123', f\"Order wrong: {result}\"\nprint(\"Order check passed\")",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must include at least one test where separator appears within the last two fields.",
+        "Scaled executable cases must include at least one test with bytes input.",
+        "Scaled executable cases must include tests for invalid UMI and invalid cell barcode (e.g., too short, invalid characters).",
+        "Scaled executable cases must include a test that explicitly checks the order of the returned tuple."
+      ],
+      "expected_output_signature": {
+        "return_type": null,
+        "return_keys": null,
+        "return_value": null,
+        "stdout_contains": [
+          "Basic test - UMI: b'UMIACTGGA' CB: b'CB10123'",
+          "Sep in fields - UMI: b'UMI_ACTGGA' CB: b'CB_10123'",
+          "Bytes input - UMI: b'UMIACTGGA' CB: b'CB10123'",
+          "Invalid UMI error: Invalid UMI: UMIACTGX",
+          "Invalid CB error: Invalid cell barcode: AB",
+          "Order check passed"
+        ],
+        "stdout_regex": [],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

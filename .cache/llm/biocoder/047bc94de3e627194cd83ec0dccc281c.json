@@ -1,0 +1,62 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Main transformed seed case: verifies sequence count logging and correct command construction with no duplicate flags (params do not contain mandatory flags).",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_838_M3_d_01,env_medagentgym_train_838_M3_a_02",
+      "axis": "D,A",
+      "semantic_intent": "The function must log the number of sequences in the input FASTA file and not duplicate mandatory flags when not in params.",
+      "target_constraint": "Given a FASTA file with 2 sequences and params that do not contain mandatory flags, the command must include '--is-worker-thread' and '--keep-tmp-files' exactly once each, and the debug log (captured on stderr) must contain 'Number of sequences in test_sequences.fasta: 2'.",
+      "expected_failure_mode": "The function either does not log the sequence count, logs an incorrect count, or adds duplicate mandatory flags (though not triggered here), or fails to include mandatory flags.",
+      "setup_code": "import logging\nimport io\nimport sys\nfrom contextlib import redirect_stderr\nlogging.basicConfig(level=logging.DEBUG, stream=sys.stderr, force=True)\ninput_fp = 'test_sequences.fasta'\nwith open(input_fp, 'w') as f:\n    f.write(\">seq1\\nACTG\\n>seq2\\nTGCA\\n\")\nparams = ['--min-size', '50']",
+      "call_code": "stderr_capture = io.StringIO()\nwith redirect_stderr(stderr_capture):\n    stdout, stderr_func, returncode = deblur_system_call(params, input_fp)\nresult = {\n    'stdout': stdout,\n    'stderr_func': stderr_func,\n    'returncode': returncode,\n    'captured_stderr': stderr_capture.getvalue()\n}",
+      "assertion_code": "assert 'Number of sequences in test_sequences.fasta: 2' in result['captured_stderr'], \"Sequence count not logged\"",
+      "covered_requirements": [
+        "Scaled executable cases must verify that the sequence count is logged in stderr.",
+        "Scaled executable cases must verify that mandatory flags are not duplicated."
+      ],
+      "expected_output_signature": {
+        "return_type": null,
+        "return_keys": null,
+        "return_value": {
+          "stdout": "Executed command: ['deblur', 'workflow', '--seqs-fp', 'test_sequences.fasta', '--is-worker-thread', '--keep-tmp-files', '--min-size', '50']",
+          "stderr_func": "",
+          "returncode": 0
+        },
+        "stdout_contains": [],
+        "stdout_regex": [],
+        "file_artifacts": []
+      }
+    },
+    {
+      "case_id": "scaled_coverage_dup_flag",
+      "description": "Coverage extension for duplicate flag avoidance: params contains '--is-worker-thread', so function must not add it again. Also verifies sequence count logging.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_838_M3_a_02,env_medagentgym_train_838_M3_d_01",
+      "axis": "A,D",
+      "semantic_intent": "The function must not duplicate mandatory flags when they are already present in params, and still log the sequence count.",
+      "target_constraint": "Given a FASTA file with 3 sequences and params that already contain '--is-worker-thread', the final command must contain '--is-worker-thread' exactly once (not twice), and the debug log must contain 'Number of sequences in test_three.fasta: 3'.",
+      "expected_failure_mode": "The function adds duplicate mandatory flags (e.g., command has two '--is-worker-thread') or does not log the sequence count.",
+      "setup_code": "import logging\nimport io\nimport sys\nfrom contextlib import redirect_stderr\nlogging.basicConfig(level=logging.DEBUG, stream=sys.stderr, force=True)\ninput_fp = 'test_three.fasta'\nwith open(input_fp, 'w') as f:\n    f.write(\">seq1\\nAAAA\\n>seq2\\nCCCC\\n>seq3\\nGGGG\\n\")\nparams = ['--min-size', '50', '--is-worker-thread']",
+      "call_code": "stderr_capture = io.StringIO()\nwith redirect_stderr(stderr_capture):\n    stdout, stderr_func, returncode = deblur_system_call(params, input_fp)\nresult = {\n    'stdout': stdout,\n    'stderr_func': stderr_func,\n    'returncode': returncode,\n    'captured_stderr': stderr_capture.getvalue()\n}",
+      "assertion_code": "import ast\nassert 'Number of sequences in test_three.fasta: 3' in result['captured_stderr'], \"Sequence count not logged\"\n# Parse command string to list and count occurrences\ncommand_str = result['stdout'].replace('Executed command: ', '')\ncommand_list = ast.literal_eval(command_str)\ncount = command_list.count('--is-worker-thread')\nassert count == 1, f\"Expected 1 occurrence of --is-worker-thread, got {count}\"",
+      "covered_requirements": [
+        "Scaled executable cases must verify that mandatory flags are not duplicated.",
+        "Scaled executable cases must verify that the sequence count is logged in stderr."
+      ],
+      "expected_output_signature": {
+        "return_type": null,
+        "return_keys": null,
+        "return_value": {
+          "stdout": "Executed command: ['deblur', 'workflow', '--seqs-fp', 'test_three.fasta', '--keep-tmp-files', '--min-size', '50', '--is-worker-thread']",
+          "stderr_func": "",
+          "returncode": 0
+        },
+        "stdout_contains": [],
+        "stdout_regex": [],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_compression",
+      "description": "Test untar_file with a compressed .tar.gz archive, verifying correct extraction using auto-detection.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_255_M2_c_01",
+      "axis": "C",
+      "semantic_intent": "Verify that untar_file correctly extracts a .tar.gz archive using auto-detection of compression.",
+      "target_constraint": "The function must use the correct tar flag (-xzf) for .tar.gz archives and extract without error.",
+      "expected_failure_mode": "A naive solution that always uses '-xf' or ignores compression would fail to extract (subprocess may return non-zero) or extract garbage.",
+      "setup_code": "",
+      "call_code": "with tempfile.TemporaryDirectory() as tmp_dir:\n    # Create a source directory with a file\n    source_dir = os.path.join(tmp_dir, 'source')\n    os.mkdir(source_dir)\n    test_file = os.path.join(source_dir, 'hello.txt')\n    with open(test_file, 'w') as f:\n        f.write('Hello, world!')\n\n    # Create a compressed tar archive (.tar.gz)\n    tar_path = os.path.join(tmp_dir, 'archive.tar.gz')\n    with tarfile.open(tar_path, 'w:gz') as tar:\n        tar.add(source_dir, arcname='source')\n\n    # Prepare the extraction directory\n    extract_dir = os.path.join(tmp_dir, 'dest')\n    os.mkdir(extract_dir)\n\n    # Call the solution here to extract\n    untar_file(extract_dir, tar_path)\n\n    # Verify extraction\n    extracted_file = os.path.join(extract_dir, 'source', 'hello.txt')\n    assert os.path.isfile(extracted_file), 'File was not extracted correctly.'\n    print('Extraction succeeded:', open(extracted_file).read())\nresult = None",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Add requirement to handle compressed tar archives (e.g., .tar.gz, .tar.bz2) by detecting the file extension or via an optional 'compression' parameter, and set the correct tar flags accordingly."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [
+          "Extraction succeeded: Hello, world!"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "scaled_executable_gold_code": "def mapRow(this_row, header_dict, precursors_mapping, sequences_mapping, protein_mapping):\n    # Normalize header keys by stripping whitespace\n    norm_header = {k.strip(): v for k, v in header_dict.items()}\n    \n    if 'FullPeptideName' in norm_header:\n        peptide_name = this_row[norm_header['FullPeptideName']]\n        transitions = []\n        pr_transitions = []\n        if 'aggr_Fragment_Annotation' in norm_header:\n            raw = this_row[norm_header['aggr_Fragment_Annotation']]\n            transitions = [f for f in raw.split(';') if f != '']\n        if 'aggr_prec_Fragment_Annotation' in norm_header:\n            raw = this_row[norm_header['aggr_prec_Fragment_Annotation']]\n            pr_transitions = [f for f in raw.split(';') if f != '']\n        if len(transitions) == 0:\n            return\n        charge_state = '0'\n        if 'Charge' in norm_header:\n            charge_state = this_row[norm_header['Charge']]\n        if charge_state == 'NA' or charge_state == '':\n            charge_state = '0'\n        key = peptide_name + '/' + charge_state\n        prkey = peptide_name + '/' + charge_state + '_pr'\n        precursors_mapping[key] = transitions\n        precursors_mapping[prkey] = pr_transitions\n        # Avoid duplicates in sequences_mapping\n        mapped_precursors = sequences_mapping.get(peptide_name, [])\n        if key not in mapped_precursors:\n            mapped_precursors.append(key)\n        if prkey not in mapped_precursors:\n            mapped_precursors.append(prkey)\n        sequences_mapping[peptide_name] = mapped_precursors\n        if 'ProteinName' in norm_header:\n            protein_name = this_row[norm_header['ProteinName']]\n            tmp = protein_mapping.get(protein_name, [])\n            if peptide_name not in tmp:\n                tmp.append(peptide_name)\n            protein_mapping[protein_name] = tmp",
+  "repair_summary": "Fixed early return condition for empty fragment annotations by filtering out empty strings from the split, ensuring rows with no valid transitions are skipped. Also preserved whitespace stripping and duplicate prevention.",
+  "covered_operator_ids": [
+    "env_medagentgym_train_835_M4_d_01",
+    "env_medagentgym_train_835_M4_d_02",
+    "env_medagentgym_train_835_M4_c_03",
+    "env_medagentgym_train_835_M4_a_04"
+  ],
+  "covered_requirements": [
+    "Add a test case where optional columns are missing and verify no error occurs.",
+    "Add test cases with malformed data and verify correct handling.",
+    "Add a test case that calls mapRow twice with identical row and verifies uniqueness.",
+    "Add test case with whitespace in column names and verify correct parsing."
+  ],
+  "remaining_risks": []
+}

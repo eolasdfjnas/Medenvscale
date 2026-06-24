@@ -1,0 +1,23 @@
+{
+  "seed_execution_case": {
+    "case_id": "seed_case_main",
+    "description": "Replay the default Illumina error profile retrieval, printing and file saving as in the original main",
+    "setup_code": "import json\n\ndef get_default_error_profile():\n    \"\"\"Return the default error profile for deblurring\n    based on illumina run data\n    \"\"\"\n    error_dist = [1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, \n        0.001, 0.001, 0.0005]\n    return error_dist",
+    "call_code": "profile = get_default_error_profile()\nresult = profile\nprint(\"Default Illumina error profile:\", profile)\nassert isinstance(profile, list), \"Profile should be a list\"\nassert len(profile) == 12, \"Profile should contain 12 entries\"\nassert profile[0] == 1, \"First entry should be 1\"\nassert profile[-1] == 0.0005, \"Last entry should be 0.0005\"\nwith open(\"error_profile.json\", \"w\") as f:\n    json.dump(profile, f)\nprint(\"Profile saved successfully to error_profile.json\")",
+    "expected_output_signature": {
+      "return_value": null,
+      "stdout_contains": [
+        "Default Illumina error profile: [1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005]",
+        "Profile saved successfully to error_profile.json"
+      ],
+      "file_artifacts": [
+        {
+          "path": "error_profile.json"
+        }
+      ]
+    },
+    "extraction_method": "llm_reconstructed",
+    "validated_against_ground_truth": false,
+    "assumptions": []
+  }
+}

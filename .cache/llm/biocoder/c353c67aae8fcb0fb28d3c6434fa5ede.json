@@ -1,0 +1,37 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_multi_placeholder",
+      "description": "Test parsing of THetA results with multiple tumor fractions and placeholders in C and p*.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_59_M2_d_01,env_medagentgym_train_59_M2_d_02",
+      "axis": "D,D",
+      "semantic_intent": "Verify that the function correctly parses multi-tumor data with non-digit and alphabetic placeholders, producing None for missing values.",
+      "target_constraint": "For a file with 2 tumor fractions, 1 region, C with 'X', and p* with 'A', the output must have mu_tumors as [0.3,0.2], C as [[2, None]], and p* as [[0.1, None]].",
+      "expected_failure_mode": "A solution that does not handle multi-tumor parsing or placeholders may produce flat lists, raise exceptions, or incorrectly convert placeholders.",
+      "setup_code": "sample = (\n    \"NLL\\tmu\\tC\\tp*\\n\"\n    \"10.0\\t0.5,0.3,0.2\\t2,X\\t0.1,A\\n\"\n)\nfname = \"theta_multi_placeholder.txt\"\nwith open(fname, \"w\") as f:\n    f.write(sample)",
+      "call_code": "result = parse_theta_results(fname)\nprint(result)\nos.remove(fname)",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Introduce a file with multiple tumor fractions, requiring the parser to handle multi-sample C and p* lists.",
+        "Introduce placeholders (alphabetic in p*, non-digit in C) to test None conversion."
+      ],
+      "expected_output_signature": {
+        "return_type": "dict",
+        "return_keys": [
+          "NLL",
+          "mu_normal",
+          "mu_tumors",
+          "C",
+          "p*"
+        ],
+        "return_value": null,
+        "stdout_contains": [
+          "{'NLL': 10.0, 'mu_normal': 0.5, 'mu_tumors': [0.3, 0.2], 'C': [[2, None]], 'p*': [[0.1, None]]}"
+        ],
+        "stdout_regex": [],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

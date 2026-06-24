@@ -1,0 +1,207 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "scale_up_compartments_and_boundaries",
+      "operator_intensity": 1,
+      "transformation_goal": "Increase the number of compartments and compartment boundaries to test scalability and handling of larger input data.",
+      "rationale": "The seed task uses only two compartments and one boundary. A larger dataset (e.g., 10 compartments, 8 boundaries) increases data complexity without altering the core logic, and the gold solution should still work correctly.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {
+          "context_summary": "import logging\nclass Compartment:\n    def __init__(self, id):\n        self.id = id\nclass DummyMetabolicModel:\n    def __init__(self):\n        self.reactions = []\n    def add_reaction(self, rxn):\n        self.reactions.append(rxn)\nclass DummyNativeModel:\n    def __init__(self):\n        self.extracellular_compartment = 1\n        self.compartments = [\n            Compartment(1), Compartment(2), Compartment(3),\n            Compartment(4), Compartment(5), Compartment(6),\n            Compartment(7), Compartment(8), Compartment(9),\n            Compartment(10)\n        ]\n        self.compartment_boundaries = [\n            (1, 2), (2, 3), (3, 4), (4, 5),\n            (5, 6), (6, 7), (7, 8), (8, 9)\n        ]"
+        },
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {
+          "seed_execution_case": {
+            "case_id": "seed_case_main_scaled_D1",
+            "setup_code": "model = DummyNativeModel()",
+            "call_code": "extended_model, weights = create_extended_model(model)\nprint('Extended model reactions:', extended_model.reactions)\nprint('Weights:', weights)\nresult = {'extended_model': extended_model, 'weights': weights}",
+            "expected_output_signature": {
+              "return_value": {
+                "extended_model": "<__seed_case_runtime__.DummyMetabolicModel object at 0x7f10782fece0>",
+                "weights": {
+                  "1_db_rxn": 1,
+                  "2_db_rxn": 1,
+                  "3_db_rxn": 1,
+                  "4_db_rxn": 1,
+                  "5_db_rxn": 1,
+                  "6_db_rxn": 1,
+                  "7_db_rxn": 1,
+                  "8_db_rxn": 1,
+                  "9_db_rxn": 1,
+                  "10_db_rxn": 1,
+                  "1_2_tp": 1,
+                  "2_3_tp": 1,
+                  "3_4_tp": 1,
+                  "4_5_tp": 1,
+                  "5_6_tp": 1,
+                  "6_7_tp": 1,
+                  "7_8_tp": 1,
+                  "8_9_tp": 1,
+                  "1_ex": 1
+                }
+              },
+              "stdout_contains": [
+                "Extended model reactions: []",
+                "Weights: {'1_db_rxn': 1, '2_db_rxn': 1, '3_db_rxn': 1, '4_db_rxn': 1, '5_db_rxn': 1, '6_db_rxn': 1, '7_db_rxn': 1, '8_db_rxn': 1, '9_db_rxn': 1, '10_db_rxn': 1, '1_2_tp': 1, '2_3_tp': 1, '3_4_tp': 1, '4_5_tp': 1, '5_6_tp': 1, '6_7_tp': 1, '7_8_tp': 1, '8_9_tp': 1, '1_ex': 1}"
+              ],
+              "file_artifacts": []
+            }
+          }
+        },
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "D1_scale_compartments",
+          "semantic_intent": "Ensure the function correctly handles a large number of compartments and boundaries.",
+          "target_constraint": "The function must process all compartments and boundaries without errors, returning correct reaction IDs and default weight 1 for each.",
+          "expected_failure_mode": "If the function hardcodes limits or incorrectly iterates, it may miss reactions or produce wrong weights.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "10 compartments with 8 boundaries"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Run create_extended_model with a model having 10 compartments (IDs 1-10) and 8 boundaries. No custom penalties. Expect all database, exchange, and transport reactions with weight 1."
+        }
+      ],
+      "output_requirements": [
+        "The scaled case must generate weights for all compartments and boundaries with default penalties."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "D",
+      "operator_type": "add_non_existent_penalty_keys",
+      "operator_intensity": 1,
+      "transformation_goal": "Introduce penalty keys that do not correspond to any added reaction, testing the function's ability to handle extraneous data in the penalties dictionary.",
+      "rationale": "The penalties dict may contain keys for reactions not added (e.g., typos or obsolete IDs). The gold solution should ignore them or assign weight anyway, but this adds data complexity by having extraneous input.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {
+          "seed_execution_case": {
+            "case_id": "seed_case_main_scaled_D2",
+            "setup_code": "model = DummyNativeModel()",
+            "call_code": "extended_model, weights = create_extended_model(\n    model,\n    db_penalty=5,\n    ex_penalty=2,\n    tp_penalty=3,\n    penalties={\"c1_db_rxn\": 10, \"nonexistent_rxn\": 0, \"c2_db_rxn_typo\": 7}\n)\nprint('Extended model reactions:', extended_model.reactions)\nprint('Weights:', weights)\nresult = {'extended_model': extended_model, 'weights': weights}",
+            "expected_output_signature": {
+              "return_value": {
+                "extended_model": "<__seed_case_runtime__.DummyMetabolicModel object at 0x7f10782fece0>",
+                "weights": {
+                  "c1_db_rxn": 10,
+                  "c2_db_rxn": 5,
+                  "c1_e_tp": 3,
+                  "e_ex": 2,
+                  "nonexistent_rxn": 0,
+                  "c2_db_rxn_typo": 7
+                }
+              },
+              "stdout_contains": [
+                "Extended model reactions: []",
+                "Weights: {'c1_db_rxn': 10, 'c2_db_rxn': 5, 'c1_e_tp': 3, 'e_ex': 2, 'nonexistent_rxn': 0, 'c2_db_rxn_typo': 7}"
+              ],
+              "file_artifacts": []
+            }
+          }
+        },
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "D2_nonexistent_penalties",
+          "semantic_intent": "Check that the function does not crash or skip when penalties contain keys not in any added reaction sets.",
+          "target_constraint": "The function must include all penalty entries in the weights dict, even if the reaction ID wasn't added by helper functions.",
+          "expected_failure_mode": "If the function only assigns penalties to reactions that exist, the nonexistent keys would be missing from output.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "Penalties dict includes keys that will not be added (e.g., 'nonexistent_rxn')"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Run create_extended_model with penalties containing entries for 'nonexistent_rxn' and a typo 'c2_db_rxn_typo'. Expect these keys to appear in output weights with specified penalty."
+        }
+      ],
+      "output_requirements": [
+        "The scaled case must include the extraneous penalty keys in the output weights."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

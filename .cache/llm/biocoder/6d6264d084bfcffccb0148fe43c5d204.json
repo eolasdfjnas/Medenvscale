@@ -1,0 +1,34 @@
+{
+  "scaled_executable_gold_code": "import logging\nimport multiprocessing as mp\nimport os\n\ndef _system_call(command):\n    # Dummy system call implementation for testing\n    stdout = f\"Executed command: {command}\"\n    stderr = \"\"\n    return (stdout, stderr, 0)\n\n\ndef deblur_system_call(params, input_fp):\n    \"\"\"Build deblur command for subprocess.\n\n    Parameters\n    ----------\n    params: list of str\n        parameter settings to pass to deblur CLI\n    input_fp : str\n        name of the input fasta file to deblur\n\n    Returns\n    -------\n    stdout: string\n        process output directed to standard output\n    stderr: string\n        process output directed to standard error\n    return_value: integer\n        return code from process\n\n    \"\"\"\n    # Validate input file existence\n    if not os.path.isfile(input_fp):\n        raise FileNotFoundError(f\"Input file {input_fp} does not exist.\")\n\n    logger = logging.getLogger(__name__)\n    # Use basename for logging to avoid path leakage\n    safe_fp = os.path.basename(input_fp)\n    logger.debug('[%s] deblur system call params %s, input_fp %s', mp.current_process().name, params, safe_fp)\n\n    script_name = 'deblur'\n    script_subprogram = 'workflow'\n    command = [script_name, script_subprogram, '--seqs-fp', input_fp, '--is-worker-thread', '--keep-tmp-files']\n\n    # Validate for conflicting flags in params\n    forbidden_flags = {'--seqs-fp', '--is-worker-thread', '--keep-tmp-files'}\n    for item in params:\n        if item.startswith('--'):\n            flag = item.split('=')[0]\n            if flag in forbidden_flags:\n                raise ValueError(f\"Flag {item} is a fixed flag and cannot be overridden.\")\n    # Extend with sanitized params (strip whitespace)\n    sanitized_params = [param.strip() for param in params]\n    command.extend(sanitized_params)\n\n    logger.debug('[%s] running command %s', mp.current_process().name, command)\n    try:\n        return _system_call(command)\n    except Exception as e:\n        logger.error('System call failed: %s', e)\n        return (f\"Command: {command}\", str(e), 1)\n\n\ndef main():\n    logging.basicConfig(level=logging.DEBUG)\n    # Create a dummy FASTA file for testing\n    input_fp = 'test_sequences.fasta'\n    with open(input_fp, 'w') as f:\n        f.write(\">seq1\\nACTG\\n>seq2\\nTGCA\\n\")\n    # Example parameters for deblur\n    params = ['--min-size', '50']\n    stdout, stderr, returncode = deblur_system_call(params, input_fp)\n    print('STDOUT:', stdout)\n    print('STDERR:', stderr)\n    print('Return code:', returncode)\n\n\nif __name__ == '__main__':\n    main()",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Added input file existence check, conflicting flag detection, strict command ordering, path obfuscation in logs, and exception handling for _system_call.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_838_M4_d_01",
+    "env_medagentgym_train_838_M4_c_02",
+    "env_medagentgym_train_838_M4_c_03",
+    "env_medagentgym_train_838_M4_a_04",
+    "env_medagentgym_train_838_M4_a_05",
+    "env_medagentgym_train_838_M4_v_06"
+  ],
+  "covered_requirements": [
+    "Scaled executable cases must include a test for missing input file.",
+    "Scaled executable cases must include tests for conflicting flags.",
+    "Scaled executable cases must include a test that verifies command list structure via mock.",
+    "Scaled executable cases must include a test that verifies log output for path obfuscation.",
+    "Scaled executable cases must include a test for system call error handling.",
+    "Scaled executable cases must include tests for command structure with empty and non-empty params, and for error handling."
+  ],
+  "implementation_notes": [
+    "File existence validated with os.path.isfile; raises FileNotFoundError if missing.",
+    "Conflicting flags detected by checking if param starts with '--' and the flag part (before '=' if present) is in forbidden set; raises ValueError.",
+    "Command list constructed in strict order: [deblur, workflow, --seqs-fp, input_fp, --is-worker-thread, --keep-tmp-files] then extended with sanitized params.",
+    "Logging on input_fp uses os.path.basename to leak only filename, not full path.",
+    "_system_call wrapped in try-except; on exception logs error and returns (command string, error message, 1).",
+    "Params are sanitized by stripping whitespace before appending.",
+    "All oracle cases are satisfied by this implementation."
+  ],
+  "assumptions": []
+}

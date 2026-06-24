@@ -1,0 +1,28 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main_compression_and_dir_creation",
+      "description": "Verify untar_file extracts a .tar.gz archive and creates the target directory if it does not exist.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_255_M2_c_01",
+      "axis": "C",
+      "semantic_intent": "The function must detect .tar.gz extension and pass -z flag; must create the target directory if it does not exist.",
+      "target_constraint": "Automatic detection of compression formats (.tar.gz) and creation of target directory if it does not exist.",
+      "expected_failure_mode": "Old solution without compression detection would fail to extract .tar.gz and raise GenipeError; without directory creation, tar would fail if directory missing.",
+      "setup_code": "",
+      "call_code": "with tempfile.TemporaryDirectory() as tmp_dir:\n    # Create source directory with a file\n    source_dir = os.path.join(tmp_dir, 'source')\n    os.mkdir(source_dir)\n    test_file = os.path.join(source_dir, 'hello.txt')\n    with open(test_file, 'w') as f:\n        f.write('Hello, world!')\n\n    # Create a compressed tar archive (.tar.gz)\n    tar_path = os.path.join(tmp_dir, 'archive.tar.gz')\n    with tarfile.open(tar_path, 'w:gz') as tar:\n        tar.add(source_dir, arcname='source')\n\n    # Destination directory does NOT exist beforehand\n    dest_dir = os.path.join(tmp_dir, 'nonexistent_dest')\n\n    # Call the solution\n    untar_file(dest_dir, tar_path)\n\n    # Verify extraction succeeded\n    extracted_file = os.path.join(dest_dir, 'source', 'hello.txt')\n    assert os.path.isfile(extracted_file), 'File was not extracted correctly.'\n    print('Extraction succeeded:', open(extracted_file).read())\nresult = None",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Increase computation complexity by requiring automatic detection of compression formats (.tar.gz, .tar.bz2, .tgz, .tbz) and creation of the target directory if it does not exist.",
+        "Scaled executable cases must include at least one test for compressed tarball extraction and one test for automatic directory creation."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [
+          "Extraction succeeded: Hello, world!"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

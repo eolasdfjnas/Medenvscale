@@ -1,0 +1,59 @@
+domains:
+  scientific_software_engineering:
+    description: "科研软件工程、文件处理、报告生成、CLI、配置、通用 Python utility。"
+    examples:
+      - "LaTeX / Jinja2 report generation"
+      - "file path parsing"
+      - "configuration serialization"
+      - "CLI / subprocess helper"
+
+  bioinformatics_sequence_structure:
+    description: "生物序列、基因组数据、FASTA/FASTQ/BAM/VCF、PDB/蛋白结构。"
+    examples:
+      - "FASTA parsing"
+      - "genomic interval processing"
+      - "motif counting"
+      - "PDB chain / residue extraction"
+
+  biomedical_data_analysis:
+    description: "NumPy/Pandas/统计/矩阵/表格/生物医学图像与 mask 处理。"
+    examples:
+      - "DataFrame transformation"
+      - "array / matrix computation"
+      - "segmentation mask processing"
+      - "feature extraction"
+
+  systems_molecular_modeling:
+    description: "系统生物学、代谢网络、reaction/compound/flux、分子模拟、free energy。"
+    examples:
+      - "metabolic reaction analysis"
+      - "stoichiometry / flux processing"
+      - "BAR / MBAR free energy computation"
+      - "thermodynamic state processing"
+
+  omics_measurement_analysis:
+    description: "蛋白质组学、代谢组学、脂质组学、FDR、PSM、m/z、LC-MS、retention time。"
+    examples:
+      - "FDR calculation"
+      - "peptide-spectrum match processing"
+      - "retention time correction"
+      - "m/z range query"
+
+# task_types:
+#   - io_format_and_cli
+#   - structured_data_processing
+#   - numerical_computation
+#   - code_validation_and_utility
+task_types:
+  - io_format_and_cli
+  - structured_data_processing
+  - numerical_computation
+  - code_validation_and_utility
+
+solution_forms:
+  - function_definition
+  - function_body
+  - expression_completion
+  - statement_block_completion
+  - decorated_function_definition
+  - patch_or_bugfix

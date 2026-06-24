@@ -1,0 +1,112 @@
+m_level_budgets:
+  M1:
+    num_axes_range: [0, 0]
+    total_intensity_range: [0, 0]
+    per_axis_intensity_range: [0, 0]
+    require_all_axes: false
+    allow_adversarial: false
+    require_safety_gate: false
+    include_primary_top_k: 0
+    allowed_axes: []
+
+  M2:
+    num_axes_range: [1, 1]
+    total_intensity_range: [1, 2]
+    per_axis_intensity_range: [1, 2]
+    require_all_axes: false
+    allow_adversarial: false
+    require_safety_gate: false
+    include_primary_top_k: 0
+    allowed_axes: [D, C, A, V]
+
+  M3:
+    num_axes_range: [2, 2]
+    total_intensity_range: [2, 4]
+    per_axis_intensity_range: [1, 2]
+    require_all_axes: false
+    allow_adversarial: true
+    require_safety_gate: false
+    include_primary_top_k: 1
+    allowed_axes: [D, C, A, V]
+
+  M4:
+    num_axes_range: [3, 4]
+    total_intensity_range: [4, 7]
+    per_axis_intensity_range: [1, 3]
+    require_all_axes: false
+    allow_adversarial: true
+    require_safety_gate: true
+    include_primary_top_k: 2
+    allowed_axes: [D, C, A, V]
+
+tool_budget_bounds:
+  M1:
+    allowed_tool_count_range: [2, 3]
+    max_total_tool_calls_range: [2, 4]
+    max_calls_per_tool_upper: 2
+    allow_debug_tool: false
+    allow_external_resource_tools: false
+
+  M2:
+    allowed_tool_count_range: [1, 3]
+    max_total_tool_calls_range: [2, 5]
+    max_calls_per_tool_upper: 3
+    allow_debug_tool: false
+    allow_external_resource_tools: true
+
+  M3:
+    allowed_tool_count_range: [2, 5]
+    max_total_tool_calls_range: [4, 9]
+    max_calls_per_tool_upper: 4
+    allow_debug_tool: true
+    max_debug_calls_upper: 2
+    allow_external_resource_tools: true
+
+  M4:
+    allowed_tool_count_range: [3, 7]
+    max_total_tool_calls_range: [7, 14]
+    max_calls_per_tool_upper: 6
+    allow_debug_tool: true
+    max_debug_calls_upper: 4
+    allow_external_resource_tools: true
+
+stage06_tool_agent:
+  submit_final_code_excluded_from_total: true
+  max_turns_by_level:
+    M1: 7
+    M2: 7
+    M3: 9
+    M4: 12
+  per_level:
+    M1:
+      max_total_tool_calls: 6
+      max_calls_per_tool:
+        get_task_context: 1
+        read_resource_file: 2
+        validate_candidate_code: 2
+        run_custom_test: 2
+        submit_final_code: 1
+    M2:
+      max_total_tool_calls: 6
+      max_calls_per_tool:
+        get_task_context: 1
+        read_resource_file: 2
+        validate_candidate_code: 2
+        run_custom_test: 2
+        submit_final_code: 1
+    M3:
+      max_total_tool_calls: 9
+      max_calls_per_tool:
+        get_task_context: 1
+        read_resource_file: 3
+        validate_candidate_code: 2
+        run_custom_test: 4
+        submit_final_code: 1
+    M4:
+      max_total_tool_calls: 12
+      max_calls_per_tool:
+        get_task_context: 1
+        read_resource_file: 4
+        validate_candidate_code: 3
+        run_custom_test: 5
+        submit_final_code: 1

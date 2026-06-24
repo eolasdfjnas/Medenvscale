@@ -1,0 +1,402 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "add_input_complexity",
+      "operator_intensity": 1,
+      "transformation_goal": "Introduce input complexity by requiring the function to handle models with empty compartments or missing extracellular_compartment.",
+      "rationale": "The original seed task assumes a fixed model structure. Adding variants with missing or empty compartments tests the function's robustness to incomplete input data, which is a realistic scenario in metabolic modeling.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Write a function create_extended_model(model, db_penalty=None, ex_penalty=None, tp_penalty=None, penalties=None) that creates an extended metabolic model for gap-filling. The function should:\n- Create a metabolic model by calling model.create_metabolic_model().\n- Use add_all_database_reactions() to add database reactions for each compartment in model.compartments (if compartments exist).\n- Use add_all_exchange_reactions() to add artificial exchange reactions for model.extracellular_compartment (if defined).\n- Use add_all_transport_reactions() to add artificial transport reactions for each pair in model.compartment_boundaries (if boundaries exist).\n- Assign penalty weights to added reactions based on db_penalty, ex_penalty, tp_penalty (defaulting to 1 if None), and override with the penalties dict if provided.\n- Handle cases where model.compartments is empty, model.extracellular_compartment is None, or model.compartment_boundaries is empty gracefully (skip the corresponding addition step).\nReturn the extended model and the weights dictionary."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {
+          "gold_solution": "def create_extended_model(model, db_penalty=None, ex_penalty=None,\n    tp_penalty=None, penalties=None):\n    model_extended = model.create_metabolic_model()\n    extra_compartment = model.extracellular_compartment\n    compartment_ids = set(c.id for c in model.compartments) if hasattr(model, 'compartments') and model.compartments else set()\n    if compartment_ids:\n        logger.info('Using all database reactions in compartments: {}...'\n            .format(', '.join('{}'.format(c) for c in compartment_ids)))\n        db_added = add_all_database_reactions(model_extended, compartment_ids)\n    else:\n        logger.warning('No compartments specified; database reactions will not be used.')\n        db_added = set()\n    if extra_compartment is not None:\n        logger.info('Using artificial exchange reactions for compartment: {}...'\n            .format(extra_compartment))\n        ex_added = add_all_exchange_reactions(model_extended, extra_compartment,\n            allow_duplicates=False)\n    else:\n        logger.warning('No extracellular compartment; exchange reactions will not be used.')\n        ex_added = set()\n    boundaries = model.compartment_boundaries if hasattr(model, 'compartment_boundaries') and model.compartment_boundaries else []\n    if boundaries:\n        logger.info('Using artificial transport reactions for compartment boundaries: {}...'\n            .format('; '.join('{}<->{}'.format(c1,c2) for c1,c2 in boundaries)))\n        tp_added = add_all_transport_reactions(model_extended, boundaries,\n            allow_duplicates=True)\n    else:\n        logger.warning('No compartment boundaries; transport reactions will not be used.')\n        tp_added = set()\n    weights = {}\n    if db_penalty is not None:\n        weights.update((rxnid, db_penalty) for rxnid in db_added)\n    else:\n        weights.update((rxnid, 1) for rxnid in db_added)\n    if tp_penalty is not None:\n        weights.update((rxnid, tp_penalty) for rxnid in tp_added)\n    else:\n        weights.update((rxnid, 1) for rxnid in tp_added)\n    if ex_penalty is not None:\n        weights.update((rxnid, ex_penalty) for rxnid in ex_added)\n    else:\n        weights.update((rxnid, 1) for rxnid in ex_added)\n    if penalties is not None:\n        for rxnid, penalty in penalties.items():\n            weights[rxnid] = penalty\n    return model_extended, weights"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_1",
+          "semantic_intent": "Verify that the function handles models with empty compartments and missing extracellular_compartment gracefully.",
+          "target_constraint": "When model.compartments is empty and extracellular_compartment is None, the function should skip calling add_all_* functions for those aspects and return an empty weights dictionary for those categories.",
+          "expected_failure_mode": "Old seed behavior would attempt to iterate over empty compartments (harmless) and raise AttributeError if extracellular_compartment is None (since it logs info using format on None).",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": {
+              "model_class": "DummyNativeModel",
+              "model_attrs": {
+                "compartments": [],
+                "extracellular_compartment": null,
+                "compartment_boundaries": []
+              }
+            }
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Create a model instance with empty compartments, null extracellular_compartment, and empty boundaries. Call create_extended_model with default penalties. The extended model should have no reactions, and weights should be empty."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a case with empty compartments and null extracellular_compartment."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "add_computation_constraint",
+      "operator_intensity": 3,
+      "transformation_goal": "Increase computational constraints by requiring specific logging format, sorted weights output, and handling of duplicate boundaries.",
+      "rationale": "The original task has minimal constraints on logging and output order. Adding requirements for sorted output and precise logging makes the solution more robust and verifiable.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Write a function create_extended_model(model, db_penalty=None, ex_penalty=None, tp_penalty=None, penalties=None) that creates an extended metabolic model for gap-filling. The function should:\n- Create a metabolic model by calling model.create_metabolic_model().\n- Use add_all_database_reactions() to add database reactions for each compartment in model.compartments.\n- Use add_all_exchange_reactions() to add artificial exchange reactions for model.extracellular_compartment.\n- Use add_all_transport_reactions() to add artificial transport reactions for each pair in model.compartment_boundaries.\n- Assign penalty weights to added reactions based on db_penalty, ex_penalty, tp_penalty (defaulting to 1 if None), and override with the penalties dict if provided.\n- The function must log an info message for each addition step with the exact format: \"Using all database reactions in compartments: <compartment_ids>...\" (use comma+space separated ids), \"Using artificial exchange reactions for compartment: <compartment>...\", and \"Using artificial transport reactions for the compartment boundaries: <boundaries>...\" where boundaries are formatted as \"c1<->c2\". If compartments or boundaries are empty, log a warning message instead.\n- The weights dictionary must be returned with keys sorted in lexicographic order.\n- If model.compartment_boundaries contains duplicate pairs, each duplicate should still be added (allow_duplicates=True already used).\nReturn the extended model and the weights dictionary."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {
+          "gold_solution": "def create_extended_model(model, db_penalty=None, ex_penalty=None,\n    tp_penalty=None, penalties=None):\n    model_extended = model.create_metabolic_model()\n    extra_compartment = model.extracellular_compartment\n    compartment_ids = set(c.id for c in model.compartments)\n    if compartment_ids:\n        logger.info('Using all database reactions in compartments: {}...'\n            .format(', '.join(sorted(compartment_ids))))\n        db_added = add_all_database_reactions(model_extended, compartment_ids)\n    else:\n        logger.warning('No compartments specified in the model; database reactions will not be used! Add compartment specification to model to include database reactions for those compartments.')\n        db_added = set()\n    logger.info('Using artificial exchange reactions for compartment: {}...'\n        .format(extra_compartment))\n    ex_added = add_all_exchange_reactions(model_extended, extra_compartment,\n        allow_duplicates=False)\n    boundaries = model.compartment_boundaries\n    if boundaries:\n        logger.info('Using artificial transport reactions for the compartment boundaries: {}...'\n            .format('; '.join('{}<->{}'.format(c1,c2) for c1,c2 in boundaries)))\n        tp_added = add_all_transport_reactions(model_extended, boundaries,\n            allow_duplicates=True)\n    else:\n        logger.warning('No compartment boundaries specified in the model; artificial transport reactions will not be used!')\n        tp_added = set()\n    weights = {}\n    if db_penalty is not None:\n        weights.update((rxnid, db_penalty) for rxnid in db_added)\n    else:\n        weights.update((rxnid, 1) for rxnid in db_added)\n    if tp_penalty is not None:\n        weights.update((rxnid, tp_penalty) for rxnid in tp_added)\n    else:\n        weights.update((rxnid, 1) for rxnid in tp_added)\n    if ex_penalty is not None:\n        weights.update((rxnid, ex_penalty) for rxnid in ex_added)\n    else:\n        weights.update((rxnid, 1) for rxnid in ex_added)\n    if penalties is not None:\n        for rxnid, penalty in penalties.items():\n            weights[rxnid] = penalty\n    # Sort weights by key\n    weights = dict(sorted(weights.items()))\n    return model_extended, weights"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "Verify that the weights dictionary is returned sorted by key.",
+          "target_constraint": "The returned weights dictionary must have keys in lexicographic order.",
+          "expected_failure_mode": "Old seed behavior returns unsorted dictionary (but Python 3.7+ may preserve insertion order, but still not guaranteed sorted).",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": {
+              "penalties": {
+                "b": 1,
+                "a": 2
+              }
+            }
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Call create_extended_model with penalties dict that has out-of-order keys (b, a). The resulting weights should have keys in order a, b."
+        },
+        {
+          "spec_id": "task_c_spec_2",
+          "semantic_intent": "Verify that logging messages match the exact format.",
+          "target_constraint": "The function should log info messages exactly as specified.",
+          "expected_failure_mode": "Old seed behavior logs unsorted compartment ids and no warning for empty compartments.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "standard"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Check that the stdout contains the expected log messages in order."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must verify the sorted order of weights and exact log format."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "add_adversarial_robustness",
+      "operator_intensity": 2,
+      "transformation_goal": "Increase robustness by requiring the function to handle edge cases such as duplicate reaction IDs from add_all_* functions, empty penalties dict, and unexpected reaction ID formats without hardcoding.",
+      "rationale": "The original seed task assumes clean inputs. Adding adversarial cases like duplicate IDs or non-standard reaction names tests the function's ability to avoid hardcoded patterns and handle unexpected data.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Write a function create_extended_model(model, db_penalty=None, ex_penalty=None, tp_penalty=None, penalties=None) that creates an extended metabolic model for gap-filling. The function should:\n- Create a metabolic model by calling model.create_metabolic_model().\n- Use add_all_database_reactions() to add database reactions for each compartment in model.compartments.\n- Use add_all_exchange_reactions() to add artificial exchange reactions for model.extracellular_compartment.\n- Use add_all_transport_reactions() to add artificial transport reactions for each pair in model.compartment_boundaries.\n- Assign penalty weights to added reactions based on db_penalty, ex_penalty, tp_penalty (defaulting to 1 if None), and override with the penalties dict if provided.\n- The function must not assume any specific reaction ID pattern (e.g., it should not expect suffixes like '_db_rxn' or '_ex'). It must use the exact reaction IDs returned by the add_all_* functions.\n- If penalties dict contains keys that are not among the added reactions, those entries should be ignored (not added to weights).\n- The function must handle the case where add_all_* functions return non-set iterables (e.g., list or generator) without error.\nReturn the extended model and the weights dictionary."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {
+          "gold_solution": "def create_extended_model(model, db_penalty=None, ex_penalty=None,\n    tp_penalty=None, penalties=None):\n    model_extended = model.create_metabolic_model()\n    extra_compartment = model.extracellular_compartment\n    compartment_ids = set(c.id for c in model.compartments)\n    if compartment_ids:\n        logger.info('Using all database reactions in compartments: {}...'\n            .format(', '.join('{}'.format(c) for c in compartment_ids)))\n        db_added = set(add_all_database_reactions(model_extended, compartment_ids))\n    else:\n        logger.warning('No compartments specified; database reactions will not be used.')\n        db_added = set()\n    logger.info('Using artificial exchange reactions for compartment: {}...'\n        .format(extra_compartment))\n    ex_added = set(add_all_exchange_reactions(model_extended, extra_compartment,\n        allow_duplicates=False))\n    boundaries = model.compartment_boundaries\n    if boundaries:\n        logger.info('Using artificial transport reactions for compartment boundaries: {}...'\n            .format('; '.join('{}<->{}'.format(c1,c2) for c1,c2 in boundaries)))\n        tp_added = set(add_all_transport_reactions(model_extended, boundaries,\n            allow_duplicates=True))\n    else:\n        logger.warning('No compartment boundaries; transport reactions will not be used.')\n        tp_added = set()\n    all_added = db_added | ex_added | tp_added\n    weights = {}\n    if db_penalty is not None:\n        weights.update((rxnid, db_penalty) for rxnid in db_added)\n    else:\n        weights.update((rxnid, 1) for rxnid in db_added)\n    if tp_penalty is not None:\n        weights.update((rxnid, tp_penalty) for rxnid in tp_added)\n    else:\n        weights.update((rxnid, 1) for rxnid in tp_added)\n    if ex_penalty is not None:\n        weights.update((rxnid, ex_penalty) for rxnid in ex_added)\n    else:\n        weights.update((rxnid, 1) for rxnid in ex_added)\n    if penalties is not None:\n        for rxnid, penalty in penalties.items():\n            if rxnid in all_added:\n                weights[rxnid] = penalty\n    return model_extended, weights"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_a_spec_1",
+          "semantic_intent": "Verify that the function ignores penalty keys that do not correspond to any added reaction.",
+          "target_constraint": "Penalties dict keys that are not in the set of added reactions should be ignored.",
+          "expected_failure_mode": "Old seed behavior would add them anyway, resulting in extra entries in weights.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": {
+              "penalties": {
+                "nonexistent_rxn": 100
+              }
+            }
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Provide a penalties dict with a key that does not match any added reaction. The returned weights should not include that key."
+        },
+        {
+          "spec_id": "task_a_spec_2",
+          "semantic_intent": "Verify that the function works with non-set iterables from add_all_* functions (e.g., list) without hardcoding set.",
+          "target_constraint": "The function should convert the return values to set internally if needed, but must not assume they are sets.",
+          "expected_failure_mode": "If the function assumes set, it might break if the helper returns a list.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "custom_helpers_returning_list"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Override the helper functions to return lists instead of sets. The function should still work."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a case with non-matching penalty keys and helpers returning lists."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "V",
+      "operator_type": "strengthen_verifier",
+      "operator_intensity": 1,
+      "transformation_goal": "Strengthen the verifier by adding executable oracle cases that cover edge cases (empty structures, missing attributes) and adversarial cases (non-matching penalties, duplicate reactions).",
+      "rationale": "The original environment has limited oracle cases. Adding comprehensive test cases ensures the solution is validated against a wider range of scenarios, improving reliability.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {
+          "scaled_oracle_cases": []
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_id": "test_empty_compartments",
+            "test_type": "executable",
+            "description": "Model with empty compartments and no extracellular_compartment. Expected: empty extended model, empty weights.",
+            "input": {
+              "model": "DummyNativeModel",
+              "model_attrs": "compartments=[], extracellular_compartment=None, compartment_boundaries=[]"
+            },
+            "expected_stdout": "Extended model reactions: []\nWeights: {}\n",
+            "expected_stderr": "WARNING:...",
+            "expected_return": null
+          },
+          {
+            "test_id": "test_sorted_weights",
+            "test_type": "executable",
+            "description": "Verify that weights are sorted by key.",
+            "input": {
+              "model": "DummyNativeModel",
+              "db_penalty": 5,
+              "ex_penalty": 2,
+              "tp_penalty": 3,
+              "penalties": {
+                "z_rxn": 1,
+                "a_rxn": 2
+              }
+            },
+            "expected_stdout": "Extended model reactions: []\nWeights: {'a_rxn': 2, 'c1_db_rxn': 5, 'c1_e_tp': 3, 'c2_db_rxn': 5, 'e_ex': 2, 'z_rxn': 1}\n",
+            "expected_stderr": "INFO:...",
+            "expected_return": null
+          },
+          {
+            "test_id": "test_ignore_nonexistent_penalty",
+            "test_type": "executable",
+            "description": "Penalties dict includes a key not in added reactions; it should be ignored.",
+            "input": {
+              "model": "DummyNativeModel",
+              "penalties": {
+                "nonexistent": 100
+              }
+            },
+            "expected_stdout": "Extended model reactions: []\nWeights: {'c1_db_rxn': 1, 'c1_e_tp': 1, 'c2_db_rxn': 1, 'e_ex': 1}\n",
+            "expected_stderr": "INFO:...",
+            "expected_return": null
+          },
+          {
+            "test_id": "test_no_penalties",
+            "test_type": "executable",
+            "description": "All penalty parameters None, default to 1.",
+            "input": {
+              "model": "DummyNativeModel"
+            },
+            "expected_stdout": "Extended model reactions: []\nWeights: {'c1_db_rxn': 1, 'c1_e_tp': 1, 'c2_db_rxn': 1, 'e_ex': 1}\n",
+            "expected_stderr": "INFO:...",
+            "expected_return": null
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_v_spec_1",
+          "semantic_intent": "Verify that the function handles the baseline case correctly (standard model) and produces correct outputs.",
+          "target_constraint": "Baseline case must match expected stdout exactly.",
+          "expected_failure_mode": "Any deviation from expected output indicates bug.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "standard"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant"
+          },
+          "test_case_description": "Standard model from seed."
+        }
+      ],
+      "output_requirements": [
+        "At least four hidden tests covering edge cases and adversarial scenarios."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Verify that the label is drawn at exact y offset above chromosome and chromosome attributes unchanged.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_98_M3_c_01,env_medagentgym_train_98_M3_a_02",
+      "axis": "C,A",
+      "semantic_intent": "Combined constraint: label drawn at exact y offset (start_y_position + 0.1 inch) and monkeypatch function does not modify chromosome attributes.",
+      "target_constraint": "The label must be drawn at exact y offset (start_y_position + 0.1 inch) and chromosome attributes must remain unchanged.",
+      "expected_failure_mode": "Label drawn at wrong y coordinate (below or wrong offset) or chromosome attributes modified.",
+      "setup_code": "",
+      "call_code": "Chromosome._draw_label = bc_chromosome_draw_label\ndwg = Drawing(400, 100)\nchrom = Chromosome('Chr1')\nchrom.start_x_position = 50\nchrom.end_x_position   = 350\nchrom.start_y_position = 20\nchrom.title_size       = 14\nchrom._draw_label(dwg, 'Chromosome 1')\ndwg.save(formats=['svg'], outDir='.', fnRoot='test_chrom_label')\nprint('SVG saved as test_chrom_label.svg')\nresult = None",
+      "assertion_code": "# Check no side effects\nassert chrom.start_x_position == 50\nassert chrom.end_x_position == 350\nassert chrom.start_y_position == 20\nassert chrom.title_size == 14\n\n# Check exact y offset in SVG\nimport xml.etree.ElementTree as ET\ntree = ET.parse('test_chrom_label.svg')\nroot = tree.getroot()\nns = {'svg': 'http://www.w3.org/2000/svg'}\ntext_elems = root.findall('.//svg:text', ns)\nfound = False\nfor elem in text_elems:\n    if elem.text and 'Chromosome 1' in elem.text:\n        y = float(elem.get('y'))\n        # expected y = 20 + 0.1*72 = 27.2\n        assert abs(y - 27.2) < 0.1, f\"Label y coordinate {y} not within tolerance\"\n        found = True\n        break\nassert found, \"Label not found\"",
+      "covered_requirements": [
+        "Scaled executable cases must expose the exact y offset constraint introduced by this operator.",
+        "Scaled executable cases must expose the no-side-effect requirement introduced by this operator."
+      ],
+      "expected_output_signature": {
+        "stdout_contains": [
+          "SVG saved as test_chrom_label.svg"
+        ],
+        "file_artifacts": [
+          {
+            "path": "test_chrom_label.svg"
+          }
+        ]
+      }
+    }
+  ]
+}

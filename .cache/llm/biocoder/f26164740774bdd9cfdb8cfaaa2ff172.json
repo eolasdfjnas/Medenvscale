@@ -1,0 +1,23 @@
+{
+  "primary_domain": "systems_molecular_modeling",
+  "secondary_domains": [],
+  "primary_task_type": "numerical_computation",
+  "solution_form": "code_snippet",
+  "secondary_task_types": [
+    "code_validation_and_utility"
+  ],
+  "domain_concepts": [
+    "Bennett acceptance ratio",
+    "free energy difference",
+    "nonequilibrium work",
+    "uncertainty estimation"
+  ],
+  "required_capabilities": [
+    "understanding BAR method",
+    "numerical root-finding",
+    "data analysis"
+  ],
+  "verifier_type_hint": "functional_test",
+  "routing_reason": "The task involves computing free energy differences from simulation work measurements using BAR, a key method in molecular modeling and statistical mechanics.",
+  "confidence": 0.95
+}

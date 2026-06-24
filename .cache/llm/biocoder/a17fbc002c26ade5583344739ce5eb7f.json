@@ -1,0 +1,30 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_case_combined",
+      "description": "Test self_consistent_update with larger input size (8 states, 500 samples) and second call with different shape (3 states, 150 samples) using constant values to verify computational performance and multiple-call support.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_647_M2_c_01,env_medagentgym_train_647_M2_c_02",
+      "axis": "C",
+      "semantic_intent": "Verify that the function handles larger arrays and can be called multiple times with different input sizes without error.",
+      "target_constraint": "The function must process u_kn of shape (8, 500) and return array of length 8, and also process second call with shape (3, 150) returning array of length 3.",
+      "expected_failure_mode": "If the function assumes fixed input size or uses global state, it may produce wrong shape or error on second call.",
+      "setup_code": "# Use constant potential energies for deterministic expected output\nn_states1 = 8\nn_samples1 = 500\nu_kn1 = np.full((n_states1, n_samples1), 1.0)\nN_k1 = np.full(n_states1, n_samples1, dtype=int)\nf_k1 = np.zeros(n_states1)\nstates_with_samples1 = np.ones(n_states1, dtype=bool)\n\nn_states2 = 3\nn_samples2 = 150\nu_kn2 = np.full((n_states2, n_samples2), 2.0)\nN_k2 = np.full(n_states2, n_samples2, dtype=int)\nf_k2 = np.zeros(n_states2)\nstates_with_samples2 = np.ones(n_states2, dtype=bool)",
+      "call_code": "updated_f_k1 = self_consistent_update(u_kn1, N_k1, f_k1, states_with_samples1)\nprint(\"First update:\", updated_f_k1)\nupdated_f_k2 = self_consistent_update(u_kn2, N_k2, f_k2, states_with_samples2)\nprint(\"Second update:\", updated_f_k2)\nresult = (updated_f_k1, updated_f_k2)",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must expose the ability to handle larger input sizes.",
+        "Scaled executable cases must demonstrate the function's ability to be called multiple times with different inputs."
+      ],
+      "expected_output_signature": {
+        "return_type": "tuple",
+        "return_value": "((array([1., 1., 1., 1., 1., 1., 1., 1.]), array([2., 2., 2.])))",
+        "stdout_contains": [
+          "First update: [1. 1. 1. 1. 1. 1. 1. 1.]",
+          "Second update: [2. 2. 2.]"
+        ],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

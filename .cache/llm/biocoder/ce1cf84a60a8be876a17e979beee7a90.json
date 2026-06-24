@@ -1,0 +1,270 @@
+{
+  "operator_instances": [
+    {
+      "axis": "C",
+      "operator_type": "efficient_and_sorted_output",
+      "operator_intensity": 2,
+      "transformation_goal": "Require that the function counts frequencies efficiently (O(n)) and returns sorted output values.",
+      "rationale": "Increases computational complexity by imposing efficiency and ordering constraints.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "In a paired-end DNA sequencing pipeline, you have a list of observed fragment lengths for each read pair. You need to identify which fragment lengths are supported by at least 100 read pairs and do not lie more than 10 median absolute deviations above the median fragment length. The function should be efficient: use a single pass to count frequencies (e.g., using collections.Counter). The returned list of values must be sorted in ascending order. Do not use the list.count() method. Write a function compute_probs(datalist: list) -> (list, list) that returns the filtered fragment lengths (values) and their relative probabilities based on the counts of those lengths."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_name": "test_sorted_output",
+            "setup_code": "from collections import Counter\n",
+            "call_code": "datalist = [12]*100 + [8]*200 + [10]*150\nvalues, probs = compute_probs(datalist)\nassert values == sorted(values), 'Values must be sorted'\nexpected_values = [8, 10, 12]\ntotal = 450\nassert values == expected_values, f'Expected {expected_values}, got {values}'\nexpected_probs = [200/total, 150/total, 100/total]\nfor v, p in zip(probs, expected_probs):\n    assert abs(p - v) < 1e-5, f'Probability mismatch for {v}: expected {p}, got {v}'\nprint('test_sorted_output passed')",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [
+                "test_sorted_output passed"
+              ],
+              "file_artifacts": []
+            },
+            "extraction_method": "rule_based",
+            "validated_against_ground_truth": false
+          },
+          {
+            "test_name": "test_large_input_performance",
+            "setup_code": "import time\nfrom collections import Counter\n",
+            "call_code": "import random\nn = 100000\ndatalist = [random.randint(1, 100) for _ in range(n)]\nstart = time.time()\nvalues, probs = compute_probs(datalist)\nelapsed = time.time() - start\nassert elapsed < 1.0, f'Performance too slow: {elapsed}s'\nprint('Performance test passed')",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [
+                "Performance test passed"
+              ],
+              "file_artifacts": []
+            },
+            "extraction_method": "rule_based",
+            "validated_against_ground_truth": false
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "list.count() usage",
+          "output not sorted",
+          "inefficient counting"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "Verify that the function uses O(n) counting and returns sorted values.",
+          "target_constraint": "Efficient counting and sorted output.",
+          "expected_failure_mode": "Using list.count() (O(n^2)) or returning unsorted values.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "datalist = [12]*100 + [8]*200 + [10]*150"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant",
+            "values_sorted": true,
+            "probabilities_match": true
+          },
+          "test_case_description": "Large list with multiple fragment lengths; output must be sorted and probabilities correct."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the requirement for efficient counting and sorted output."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": false,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      },
+      "checks": [
+        "operator must not reveal gold solution",
+        "operator must modify state as specified"
+      ]
+    },
+    {
+      "axis": "A",
+      "operator_type": "robust_against_empty_and_negative",
+      "operator_intensity": 2,
+      "transformation_goal": "Ensure the function handles empty list and negative fragment lengths gracefully.",
+      "rationale": "Improves robustness by requiring defensive programming against invalid or empty inputs.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "In a paired-end DNA sequencing pipeline, you have a list of observed fragment lengths for each read pair. You need to identify which fragment lengths are supported by at least 100 read pairs and do not lie more than 10 median absolute deviations above the median fragment length. The function must handle the case when the input list is empty (return two empty lists) and when it contains non-positive fragment lengths (zero or negative) by ignoring them. The function should not raise any exceptions on these inputs. Write a function compute_probs(datalist: list) -> (list, list) that returns the filtered fragment lengths (values) and their relative probabilities based on the counts of those lengths."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_name": "test_empty_input",
+            "setup_code": "",
+            "call_code": "values, probs = compute_probs([])\nassert values == [], f'Expected empty list, got {values}'\nassert probs == [], f'Expected empty list, got {probs}'\nprint('test_empty_input passed')",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [
+                "test_empty_input passed"
+              ],
+              "file_artifacts": []
+            },
+            "extraction_method": "rule_based",
+            "validated_against_ground_truth": false
+          },
+          {
+            "test_name": "test_negative_values",
+            "setup_code": "",
+            "call_code": "datalist = [-5]*50 + [8]*100\nvalues, probs = compute_probs(datalist)\nexpected_values = [8]\nassert values == expected_values, f'Expected {expected_values}, got {values}'\nexpected_probs = [1.0]\nassert abs(probs[0] - 1.0) < 1e-5, f'Expected 1.0, got {probs[0]}'\nprint('test_negative_values passed')",
+            "expected_output_signature": {
+              "return_value": null,
+              "stdout_contains": [
+                "test_negative_values passed"
+              ],
+              "file_artifacts": []
+            },
+            "extraction_method": "rule_based",
+            "validated_against_ground_truth": false
+          }
+        ],
+        "exception_tests": [
+          {
+            "test_name": "test_no_exception_on_empty",
+            "setup_code": "",
+            "call_code": "try:\n    compute_probs([])\n    print('No exception')\nexcept:\n    print('Exception raised')\n",
+            "expected_output_signature": {
+              "stdout_contains": [
+                "No exception"
+              ],
+              "file_artifacts": []
+            }
+          },
+          {
+            "test_name": "test_no_exception_on_negative",
+            "setup_code": "",
+            "call_code": "try:\n    compute_probs([-1]*10 + [5]*100)\n    print('No exception')\nexcept:\n    print('Exception raised')\n",
+            "expected_output_signature": {
+              "stdout_contains": [
+                "No exception"
+              ],
+              "file_artifacts": []
+            }
+          }
+        ],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Crashing on empty input",
+          "Including negative values in computation"
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_a_spec_1",
+          "semantic_intent": "Verify that the function handles empty and negative inputs gracefully without exceptions and returns correct results.",
+          "target_constraint": "Robustness to empty list and non-positive values.",
+          "expected_failure_mode": "Function raises exception on empty list or includes negative values.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "datalist = []"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant",
+            "values": [],
+            "probs": []
+          },
+          "test_case_description": "Empty input should return empty lists."
+        },
+        {
+          "spec_id": "task_a_spec_2",
+          "semantic_intent": "Verify that the function ignores non-positive lengths and only considers positive ones.",
+          "target_constraint": "Robustness to negative and zero values.",
+          "expected_failure_mode": "Including negative values in calculation or crashing.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "datalist = [-5]*50 + [8]*100"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "data_variant",
+            "values": [
+              8
+            ],
+            "probs": [
+              1.0
+            ]
+          },
+          "test_case_description": "Negative values ignored; only positive fragments considered."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must expose the robustness requirements for empty and negative inputs."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": false,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      },
+      "checks": [
+        "operator must not reveal gold solution",
+        "operator must modify state as specified"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main_c01",
+      "description": "Verify that the label's vertical offset is proportional to font size (self.title_size * 0.01 inch) instead of a fixed constant.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_98_M2_c_01",
+      "axis": "C",
+      "semantic_intent": "The solution must compute the vertical offset as a function of font size, not a fixed constant.",
+      "target_constraint": "Offset = self.title_size * 0.01 inch",
+      "expected_failure_mode": "Using hardcoded offset (e.g., 0.1 inch) will fail the hidden SVG parsing check because the y-position will be off.",
+      "setup_code": "",
+      "call_code": "Chromosome._draw_label = bc_chromosome_draw_label\ndwg = Drawing(400, 100)\nchrom = Chromosome('Chr1')\nchrom.start_x_position = 50\nchrom.end_x_position   = 350\nchrom.start_y_position = 20\nchrom.title_size       = 14\nchrom._draw_label(dwg, 'Chromosome 1')\ndwg.save(formats=['svg'], outDir='.', fnRoot='test_chrom_label')\nprint('SVG saved as test_chrom_label.svg')\nresult = None",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Require the label's vertical offset to be proportional to the font size (self.title_size) instead of a fixed constant."
+      ],
+      "expected_output_signature": {
+        "return_value": null,
+        "stdout_contains": [
+          "SVG saved as test_chrom_label.svg"
+        ],
+        "file_artifacts": [
+          {
+            "path": "test_chrom_label.svg"
+          }
+        ]
+      }
+    }
+  ]
+}

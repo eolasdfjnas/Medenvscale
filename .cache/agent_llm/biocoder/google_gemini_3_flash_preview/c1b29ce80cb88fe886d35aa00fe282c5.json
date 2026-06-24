@@ -1,0 +1,26 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "tool_run_custom_test_wIi4rF9Y2LtIG6N0lqcP",
+      "function": {
+        "name": "run_custom_test",
+        "arguments": "{\"code\":\"\\ndef get_default_error_profile():\\n    # Deblur default error profile\\n    # Based on the Deblur paper/source code, the default profile is:\\n    # [1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005]\\n    return [1, 0.06, 0.02, 0.02, 0.01, 0.005, 0.005, 0.005, 0.001, 0.001, 0.001, 0.0005]\\n\\ndef main():\\n    profile = get_default_error_profile()\\n    print(\\\"Default Illumina error profile:\\\", profile)\\n    assert isinstance(profile, list), \\\"Profile should be a list\\\"\\n    assert len(profile) == 12, \\\"Profile should contain 12 entries\\\"\\n    assert profile[0] == 1, \\\"First entry should be 1\\\"\\n    assert profile[-1] == 0.0005, \\\"Last entry should be 0.0005\\\"\\n    print(\\\"Test passed!\\\")\\n\\nif __name__ == \\\"__main__\\\":\\n    main()\\n\",\"test_snippet\":\"main()\"}"
+      }
+    }
+  ],
+  "reasoning_details": [
+    {
+      "type": "reasoning.encrypted",
+      "data": "AY89a1/ltiTI6zI0Au0AnmrHh4ZdYuQig3GiWGE9mMIvcNl74vEV54xEJ5g4q194LRw=",
+      "format": "google-gemini-v1",
+      "id": "tool_run_custom_test_wIi4rF9Y2LtIG6N0lqcP",
+      "index": 0
+    }
+  ]
+}

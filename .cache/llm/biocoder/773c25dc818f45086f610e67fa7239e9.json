@@ -1,0 +1,25 @@
+{
+  "seed_execution_case": {
+    "case_id": "seed_case_main",
+    "description": "Replay the main demo of monkey-patched label drawing, producing an SVG file.",
+    "setup_code": "from Bio.Graphics import BasicChromosome as BC\nfrom Bio.Graphics.BasicChromosome import Chromosome\nfrom reportlab.graphics.shapes import Drawing\nfrom reportlab.lib.units import inch\n\ndef bc_chromosome_draw_label(self, cur_drawing, label_name):\n    x_position = 0.5 * (self.start_x_position + self.end_x_position)\n    y_position = self.start_y_position + 0.1 * inch\n    label_string = BC.String(x_position, y_position, label_name)\n    label_string.fontName = 'Times-BoldItalic'\n    label_string.fontSize = self.title_size\n    label_string.textAnchor = 'middle'\n    cur_drawing.add(label_string)",
+    "call_code": "Chromosome._draw_label = bc_chromosome_draw_label\ndwg = Drawing(400, 100)\nchrom = Chromosome('Chr1')\nchrom.start_x_position = 50\nchrom.end_x_position   = 350\nchrom.start_y_position = 20\nchrom.title_size       = 14\nchrom._draw_label(dwg, 'Chromosome 1')\ndwg.save(formats=['svg'], outDir='.', fnRoot='test_chrom_label')\nprint('SVG saved as test_chrom_label.svg')\nresult = None",
+    "expected_output_signature": {
+      "return_value": null,
+      "stdout_contains": [
+        "SVG saved as test_chrom_label.svg"
+      ],
+      "file_artifacts": [
+        {
+          "path": "test_chrom_label.svg"
+        }
+      ]
+    },
+    "extraction_method": "llm_reconstructed",
+    "validated_against_ground_truth": false,
+    "assumptions": [
+      "Biopython and reportlab packages are installed",
+      "No network access required"
+    ]
+  }
+}

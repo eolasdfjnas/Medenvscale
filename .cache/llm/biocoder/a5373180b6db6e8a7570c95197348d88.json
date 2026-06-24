@@ -1,0 +1,35 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Monkey-patch Chromosome._draw_label with file-based label, swapped coordinates, missing title_size, and font scaling.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_98_M4_d_01,env_medagentgym_train_98_M4_c_02,env_medagentgym_train_98_M4_a_03,env_medagentgym_train_98_M4_v_01",
+      "axis": "D,C,A,V",
+      "semantic_intent": "The solution must handle file-based label input, enforce centering and offset, scale font if needed, handle swapped coordinates, and handle missing title_size gracefully.",
+      "target_constraint": "Implementation must read label from file if label_name points to existing file; label must be centered at x=0.5*(start_x+end_x), y=start_y+0.1*inch; if label width exceeds chromosome width, reduce font size proportionally; if start_x > end_x, compute center correctly; if title_size missing, use default.",
+      "expected_failure_mode": "Seed solution would not read file, would not center correctly if coords swapped, would not scale font, would crash on missing title_size.",
+      "setup_code": "with open('label.txt', 'w') as f:\n    f.write('A' * 100)",
+      "call_code": "Chromosome._draw_label = bc_chromosome_draw_label\ndwg = Drawing(400, 100)\nchrom = Chromosome('Chr1')\nchrom.start_x_position = 350\nchrom.end_x_position   = 50\nchrom.start_y_position = 20\n# deliberately not setting title_size to test missing attribute\nchrom._draw_label(dwg, 'label.txt')\ndwg.save(formats=['svg'], outDir='.', fnRoot='test_chrom_label')\nprint('SVG saved as test_chrom_label.svg')\nresult = None",
+      "assertion_code": "import xml.etree.ElementTree as ET\nns = {'svg': 'http://www.w3.org/2000/svg'}\ntree = ET.parse('test_chrom_label.svg')\nroot = tree.getroot()\ntext_elem = root.find('.//svg:text', ns)\nassert text_elem is not None, 'No text element found'\nwith open('label.txt') as f:\n    expected_text = f.read()\nassert text_elem.text == expected_text, f'Text content mismatch: {text_elem.text} vs {expected_text}'\nx = float(text_elem.get('x'))\ny = float(text_elem.get('y'))\nexpected_x = 200.0\nexpected_y = 20 + 0.1 * 72\nassert abs(x - expected_x) < 0.01, f'x position {x} != {expected_x}'\nassert abs(y - expected_y) < 0.01, f'y position {y} != {expected_y}'\nfont_size = float(text_elem.get('font-size'))\nassert font_size < 12, f'Font size {font_size} not scaled down'\nassert font_size > 1, f'Font size {font_size} too small'",
+      "covered_requirements": [
+        "Scaled executable cases must include a test with a file-based label_name and verify the SVG content.",
+        "Scaled executable cases must include one test verifying centering and offset, and one test verifying font scaling for long labels.",
+        "Scaled executable cases must include a test with swapped coordinates and a test with missing title_size.",
+        "Scaled executable cases must provide stronger executable verification coverage for this operator."
+      ],
+      "expected_output_signature": {
+        "return_type": null,
+        "return_value": null,
+        "stdout_contains": [
+          "SVG saved as test_chrom_label.svg"
+        ],
+        "file_artifacts": [
+          {
+            "path": "test_chrom_label.svg"
+          }
+        ]
+      }
+    }
+  ]
+}

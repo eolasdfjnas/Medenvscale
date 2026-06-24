@@ -1,0 +1,16 @@
+{
+  "role": "assistant",
+  "content": "",
+  "reasoning_content": "Using `files` parameter works great for multipart form data without needing `requests_toolbelt`. The form fields are correctly sent as multipart/form-data.\n\nNow let me test the actual LipidMaps API to see if it works.",
+  "tool_calls": [
+    {
+      "index": 0,
+      "id": "call_00_MWalKPl8z9JAb9txe15Q6133",
+      "type": "function",
+      "function": {
+        "name": "run_custom_test",
+        "arguments": "{\"code\": \"import requests\\nimport pandas as pd\\nfrom io import StringIO\\n\\n# Test the actual LipidMaps API\\nurl = \\\"https://www.lipidmaps.org/rest/compound/mass_all\\\"\\nresponse = requests.post(url, files={\\n    'mz': (None, '100.0\\\\n200.0\\\\n300.0'),\\n    'tolerance': (None, '0.01'),\\n    'database': (None, 'GLYCOLIPIDS'),\\n    'adducts': (None, 'M+H,M+Na')\\n}, timeout=30)\\nprint(\\\"Status:\\\", response.status_code)\\nprint(\\\"Headers:\\\", dict(response.headers))\\nprint(\\\"Response text (first 1000 chars):\\\", response.text[:1000])\\n\", \"test_snippet\": \"\"}"
+      }
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+You are generating case-specific domain guidance for a medical difficulty-scaling pipeline.
+
+Primary domain:
+{{ primary_domain }}
+
+Secondary domains:
+{{ secondary_domains }}
+
+Primary task type:
+{{ primary_task_type }}
+
+Secondary task types:
+{{ secondary_task_types }}
+
+Clinical topic:
+{{ clinical_topic }}
+
+Patient state:
+{{ patient_state }}
+
+Clinical context:
+{{ clinical_context }}
+
+Evidence state:
+{{ evidence_state }}
+
+Gold state:
+{{ gold_state }}
+
+Return JSON only with this exact schema:
+{
+  "risk_hints": ["<case-specific risk emphasis>"],
+  "evidence_hints": ["<case-specific missing evidence>"],
+  "constraint_hints": ["<case-specific communication or reasoning constraint>"],
+  "safety_hints": ["<case-specific safety reminder>"],
+  "unsafe_patterns": ["<dangerous statement to avoid>"],
+  "distractor_history": ["<plausible but lower-priority history detail>"]
+}
+
+Keep each list concise and clinically grounded in this specific case.
+Primary domain should control the main medical framing.
+Secondary domains should only add cross-domain medical risk and safety considerations.

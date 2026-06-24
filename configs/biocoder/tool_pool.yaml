@@ -1,0 +1,168 @@
+agent_tools:
+  - tool_name: get_task_context
+    description: Read public task context, scaffold, signature, public requirements, and resource manifest.
+    input_schema:
+      window: integer
+    output_schema:
+      ok: boolean
+      problem: string
+      user_prompt: string
+      signature: string
+      context: string
+      solution_form: string
+      resource_manifest: array
+      public_requirements: array
+      difficulty: object
+    openai_parameters:
+      type: object
+      properties:
+        window:
+          type: integer
+          description: Maximum characters of long text fields to return.
+          default: 4000
+    when_to_use: Use at the start of an episode to inspect the public coding task.
+    limitations:
+      - Does not expose oracle cases, gold solutions, expected output signatures, or Stage05 reports.
+
+  - tool_name: read_resource_file
+    description: Read a bounded slice of a public resource file listed in the task resource manifest.
+    input_schema:
+      path: string
+      offset: integer
+      max_bytes: integer
+    output_schema:
+      ok: boolean
+      path: string
+      offset: integer
+      bytes_read: integer
+      total_bytes: integer
+      content: string
+      truncated: boolean
+    openai_parameters:
+      type: object
+      required: [path]
+      properties:
+        path:
+          type: string
+          description: Relative path from the public resource manifest.
+        offset:
+          type: integer
+          default: 0
+        max_bytes:
+          type: integer
+          default: 4000
+    when_to_use: Use when the solution depends on public FASTA, CSV, JSON, text, or other resource files.
+    limitations:
+      - Only reads manifest-listed relative paths.
+      - Rejects absolute paths, home paths, and paths escaping the work directory.
+
+  - tool_name: validate_candidate_code
+    description: Check whether a complete Python program compiles and preserves the target callable signature.
+    input_schema:
+      code: string
+    output_schema:
+      ok: boolean
+      syntax: object
+      signature: object
+      safety: object
+    openai_parameters:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          description: Complete executable Python program.
+    when_to_use: Use after drafting code and before runtime tests.
+    limitations:
+      - Checks syntax, target signature, and static safety only; it does not prove semantic correctness.
+
+  - tool_name: run_custom_test
+    description: Execute a self-authored public test snippet against the complete candidate program.
+    input_schema:
+      code: string
+      test_snippet: string
+      timeout_seconds: integer
+    output_schema:
+      ok: boolean
+      exit_code: integer
+      stdout_tail: string
+      stderr_tail: string
+      traceback_tail: string
+      artifacts: array
+      failure_reasons: array
+    openai_parameters:
+      type: object
+      required: [code, test_snippet]
+      properties:
+        code:
+          type: string
+          description: Complete executable Python program.
+        test_snippet:
+          type: string
+          description: Public/self-authored Python assertions or calls that exercise the candidate code.
+        timeout_seconds:
+          type: integer
+          default: 5
+    when_to_use: Use to debug visible behavior and agent-created edge cases.
+    limitations:
+      - Does not run hidden oracle cases.
+      - Rejects unsafe paths, network imports, and subprocess-like calls.
+
+  - tool_name: submit_final_code
+    description: Submit the final complete Python program and end the episode.
+    input_schema:
+      code: string
+    output_schema:
+      ok: boolean
+      terminated: boolean
+      compile_passed: boolean
+      execution_passed: boolean
+      passed_cases: integer
+      total_cases: integer
+      failure_count: integer
+    openai_parameters:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          description: Final complete executable Python program.
+    when_to_use: Use exactly once when ready to submit the final answer.
+    limitations:
+      - Triggers evaluator-only oracle case execution, but detailed oracle cases are never exposed to the agent.
+
+evaluator_tools:
+  - tool_name: run_validated_oracle_cases
+    description: Execute Stage05 validated oracle cases against a submitted candidate.
+    input_schema:
+      env_id: string
+      code: string
+    output_schema:
+      compile_passed: boolean
+      execution_passed: boolean
+      case_reports: array
+    when_to_use: Internal evaluator use only after submit_final_code.
+    limitations:
+      - Never exposed as an agent-callable tool.
+
+  - tool_name: score_process_trace
+    description: Score the agent process trace for tool use quality and policy adherence.
+    input_schema:
+      trace: array
+    output_schema:
+      score: number
+      findings: array
+    when_to_use: Internal evaluator use only.
+    limitations:
+      - Never exposed to the agent.
+
+  - tool_name: check_tool_leakage
+    description: Check whether evaluator-only information or hidden tests leaked into the agent-visible trace.
+    input_schema:
+      trace: array
+    output_schema:
+      passed: boolean
+      findings: array
+    when_to_use: Internal evaluator use only.
+    limitations:
+      - Never exposed to the agent.

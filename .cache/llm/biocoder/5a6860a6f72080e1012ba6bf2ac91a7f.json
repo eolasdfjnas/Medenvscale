@@ -1,0 +1,20 @@
+{
+  "scaled_executable_gold_code": "import os\nimport tarfile\nimport tempfile\nfrom subprocess import check_call, CalledProcessError\n\nclass GenipeError(Exception):\n    pass\n\ndef untar_file(path, fn):\n    \"\"\"Extracts a tar archive.\n\n    Args:\n        path (str): the path to where the file will be extracted\n        fn (str): the name of the tar archive\n\n    Raises:\n        GenipeError: if the file extension is not a recognized tar format or extraction fails.\n    \"\"\"\n    # Map extension to tar decompression flag\n    extension_flags = {\n        '.tar': '',\n        '.tar.gz': 'z',\n        '.tar.bz2': 'j',\n        '.tar.xz': 'J',\n        '.tgz': 'z',\n        '.tbz2': 'j',\n        '.txz': 'J',\n    }\n    # Determine the flag based on file extension\n    flag = None\n    for ext, f in extension_flags.items():\n        if fn.endswith(ext):\n            flag = f\n            break\n    if flag is None:\n        raise GenipeError('Unrecognized file extension: {}'.format(fn))\n    # Build tar command\n    cmd = ['tar', '-C', path, '-x']\n    if flag:\n        cmd.insert(2, '-' + flag)\n    else:\n        cmd.insert(2, '-f')\n    if not flag:\n        cmd.append('-f')\n    cmd.append(fn)\n    try:\n        check_call(cmd)\n    except CalledProcessError:\n        raise GenipeError('Could not extract {}'.format(fn))\n\ndef main():\n    with tempfile.TemporaryDirectory() as tmp_dir:\n        # Create a source directory with a file\n        source_dir = os.path.join(tmp_dir, 'source')\n        os.mkdir(source_dir)\n        test_file = os.path.join(source_dir, 'hello.txt')\n        with open(test_file, 'w') as f:\n            f.write('Hello, world!')\n\n        # Create a tar archive of the source directory\n        tar_path = os.path.join(tmp_dir, 'archive.tar')\n        with tarfile.open(tar_path, 'w') as tar:\n            tar.add(source_dir, arcname='source')\n\n        # Prepare the extraction directory\n        extract_dir = os.path.join(tmp_dir, 'dest')\n        os.mkdir(extract_dir)\n\n        # Call the solution here to extract\n        untar_file(extract_dir, tar_path)\n\n        # Verify extraction\n        extracted_file = os.path.join(extract_dir, 'source', 'hello.txt')\n        assert os.path.isfile(extracted_file), 'File was not extracted correctly.'\n        print('Extraction succeeded:', open(extracted_file).read())\n\nif __name__ == '__main__':\n    main()",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Added automatic compression format detection and flag selection, plus rejection of non-tar files.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_255_M2_c_01"
+  ],
+  "covered_requirements": [
+    "Increase computation/constraint complexity by requiring automatic detection of compression format and appropriate flag selection, plus rejection of non-tar files."
+  ],
+  "implementation_notes": [
+    "The function checks the file extension to determine the appropriate tar decompression flag (e.g., -z for .tar.gz, -j for .tar.bz2).",
+    "If the extension is not recognized, it raises a GenipeError.",
+    "The command is built with the extracted flag and executed via subprocess.check_call; on failure, a GenipeError is raised."
+  ],
+  "assumptions": []
+}

@@ -1,0 +1,28 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Combined test covering whitespace variations, empty lines, comments, and chromosome normalization.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_295_M4_d_01,env_medagentgym_train_295_M4_d_02,env_medagentgym_train_295_M4_c_03,env_medagentgym_train_295_M4_a_04",
+      "axis": "D,C,A",
+      "semantic_intent": "Verify the function correctly parses input with whitespace variations (tabs, multiple spaces, leading/trailing spaces), skips empty lines and comments, and normalizes chromosome identifiers by stripping common prefixes.",
+      "target_constraint": "The function must parse lines with any whitespace delimiters, ignore lines that are empty or start with '#', and return chromosome column values without 'chr' or 'chrom' prefix.",
+      "expected_failure_mode": "A solution that splits on single spaces, does not skip comments/empty lines, or does not normalize chromosomes will produce incorrect output or errors.",
+      "setup_code": "with open('combined.txt', 'w') as f:\n    f.write('# This is a comment\\n')\n    f.write('\\n')\n    f.write('chr1:100-200\\tgeneA\\n')\n    f.write('chrom2:300-400   \\n')\n    f.write('  chr3:500-600 REF>ALT\\n')",
+      "call_code": "df = read_text('combined.txt')\nprint(df)",
+      "assertion_code": "assert list(df['chromosome']) == ['1','2','3'] and list(df['gene']) == ['geneA','-','REF>ALT']",
+      "covered_requirements": [
+        "Scaled executable cases must include a file with whitespace variations and verify correct parsing.",
+        "Scaled executable cases must include an input file with comments and empty lines, verifying correct skipping.",
+        "Scaled executable cases must test that chromosome identifiers are normalized.",
+        "Scaled executable cases must include a file with comment lines and verify they are ignored."
+      ],
+      "expected_output_signature": {
+        "stdout_contains": [
+          "chromosome  start  end     gene"
+        ]
+      }
+    }
+  ]
+}

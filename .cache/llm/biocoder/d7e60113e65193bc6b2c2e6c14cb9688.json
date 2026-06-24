@@ -1,0 +1,18 @@
+{
+  "seed_execution_case": {
+    "case_id": "seed_case_main",
+    "description": "Replay the main example with db='GLYCOLIPIDS', mz_values='100.0\\n200.0\\n300.0', adducts='M+H,M+Na', tolerance=0.01.",
+    "setup_code": "import requests\nimport pandas as pd\nfrom io import StringIO\n\nLIPIDMAPS_URL = \"https://www.lipidmaps.org/ms/rest/ms_search/\"\n\ndef _get_num_matches(db, mzStr, adducts, tolerance=0.001):\n    files = {'file': ('file', StringIO(mzStr), 'text/plain')}\n    data = {\n        'CHOICE': db,\n        'ion': adducts,\n        'tol': str(tolerance),\n        'sort': 'DELTA'\n    }\n    try:\n        response = requests.post(LIPIDMAPS_URL, data=data, files=files)\n    except:\n        raise Exception('Connection error with the database. Please check your network and try again after a few minutes.')\n    if len(response.text) == 0:\n        return 0\n    else:\n        matches = pd.read_csv(StringIO(response.text), sep='\\t', engine='python', index_col=False)\n        if matches.empty:\n            return 0\n        else:\n            try:\n                unique_masses = matches['Input Mass'].unique()\n            except KeyError:\n                unique_masses = matches.iloc[:, 0].unique()\n            return len(unique_masses)",
+    "call_code": "db = 'GLYCOLIPIDS'\nmz_values = '100.0\\n200.0\\n300.0'\nadducts = 'M+H,M+Na'\ntolerance = 0.01\nresult = _get_num_matches(db, mz_values, adducts, tolerance)\nprint(f'Number of unique m/z matches: {result}')",
+    "expected_output_signature": {
+      "return_value": null,
+      "stdout_contains": [
+        "Number of unique m/z matches: 315"
+      ],
+      "file_artifacts": []
+    },
+    "extraction_method": "llm_reconstructed",
+    "validated_against_ground_truth": false,
+    "assumptions": []
+  }
+}

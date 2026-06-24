@@ -1,0 +1,373 @@
+{
+  "operator_instances": [
+    {
+      "axis": "D",
+      "operator_type": "validate_input_file",
+      "operator_intensity": 1,
+      "transformation_goal": "Require the function to validate that the input FASTA file exists before constructing the command.",
+      "rationale": "Adding input validation increases data complexity by forcing the function to handle missing files gracefully.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Write a Python function named deblur_system_call that builds a Deblur CLI command to deblur a FASTA file. The function should take two arguments: params (a list of strings representing additional command-line options) and input_fp (a string path to the input FASTA file). It must construct a command list invoking 'deblur workflow' with flags '--is-worker-thread' and '--keep-tmp-files', append all items in params, log the full command via Python's logging module, and invoke it via a helper function _system_call. The function should return the stdout, stderr, and return code from _system_call. Additionally, the function must check that the input file exists before building the command; if the file does not exist, it should raise a FileNotFoundError."
+        },
+        "data_state_patch": {
+          "resource_manifest": []
+        },
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {
+          "operator_mode": "gold_compatible",
+          "gold_solution": "def deblur_system_call(params, input_fp):\n    import os\n    if not os.path.isfile(input_fp):\n        raise FileNotFoundError(f\"Input file {input_fp} does not exist.\")\n    logger = logging.getLogger(__name__)\n    logger.debug('[%s] deblur system call params %s, input_fp %s' % (mp.current_process().name, params, input_fp))\n    script_name = 'deblur'\n    script_subprogram = 'workflow'\n    command = [script_name, script_subprogram, '--seqs-fp', input_fp, '--is-worker-thread', '--keep-tmp-files']\n    command.extend(params)\n    logger.debug('[%s] running command %s' % (mp.current_process().name, command))\n    return _system_call(command)"
+        },
+        "verifier_state_patch": {
+          "verifier_type_hint": "unit_test"
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [
+          {
+            "test_id": "test_missing_input_file",
+            "description": "Verify that FileNotFoundError is raised when input_fp does not exist.",
+            "setup_code": "import os\nif os.path.exists('nonexistent.fasta'): os.remove('nonexistent.fasta')",
+            "call_code": "try:\n    deblur_system_call(['--min-size', '50'], 'nonexistent.fasta')\n    assert False, 'Expected FileNotFoundError'\nexcept FileNotFoundError:\n    pass"
+          }
+        ],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Seed solution will not raise an error for missing file."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_d_spec_1",
+          "semantic_intent": "Prove that the function validates input file existence.",
+          "target_constraint": "Function must raise FileNotFoundError if input_fp does not exist.",
+          "expected_failure_mode": "Seed solution does not check file existence, so it would proceed and potentially fail later or succeed with dummy _system_call.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "missing_file"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "exception"
+          },
+          "test_case_description": "Call deblur_system_call with a non-existent input file path."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a test that the function raises FileNotFoundError for missing input file."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "C",
+      "operator_type": "validate_params_flags",
+      "operator_intensity": 2,
+      "transformation_goal": "Require the function to validate that params does not contain flags that conflict with mandatory flags (e.g., '--seqs-fp', '--is-worker-thread', '--keep-tmp-files').",
+      "rationale": "Adding parameter validation increases computation complexity by enforcing constraints on the input list.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Write a Python function named deblur_system_call that builds a Deblur CLI command to deblur a FASTA file. The function should take two arguments: params (a list of strings representing additional command-line options) and input_fp (a string path to the input FASTA file). It must construct a command list invoking 'deblur workflow' with flags '--is-worker-thread' and '--keep-tmp-files', append all items in params, log the full command via Python's logging module, and invoke it via a helper function _system_call. The function should return the stdout, stderr, and return code from _system_call. Additionally, the function must validate that params does not contain any of the following flags: '--seqs-fp', '--is-worker-thread', '--keep-tmp-files'. If any of these are present, it should raise a ValueError."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {
+          "operator_mode": "gold_compatible",
+          "gold_solution": "def deblur_system_call(params, input_fp):\n    forbidden = {'--seqs-fp', '--is-worker-thread', '--keep-tmp-files'}\n    for p in params:\n        if p in forbidden:\n            raise ValueError(f\"Param {p} is not allowed, it is automatically added.\")\n    logger = logging.getLogger(__name__)\n    logger.debug('[%s] deblur system call params %s, input_fp %s' % (mp.current_process().name, params, input_fp))\n    script_name = 'deblur'\n    script_subprogram = 'workflow'\n    command = [script_name, script_subprogram, '--seqs-fp', input_fp, '--is-worker-thread', '--keep-tmp-files']\n    command.extend(params)\n    logger.debug('[%s] running command %s' % (mp.current_process().name, command))\n    return _system_call(command)"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [
+          {
+            "test_id": "test_forbidden_flag",
+            "description": "Verify that ValueError is raised when params contains '--seqs-fp'.",
+            "setup_code": "",
+            "call_code": "try:\n    deblur_system_call(['--seqs-fp', 'other.fasta'], 'test.fasta')\n    assert False, 'Expected ValueError'\nexcept ValueError:\n    pass"
+          },
+          {
+            "test_id": "test_forbidden_flag_is_worker",
+            "description": "Verify ValueError for '--is-worker-thread'.",
+            "setup_code": "",
+            "call_code": "try:\n    deblur_system_call(['--is-worker-thread'], 'test.fasta')\n    assert False, 'Expected ValueError'\nexcept ValueError:\n    pass"
+          },
+          {
+            "test_id": "test_forbidden_flag_keep_tmp",
+            "description": "Verify ValueError for '--keep-tmp-files'.",
+            "setup_code": "",
+            "call_code": "try:\n    deblur_system_call(['--keep-tmp-files'], 'test.fasta')\n    assert False, 'Expected ValueError'\nexcept ValueError:\n    pass"
+          }
+        ],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Seed solution does not validate params for forbidden flags, so it would build command with duplicate flags."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_c_spec_1",
+          "semantic_intent": "Prove that the function validates params for forbidden flags.",
+          "target_constraint": "Function must raise ValueError if params contains any of '--seqs-fp', '--is-worker-thread', '--keep-tmp-files'.",
+          "expected_failure_mode": "Seed solution would silently include duplicate flags.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "forbidden_flags"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "exception"
+          },
+          "test_case_description": "Call deblur_system_call with params containing a forbidden flag."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include tests that the function raises ValueError for each forbidden flag."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "A",
+      "operator_type": "prevent_input_mutation_and_duplicate_flags",
+      "operator_intensity": 2,
+      "transformation_goal": "Require the function to not mutate the input params list and to avoid duplicating any fixed flags that might accidentally appear in params (though already handled by C, here ensure robustness against duplicate flags by deduplication).",
+      "rationale": "Adding robustness against input mutation and duplicate flags increases adversarial complexity.",
+      "state_updates": {
+        "task_state_patch": {
+          "problem": "Write a Python function named deblur_system_call that builds a Deblur CLI command to deblur a FASTA file. The function should take two arguments: params (a list of strings representing additional command-line options) and input_fp (a string path to the input FASTA file). It must construct a command list invoking 'deblur workflow' with flags '--is-worker-thread' and '--keep-tmp-files', append all items in params, log the full command via Python's logging module, and invoke it via a helper function _system_call. The function should return the stdout, stderr, and return code from _system_call. Additionally, the function must not modify the original params list (i.e., it should treat it as immutable) and must ensure that if params contains any of the fixed flags ('--seqs-fp', '--is-worker-thread', '--keep-tmp-files'), those flags are not duplicated in the final command (e.g., by skipping them)."
+        },
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {
+          "operator_mode": "gold_compatible",
+          "gold_solution": "def deblur_system_call(params, input_fp):\n    fixed_flags = {'--seqs-fp', '--is-worker-thread', '--keep-tmp-files'}\n    filtered_params = [p for p in params if p not in fixed_flags]\n    logger = logging.getLogger(__name__)\n    logger.debug('[%s] deblur system call params %s, input_fp %s' % (mp.current_process().name, params, input_fp))\n    script_name = 'deblur'\n    script_subprogram = 'workflow'\n    command = [script_name, script_subprogram, '--seqs-fp', input_fp, '--is-worker-thread', '--keep-tmp-files']\n    command.extend(filtered_params)\n    logger.debug('[%s] running command %s' % (mp.current_process().name, command))\n    return _system_call(command)"
+        },
+        "verifier_state_patch": {},
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [],
+        "exception_tests": [
+          {
+            "test_id": "test_no_mutation",
+            "description": "Verify that the original params list is not modified by the function call.",
+            "setup_code": "original_params = ['--min-size', '50']\nparams_copy = original_params.copy()",
+            "call_code": "result = deblur_system_call(original_params, 'test.fasta')\nassert original_params == params_copy, 'Params list was mutated'"
+          },
+          {
+            "test_id": "test_duplicate_flag_removal",
+            "description": "Verify that duplicate fixed flags are not added to the command.",
+            "setup_code": "",
+            "call_code": "stdout, stderr, ret = deblur_system_call(['--keep-tmp-files', '--min-size', '50'], 'test.fasta')\n# The command should contain '--keep-tmp-files' only once\nimport ast\ncommand = ast.literal_eval(stdout.split('Executed command: ')[1])\nassert command.count('--keep-tmp-files') == 1, 'Duplicate flag not removed'"
+          }
+        ],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": [
+          "Seed solution modifies params list by extending it? Actually seed extends a new list, not modifying params. But seed does not filter duplicates, so duplicate fixed flags would appear twice."
+        ]
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_a_spec_1",
+          "semantic_intent": "Prove that the function does not mutate the input params list.",
+          "target_constraint": "The original params list must remain unchanged after function call.",
+          "expected_failure_mode": "If the function extends the params list in place, it would mutate.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "mutation_check"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "no_mutation"
+          },
+          "test_case_description": "Call deblur_system_call and assert that the input params list is unchanged."
+        },
+        {
+          "spec_id": "task_a_spec_2",
+          "semantic_intent": "Prove that the function removes duplicate fixed flags from params.",
+          "target_constraint": "The final command should not contain any fixed flag more than once.",
+          "expected_failure_mode": "Seed solution would add duplicate flags.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "duplicate_flag"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "deduplication"
+          },
+          "test_case_description": "Call deblur_system_call with params containing a fixed flag, check that it appears only once."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include tests for no mutation and duplicate flag removal."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    },
+    {
+      "axis": "V",
+      "operator_type": "add_verifier_case_for_command_structure",
+      "operator_intensity": 1,
+      "transformation_goal": "Add a hidden test that verifies the exact structure of the built command list for a complex params scenario.",
+      "rationale": "Strengthening the verifier ensures that the command construction is correct under varied inputs.",
+      "state_updates": {
+        "task_state_patch": {},
+        "data_state_patch": {},
+        "tool_state_patch": {},
+        "visible_state_patch": {},
+        "gold_state_patch": {},
+        "verifier_state_patch": {
+          "verifier_type_hint": "unit_test"
+        },
+        "test_state_patch": {},
+        "turn_state_patch": {}
+      },
+      "verifier_delta": {
+        "new_checks": [],
+        "new_hidden_tests": [
+          {
+            "test_id": "test_command_structure_complex_params",
+            "description": "Verify that the command list is correctly built with multiple params.",
+            "setup_code": "import logging\nlogging.basicConfig(level=logging.DEBUG)\ninput_fp = 'complex_test.fasta'\nwith open(input_fp, 'w') as f:\n    f.write(\">seq1\\nACTG\\n\")\nparams = ['--min-size', '50', '--max-size', '1000', '--left-trim', '0']",
+            "call_code": "stdout, stderr, ret = deblur_system_call(params, input_fp)\nexpected_command = ['deblur', 'workflow', '--seqs-fp', 'complex_test.fasta', '--is-worker-thread', '--keep-tmp-files', '--min-size', '50', '--max-size', '1000', '--left-trim', '0']\nimport ast\nactual_command = ast.literal_eval(stdout.split('Executed command: ')[1])\nassert actual_command == expected_command, f'Command mismatch: {actual_command} vs {expected_command}'"
+          }
+        ],
+        "exception_tests": [],
+        "numeric_tolerance_tests": [],
+        "array_close_tests": [],
+        "dataframe_equal_tests": [],
+        "file_output_tests": [],
+        "object_state_tests": [],
+        "static_checks": [],
+        "expected_failure_modes": []
+      },
+      "semantic_test_specs": [
+        {
+          "spec_id": "task_v_spec_1",
+          "semantic_intent": "Prove that the function builds the correct command list for a set of params.",
+          "target_constraint": "The command list must have the exact order: deblur workflow --seqs-fp input_fp --is-worker-thread --keep-tmp-files followed by params.",
+          "expected_failure_mode": "If the function misses a flag or reorders, the test fails.",
+          "test_template_type": "data_variant_case",
+          "input_variant": {
+            "kind": "data_variant",
+            "value": "complex_params"
+          },
+          "expected_behavior": {
+            "kind": "oracle_output_match",
+            "mode": "exact_command"
+          },
+          "test_case_description": "Call deblur_system_call with a list of params and verify the exact command built."
+        }
+      ],
+      "output_requirements": [
+        "Scaled executable cases must include a test checking the exact command list for a non-trivial params list."
+      ],
+      "output_constraint_spec": {
+        "checks": []
+      },
+      "rubric_delta": [],
+      "expected_effect": {},
+      "verification_contract": {
+        "generation_mode": "gold_compatible",
+        "gold_solution_must_pass": true,
+        "must_add_executable_test": true,
+        "must_update_verifier_if_behavior_changes": true,
+        "must_not_change_solution_form": true,
+        "must_not_leak_answer": true
+      },
+      "constraints": {
+        "must_preserve_core_task": true,
+        "must_not_change_ground_truth": true,
+        "must_not_leak_answer": true,
+        "must_keep_verifier_executable": true,
+        "must_not_change_solution_form": true
+      }
+    }
+  ]
+}

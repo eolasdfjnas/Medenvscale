@@ -1,0 +1,17 @@
+{
+  "role": "assistant",
+  "content": null,
+  "refusal": null,
+  "reasoning": null,
+  "tool_calls": [
+    {
+      "type": "function",
+      "index": 0,
+      "id": "call_qgPslK8CcNlEHCY5ziVZKEg5",
+      "function": {
+        "name": "validate_candidate_code",
+        "arguments": "{\"code\":\"def parse_exchange_file(path, default_compartment):\\n    format_type = resolve_format(None, path)\\n    if format_type is None:\\n        raise ParseError(\\\"Unsupported file format.\\\")\\n\\n    with open(path, 'r') as f:\\n        if format_type == 'tsv':\\n            return parse_exchange_table_file(f)\\n        elif format_type == 'yaml':\\n            return parse_exchange_yaml_file(FilePathContext(path), f, default_compartment)\\n    raise ParseError(\\\"Could not determine file format.\\\")\\n\\ndef resolve_format(fmt, filepath):\\n    import os\\n    _, ext = os.path.splitext(filepath.lower())\\n    if ext in ['.tsv', '.txt']:\\n        return 'tsv'\\n    if ext in ['.yaml', '.yml']:\\n        return 'yaml'\\n    return None\\n\\ndef parse_exchange_table_file(f):\\n    header = f.readline()\\n    for line in f:\\n        parts = line.strip().split('\\\\t')\\n        if len(parts) != 3:\\n            continue\\n        yield {'compound': parts[0], 'lower': float(parts[1]), 'upper': float(parts[2])}\\n\\ndef parse_exchange_yaml_file(context, f, default_compartment):\\n    for line in f:\\n        parts = line.strip().split(':')\\n        if len(parts) < 3:\\n            continue\\n        entry = {\\n            'compound': parts[0],\\n            'lower': float(parts[1]),\\n            'upper': float(parts[2]),\\n            'compartment': parts[3] if len(parts) > 3 else default_compartment\\n        }\\n        yield entry\\n\\nclass ParseError(Exception):\\n    pass\\n\\nlogger = logging.getLogger(__name__)\"}"
+      }
+    }
+  ]
+}

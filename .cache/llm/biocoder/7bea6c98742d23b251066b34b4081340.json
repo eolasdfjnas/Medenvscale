@@ -1,0 +1,33 @@
+{
+  "scaled_executable_gold_code": "import requests\nimport pandas as pd\nfrom io import StringIO\n\nLIPIDMAPS_URL = \"https://www.lipidmaps.org/ms/rest/ms_search/\"\n\ndef _get_num_matches(db, mzStr, adducts, tolerance=0.001):\n    \"\"\"Return the number of unique input m/z values that yield at least one match.\"\"\"\n    # Preprocess m/z string: skip empty lines, non-numeric lines, and strip whitespace\n    valid_mzs = []\n    for line in mzStr.splitlines():\n        stripped = line.strip()\n        if stripped == '':\n            continue\n        try:\n            float(stripped)\n            valid_mzs.append(stripped)\n        except ValueError:\n            continue\n    if not valid_mzs:\n        return 0\n    mzStr_clean = '\\n'.join(valid_mzs)\n\n    # Clean adducts string: remove extra spaces\n    adducts_clean = ','.join([a.strip() for a in adducts.split(',')])\n\n    files = {'file': ('file', StringIO(mzStr_clean), 'text/plain')}\n    data = {\n        'CHOICE': db,\n        'ion': adducts_clean,\n        'tol': str(tolerance),\n        'sort': 'DELTA'\n    }\n    try:\n        response = requests.post(LIPIDMAPS_URL, data=data, files=files)\n    except Exception:\n        raise Exception('Connection error with the database. Please check your network and try again after a few minutes.')\n    if len(response.text) == 0:\n        return 0\n    try:\n        matches = pd.read_csv(StringIO(response.text), sep='\\t', engine='python')\n    except Exception:\n        return 0\n    if matches.empty:\n        return 0\n    # Handle variable column names for input mass\n    possible_columns = ['Input Mass', 'Input m/z', 'Mass']\n    input_col = None\n    for col in possible_columns:\n        if col in matches.columns:\n            input_col = col\n            break\n    if input_col is None:\n        # fallback to first column if unknown\n        input_col = matches.columns[0]\n    unique_masses = matches[input_col].unique()\n    return len(unique_masses)",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "The seed solution hardcoded column name 'Input Mass' and did not handle malformed input lines or whitespace in adducts. The scaled task requires robustness to variable column names, malformed input, and extra whitespace. The new implementation preprocesses the m/z string to filter valid lines, cleans adducts, and searches for common column names in the response CSV.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_764_M4_c_01",
+    "env_medagentgym_train_764_M4_a_02",
+    "env_medagentgym_train_764_M4_v_03"
+  ],
+  "covered_requirements": [
+    "Handles variable column names in the response CSV (e.g., 'Input Mass', 'Input m/z', 'Mass') by trying known names and falling back to the first column.",
+    "Ensures unique input m/z counting is robust against multiple rows per input (via pandas unique).",
+    "Skips empty lines, non-numeric lines, and trims whitespace from each line in the input m/z string.",
+    "Trims extra spaces from the adducts string before splitting by comma.",
+    "Works with mocked server responses as demonstrated by the scaled oracle case."
+  ],
+  "implementation_notes": [
+    "The function preprocesses the m/z string by iterating over lines, stripping whitespace, and attempting float conversion to filter valid entries.",
+    "Adducts string is split by comma, each part stripped, then rejoined with no spaces.",
+    "The response CSV is parsed with pandas; the column for input mass is identified by trying common names ('Input Mass', 'Input m/z', 'Mass'), falling back to the first column if none match.",
+    "Unique count is obtained via pandas unique() on the identified column.",
+    "The function returns 0 if the response is empty, parsing fails, or the DataFrame is empty.",
+    "Network exceptions are caught and re-raised with a descriptive message."
+  ],
+  "assumptions": [
+    "The LipidMaps server returns a tab-separated CSV with a header row.",
+    "The server response format includes columns that may be named differently but contain the input m/z values.",
+    "The function is intended to be used in a context where network access may be available, but it also works with mocked responses."
+  ]
+}

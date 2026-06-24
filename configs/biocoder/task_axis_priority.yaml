@@ -1,0 +1,32 @@
+task_axis_priority:
+  io_format_and_cli:
+    axis_priority: [D, C, V, A]
+    default_axis:
+      D: 2
+      C: 2
+      A: 1
+      V: 2
+
+  structured_data_processing:
+    axis_priority: [D, C, V, A]
+    default_axis:
+      D: 3
+      C: 2
+      A: 1
+      V: 2
+
+  numerical_computation:
+    axis_priority: [C, V, D, A]
+    default_axis:
+      D: 1
+      C: 3
+      A: 1
+      V: 3
+
+  code_validation_and_utility:
+    axis_priority: [C, A, V, D]
+    default_axis:
+      D: 1
+      C: 3
+      A: 2
+      V: 3

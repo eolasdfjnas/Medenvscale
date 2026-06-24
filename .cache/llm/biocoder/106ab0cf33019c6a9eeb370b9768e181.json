@@ -1,0 +1,18 @@
+{
+  "seed_execution_case": {
+    "case_id": "seed_case_main",
+    "description": "Replays the main() example: creates a tar archive, extracts it using untar_file, and prints success.",
+    "setup_code": "import os\nimport tarfile\nimport tempfile\nfrom subprocess import check_call, CalledProcessError\n\nclass GenipeError(Exception):\n    pass\n\ndef untar_file(path, fn):\n    try:\n        check_call(['tar', '-C', path, '-xf', fn])\n    except CalledProcessError:\n        raise GenipeError('Could not extract {}'.format(fn))\n\n# Create test directory structure\nimport tempfile\ntmp_dir = tempfile.mkdtemp()\nsource_dir = os.path.join(tmp_dir, 'source')\nos.mkdir(source_dir)\ntest_file = os.path.join(source_dir, 'hello.txt')\nwith open(test_file, 'w') as f:\n    f.write('Hello, world!')\n\ntar_path = os.path.join(tmp_dir, 'archive.tar')\nwith tarfile.open(tar_path, 'w') as tar:\n    tar.add(source_dir, arcname='source')\n\nextract_dir = os.path.join(tmp_dir, 'dest')\nos.mkdir(extract_dir)",
+    "call_code": "# Call the solution\nuntar_file(extract_dir, tar_path)\n\n# Verify extraction\nextracted_file = os.path.join(extract_dir, 'source', 'hello.txt')\nassert os.path.isfile(extracted_file), 'File was not extracted correctly.'\nprint('Extraction succeeded:', open(extracted_file).read())\n\n# Assign result (function returns None)\nresult = None",
+    "expected_output_signature": {
+      "return_value": null,
+      "stdout_contains": [
+        "Extraction succeeded: Hello, world!"
+      ],
+      "file_artifacts": []
+    },
+    "extraction_method": "llm_reconstructed",
+    "validated_against_ground_truth": false,
+    "assumptions": []
+  }
+}

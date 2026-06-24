@@ -1,0 +1,37 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_main_combined",
+      "description": "Combined test for missing cell, whitespace trimming, charge validation, and dedup in sequences_mapping.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_835_M4_d_01,env_medagentgym_train_835_M4_c_02,env_medagentgym_train_835_M4_a_03",
+      "axis": "D,C,A",
+      "semantic_intent": "Verify that mapRow handles missing cells (row shorter than header), trims whitespace from peptide_name and charge_state, validates charge as integer defaulting to '0' on invalid, and prevents duplicate entries in sequences_mapping when called repeatedly.",
+      "target_constraint": "Function must: (1) not raise IndexError for rows with fewer cells than header indices; treat missing as empty string. (2) strip whitespace from peptide_name and charge_state. (3) if charge_state after stripping is not a valid integer (including 'NA' or empty), default to '0'. (4) avoid adding duplicate keys to sequences_mapping list for the same peptide.",
+      "expected_failure_mode": "Seed gold solution would raise IndexError on missing cell, preserve whitespace in keys, keep invalid charge as literal string, and add duplicate keys in sequences_mapping on repeated calls.",
+      "setup_code": "header = ['FullPeptideName','aggr_Fragment_Annotation','aggr_prec_Fragment_Annotation','Charge','ProteinName']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping = {}\nprotein_mapping = {}\nrow1 = [' PEP ', 'b1;b2;', 'c1;', ' 2 ']  # missing ProteinName column\nrow2 = [' PEP ', 'b1;b2;', 'c1;', 'abc']  # invalid charge",
+      "call_code": "mapRow(row1, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nmapRow(row1, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nmapRow(row2, header_dict, precursors_mapping, sequences_mapping, protein_mapping)\nprint('Precursors Mapping:', precursors_mapping)\nprint('Sequences Mapping:', sequences_mapping)\nprint('Protein Mapping:', protein_mapping)",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must include tests with rows missing optional columns.",
+        "Scaled executable cases must test trimming and charge validation.",
+        "Scaled executable cases must include repeated row processing to test dedup."
+      ],
+      "expected_output_signature": {
+        "return_type": null,
+        "return_keys": null,
+        "return_value": null,
+        "stdout_contains": [
+          "PEP/2",
+          "PEP/0",
+          "PEP/2_pr",
+          "PEP/0_pr",
+          "Sequences Mapping: {'PEP': ['PEP/2', 'PEP/2_pr', 'PEP/0', 'PEP/0_pr']}",
+          "Protein Mapping: {}"
+        ],
+        "stdout_regex": [],
+        "file_artifacts": []
+      }
+    }
+  ]
+}

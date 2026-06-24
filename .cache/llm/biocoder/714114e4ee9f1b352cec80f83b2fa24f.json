@@ -1,0 +1,12 @@
+{
+  "scaled_executable_gold_code": "import numpy as np\n\ndef kln_to_kn(kln, N_k, cleanup=False):\n    \"\"\"Convert KxLxN_max array to LxN array by concatenating samples from each group.\n\n    Parameters\n    ----------\n    kln : np.ndarray, shape=(K, L, N_max)\n    N_k : np.ndarray, shape=(K,), dtype=int\n        Number of samples to take from each group.\n    cleanup : bool, optional\n        If True, delete the input kln array to free memory.\n\n    Returns\n    -------\n    str\n        String representation of the resulting array of shape (L, sum(N_k)).\n    \"\"\"\n    K, L, N_max = kln.shape\n    N = np.sum(N_k)\n    result = np.zeros((L, N), dtype=np.float64)\n    idx = 0\n    for k in range(K):\n        nk = N_k[k]\n        for n in range(nk):\n            result[:, idx] = kln[k, :, n]\n            idx += 1\n    if cleanup:\n        del kln\n        print(\"Resulting shape:\", result.shape)\n        print(\"Resulting array:\\n\", result)\n    return np.array2string(result, linewidth=200)\n\nif __name__ == \"__main__\":\n    # Example usage (not used by tests)\n    K, L, N_max = 3, 4, 5\n    kln = np.arange(K * L * N_max).reshape(K, L, N_max).astype(np.float64)\n    N_k = np.array([2, 4, 3], dtype=int)\n    out = kln_to_kn(kln, N_k, cleanup=True)\n    print(\"Returned string:\\n\", out)\n",
+  "repair_summary": "Changed kln_to_kn to return a string representation (via np.array2string with large linewidth) instead of the numpy array. Added conditional printing of shape and array when cleanup=True to replicate the output expected from the original call_code. Removed module-level test data to avoid interference.",
+  "covered_operator_ids": [
+    "env_medagentgym_train_683_M2_v_01"
+  ],
+  "covered_requirements": [
+    "Scaled executable cases must expose the new requirement introduced by this operator.",
+    "Strengthen verification by adding multiple hidden test cases covering valid edge cases of N_k array (zero samples, all samples) and cleanup flag."
+  ],
+  "remaining_risks": []
+}

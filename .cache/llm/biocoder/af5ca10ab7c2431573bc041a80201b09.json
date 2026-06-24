@@ -1,0 +1,76 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_internal_empty_annotations",
+      "description": "Test that annotation strings with internal empty elements are handled correctly: interior empties preserved, trailing empties removed.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_835_M3_c_01",
+      "axis": "C",
+      "semantic_intent": "Verify that the function keeps empty internal elements in annotation lists when splitting.",
+      "target_constraint": "When fragment annotation string is 'b1;;b2;b3;' (empty in middle), the resulting transitions list should be ['b1', '', 'b2', 'b3'] (preserving the empty element, only removing trailing empty).",
+      "expected_failure_mode": "If the function naively removes all empty elements or splits incorrectly.",
+      "setup_code": "header = [\n    'FullPeptideName',\n    'aggr_Fragment_Annotation',\n    'aggr_prec_Fragment_Annotation',\n    'Charge',\n    'ProteinName'\n]\nrow = ['PEPTIDESEQ', 'b1;;b2;b3;', 'p1;;p2;', '2', 'P12345']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping  = {}\nprotein_mapping    = {}\ndef mapRow(this_row, header_dict, precursors_mapping, sequences_mapping,\n           protein_mapping):\n    \"\"\"\n    Populate mapping from a single row in the CSV file.\n\n    Populate the precursors_mapping, sequences_mapping and protein_mapping\n    based on the information in a row in a CSV file. Read the relationship\n    between transition_ids, precursors, peptide sequences and proteins from the\n    CSV input file.\n    \"\"\"\n    if 'FullPeptideName' in header_dict:\n        peptide_name = this_row[header_dict['FullPeptideName']]\n        transitions = []\n        pr_transitions = []\n        if 'aggr_Fragment_Annotation' in header_dict:\n            transitions = this_row[header_dict['aggr_Fragment_Annotation']\n                ].split(';')\n        if 'aggr_prec_Fragment_Annotation' in header_dict:\n            pr_transitions = this_row[header_dict[\n                'aggr_prec_Fragment_Annotation']].split(';')\n        if len(transitions) == 0:\n            return\n        if len(transitions[-1]) == 0:\n            transitions = transitions[:-1]\n        if len(pr_transitions) > 0 and len(pr_transitions[-1]) == 0:\n            pr_transitions = pr_transitions[:-1]\n        charge_state = '0'\n        if 'Charge' in header_dict:\n            charge_state = this_row[header_dict['Charge']]\n        if charge_state == 'NA' or charge_state == '':\n            charge_state = '0'\n        key = peptide_name + '/' + charge_state\n        prkey = peptide_name + '/' + charge_state + '_pr'\n        precursors_mapping[key] = transitions\n        precursors_mapping[prkey] = pr_transitions\n        mapped_precursors = sequences_mapping.get(peptide_name, [])\n        mapped_precursors.extend([key, prkey])\n        sequences_mapping[peptide_name] = mapped_precursors\n        if 'ProteinName' in header_dict:\n            protein_name = this_row[header_dict['ProteinName']]\n            tmp = protein_mapping.get(protein_name, [])\n            if peptide_name not in tmp:\n                tmp.append(peptide_name)\n            protein_mapping[protein_name] = tmp",
+      "call_code": "result = mapRow(\n        this_row=row,\n        header_dict=header_dict,\n        precursors_mapping=precursors_mapping,\n        sequences_mapping=sequences_mapping,\n        protein_mapping=protein_mapping\n    )\nprint('Precursors Mapping:', precursors_mapping)\nprint('Sequences Mapping:', sequences_mapping)\nprint('Protein Mapping:', protein_mapping)",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must test the function with annotation strings containing internal empty elements (e.g., 'b1;;b2;b3;') and verify transitions list preserves interior empties."
+      ],
+      "expected_output_signature": {
+        "stdout_contains": [
+          "Precursors Mapping: {'PEPTIDESEQ/2': ['b1', '', 'b2', 'b3'], 'PEPTIDESEQ/2_pr': ['p1', '', 'p2']}",
+          "Sequences Mapping: {'PEPTIDESEQ': ['PEPTIDESEQ/2', 'PEPTIDESEQ/2_pr']}",
+          "Protein Mapping: {'P12345': ['PEPTIDESEQ']}"
+        ]
+      }
+    },
+    {
+      "case_id": "scaled_missing_fullpeptidename",
+      "description": "Test that when the FullPeptideName column is missing from the header, the function returns without modifying any mapping.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_835_M3_c_01",
+      "axis": "C",
+      "semantic_intent": "Verify that the function does nothing when 'FullPeptideName' column is missing from the row (or header).",
+      "target_constraint": "If the header_dict does not contain 'FullPeptideName', the function should return without modifying any of the mapping dictionaries.",
+      "expected_failure_mode": "If the function modifies a mapping or raises an error.",
+      "setup_code": "header = ['aggr_Fragment_Annotation','aggr_prec_Fragment_Annotation','Charge','ProteinName']\nrow = ['b1;b2', 'p1;p2', '2', 'PROT2']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping  = {}\nprotein_mapping    = {}\ndef mapRow(this_row, header_dict, precursors_mapping, sequences_mapping,\n           protein_mapping):\n    \"\"\"\n    Populate mapping from a single row in the CSV file.\n\n    Populate the precursors_mapping, sequences_mapping and protein_mapping\n    based on the information in a row in a CSV file. Read the relationship\n    between transition_ids, precursors, peptide sequences and proteins from the\n    CSV input file.\n    \"\"\"\n    if 'FullPeptideName' in header_dict:\n        peptide_name = this_row[header_dict['FullPeptideName']]\n        transitions = []\n        pr_transitions = []\n        if 'aggr_Fragment_Annotation' in header_dict:\n            transitions = this_row[header_dict['aggr_Fragment_Annotation']\n                ].split(';')\n        if 'aggr_prec_Fragment_Annotation' in header_dict:\n            pr_transitions = this_row[header_dict[\n                'aggr_prec_Fragment_Annotation']].split(';')\n        if len(transitions) == 0:\n            return\n        if len(transitions[-1]) == 0:\n            transitions = transitions[:-1]\n        if len(pr_transitions) > 0 and len(pr_transitions[-1]) == 0:\n            pr_transitions = pr_transitions[:-1]\n        charge_state = '0'\n        if 'Charge' in header_dict:\n            charge_state = this_row[header_dict['Charge']]\n        if charge_state == 'NA' or charge_state == '':\n            charge_state = '0'\n        key = peptide_name + '/' + charge_state\n        prkey = peptide_name + '/' + charge_state + '_pr'\n        precursors_mapping[key] = transitions\n        precursors_mapping[prkey] = pr_transitions\n        mapped_precursors = sequences_mapping.get(peptide_name, [])\n        mapped_precursors.extend([key, prkey])\n        sequences_mapping[peptide_name] = mapped_precursors\n        if 'ProteinName' in header_dict:\n            protein_name = this_row[header_dict['ProteinName']]\n            tmp = protein_mapping.get(protein_name, [])\n            if peptide_name not in tmp:\n                tmp.append(peptide_name)\n            protein_mapping[protein_name] = tmp",
+      "call_code": "result = mapRow(\n        this_row=row,\n        header_dict=header_dict,\n        precursors_mapping=precursors_mapping,\n        sequences_mapping=sequences_mapping,\n        protein_mapping=protein_mapping\n    )\nprint('Precursors:', precursors_mapping)\nprint('Sequences:', sequences_mapping)\nprint('Protein:', protein_mapping)",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must test the function with a header_dict that lacks 'FullPeptideName' and verify that all mappings remain unchanged.",
+        "The verifier must include at least three hidden tests covering edge cases: internal empty annotations, missing FullPeptideName column, and duplicate peptide keys across multiple rows."
+      ],
+      "expected_output_signature": {
+        "stdout_contains": [
+          "Precursors: {}",
+          "Sequences: {}",
+          "Protein: {}"
+        ]
+      }
+    },
+    {
+      "case_id": "scaled_duplicate_peptide_keys",
+      "description": "Test that calling mapRow twice with the same peptide and charge does not result in duplicate entries in sequences_mapping (list for peptide_name should have exactly two unique keys) and protein_mapping (no duplicate peptide names).",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_835_M3_v_02",
+      "axis": "V",
+      "semantic_intent": "Verify no duplicate entries in sequences_mapping when same peptide/charge appears in multiple rows.",
+      "target_constraint": "The list for peptide_name in sequences_mapping should contain unique keys (no duplicates).",
+      "expected_failure_mode": "Simple extend without check may add duplicate keys.",
+      "setup_code": "header = ['FullPeptideName','aggr_Fragment_Annotation','aggr_prec_Fragment_Annotation','Charge','ProteinName']\nrow1 = ['PEPTIDE_A', 'a1;a2;','ap1;','1','PROT_A']\nrow2 = ['PEPTIDE_A', 'b1;b2;','bp1;','1','PROT_A']\nheader_dict = {name: idx for idx, name in enumerate(header)}\nprecursors_mapping = {}\nsequences_mapping  = {}\nprotein_mapping    = {}\ndef mapRow(this_row, header_dict, precursors_mapping, sequences_mapping,\n           protein_mapping):\n    \"\"\"\n    Populate mapping from a single row in the CSV file.\n\n    Populate the precursors_mapping, sequences_mapping and protein_mapping\n    based on the information in a row in a CSV file. Read the relationship\n    between transition_ids, precursors, peptide sequences and proteins from the\n    CSV input file.\n    \"\"\"\n    if 'FullPeptideName' in header_dict:\n        peptide_name = this_row[header_dict['FullPeptideName']]\n        transitions = []\n        pr_transitions = []\n        if 'aggr_Fragment_Annotation' in header_dict:\n            transitions = this_row[header_dict['aggr_Fragment_Annotation']\n                ].split(';')\n        if 'aggr_prec_Fragment_Annotation' in header_dict:\n            pr_transitions = this_row[header_dict[\n                'aggr_prec_Fragment_Annotation']].split(';')\n        if len(transitions) == 0:\n            return\n        if len(transitions[-1]) == 0:\n            transitions = transitions[:-1]\n        if len(pr_transitions) > 0 and len(pr_transitions[-1]) == 0:\n            pr_transitions = pr_transitions[:-1]\n        charge_state = '0'\n        if 'Charge' in header_dict:\n            charge_state = this_row[header_dict['Charge']]\n        if charge_state == 'NA' or charge_state == '':\n            charge_state = '0'\n        key = peptide_name + '/' + charge_state\n        prkey = peptide_name + '/' + charge_state + '_pr'\n        precursors_mapping[key] = transitions\n        precursors_mapping[prkey] = pr_transitions\n        mapped_precursors = sequences_mapping.get(peptide_name, [])\n        mapped_precursors.extend([key, prkey])\n        sequences_mapping[peptide_name] = mapped_precursors\n        if 'ProteinName' in header_dict:\n            protein_name = this_row[header_dict['ProteinName']]\n            tmp = protein_mapping.get(protein_name, [])\n            if peptide_name not in tmp:\n                tmp.append(peptide_name)\n            protein_mapping[protein_name] = tmp",
+      "call_code": "result = mapRow(\n        this_row=row1,\n        header_dict=header_dict,\n        precursors_mapping=precursors_mapping,\n        sequences_mapping=sequences_mapping,\n        protein_mapping=protein_mapping\n    )\nresult = mapRow(\n        this_row=row2,\n        header_dict=header_dict,\n        precursors_mapping=precursors_mapping,\n        sequences_mapping=sequences_mapping,\n        protein_mapping=protein_mapping\n    )\nprint('Precursors:', precursors_mapping)\nprint('Sequences:', sequences_mapping)\nprint('Protein:', protein_mapping)",
+      "assertion_code": "assert len(sequences_mapping['PEPTIDE_A']) == 2, 'sequences_mapping should have exactly 2 keys'\nassert len(protein_mapping['PROT_A']) == 1, 'protein_mapping should have no duplicates'",
+      "covered_requirements": [
+        "The verifier must include at least three hidden tests covering edge cases: internal empty annotations, missing FullPeptideName column, and duplicate peptide keys across multiple rows.",
+        "Hidden tests must assert correct stdout outputs as per oracle."
+      ],
+      "expected_output_signature": {
+        "stdout_contains": [
+          "'PEPTIDE_A/1': ['b1', 'b2']",
+          "'PEPTIDE_A/1_pr': ['bp1']",
+          "'PEPTIDE_A': ['PEPTIDE_A/1', 'PEPTIDE_A/1_pr']",
+          "'PROT_A': ['PEPTIDE_A']"
+        ]
+      }
+    }
+  ]
+}

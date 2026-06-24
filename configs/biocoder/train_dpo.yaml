@@ -1,0 +1,9 @@
+default_dataset: biocoder
+trainer: trl_dpo
+dataset_path: data/splits/preference_train.jsonl
+eval_path: data/splits/preference_dev.jsonl
+output_dir: experiments/dpo
+model_name_or_path: Qwen/Qwen2.5-1.5B-Instruct
+max_steps: 50
+learning_rate: 1.0e-5
+beta: 0.1

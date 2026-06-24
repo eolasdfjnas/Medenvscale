@@ -1,0 +1,28 @@
+{
+  "scaled_executable_gold_code": "def get_cell_umi_read_string(read_id, sep='_'):\n    \"\"\"\n    Extract the UMI and cell barcode from a read ID.\n\n    The read ID should have at least two separators; the last two fields\n    (separated by the given separator) are the cell barcode and UMI.\n    The function returns a tuple (UMI_bytes, cell_barcode_bytes).\n\n    If read_id is bytes, it is decoded to string using utf-8.\n    If the read_id does not contain at least two separators, a ValueError is raised.\n    After extraction, the UMI is validated to be a DNA sequence (A,C,G,T) of length 8-12,\n    and the cell barcode is validated to be alphanumeric of length 6-16.\n    If validation fails, a ValueError is raised.\n    \"\"\"\n    import re\n    if isinstance(read_id, bytes):\n        read_id = read_id.decode('utf-8')\n    try:\n        # Use rsplit with maxsplit=2 to correctly handle separators within fields\n        parts = read_id.rsplit(sep, 2)\n        umi_str = parts[-1]\n        cell_barcode_str = parts[-2]\n    except IndexError:\n        raise ValueError(\n            'Could not extract UMI or CB from the read ID, please check UMI and CB are encoded in the read name: %s'\n            % read_id\n        )\n    # Validate UMI: only A, C, G, T, length 8-12\n    if not re.match(r'^[ACGT]{8,12}$', umi_str):\n        raise ValueError(f'Invalid UMI: {umi_str}')\n    # Validate cell barcode: alphanumeric, length 6-16\n    if not re.match(r'^[A-Za-z0-9]{6,16}$', cell_barcode_str):\n        raise ValueError(f'Invalid cell barcode: {cell_barcode_str}')\n    # Return tuple in order (UMI_bytes, cell_barcode_bytes)\n    return umi_str.encode('utf-8'), cell_barcode_str.encode('utf-8')\n",
+  "gold_changed": true,
+  "answer_invariant": false,
+  "gold_generation_method": "llm_solver_code",
+  "gold_change_reason": "Solutions must incorporate rsplit with maxsplit=2 for robustness against separator in fields, accept bytes input, validate UMI and cell barcode formats, and enforce output tuple order.",
+  "seed_gold_compatible_with_scaled_task": false,
+  "covered_operator_ids": [
+    "env_medagentgym_train_879_M3_d_01",
+    "env_medagentgym_train_879_M3_d_02",
+    "env_medagentgym_train_879_M3_c_03",
+    "env_medagentgym_train_879_M3_c_04"
+  ],
+  "covered_requirements": [
+    "Scaled executable cases must include at least one test where separator appears within the last two fields.",
+    "Scaled executable cases must include at least one test with bytes input.",
+    "Scaled executable cases must include tests for invalid UMI and invalid cell barcode (e.g., too short, invalid characters).",
+    "Scaled executable cases must include a test that explicitly checks the order of the returned tuple."
+  ],
+  "implementation_notes": [
+    "Uses rsplit with maxsplit=2 to handle separator within UMI or cell barcode.",
+    "Checks read_id type and decodes bytes to str.",
+    "Validates UMI with regex ^[ACGT]{8,12}$ and cell barcode with ^[A-Za-z0-9]{6,16}$.",
+    "Raises ValueError with descriptive messages for missing fields or invalid formats.",
+    "Returns tuple in (UMI_bytes, cell_barcode_bytes) order."
+  ],
+  "assumptions": []
+}

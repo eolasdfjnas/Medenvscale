@@ -1,0 +1,92 @@
+{
+  "scaled_oracle_cases": [
+    {
+      "case_id": "scaled_seed_case_main",
+      "description": "Tests default behavior when default_error_profile.json does not exist: function returns hardcoded list, passes validation, returns a copy, does not modify globals, and is deterministic.",
+      "case_kind": "scaled_seed_case_main",
+      "targets_operator_id": "env_medagentgym_train_841_M4_d_01,env_medagentgym_train_841_M4_c_02,env_medagentgym_train_841_M4_a_03,env_medagentgym_train_841_M4_a_04,env_medagentgym_train_841_M4_a_05",
+      "axis": "D,C,A",
+      "semantic_intent": "Verify that the function returns the hardcoded default list when no file is present, validates it, returns a copy, does not mutate state, and is deterministic.",
+      "target_constraint": "When default_error_profile.json does not exist, the function must return the hardcoded list; the returned list must be non-increasing and within [0,1]; it must be a new list on each call; the function must not modify global state; multiple calls must return equal but not identical lists.",
+      "expected_failure_mode": "Old seed returns hardcoded list without copy/validation/global state check; adversarial mutation would affect subsequent calls; global state may be modified.",
+      "setup_code": "",
+      "call_code": "initial_globals = set(globals().keys())\nresult1 = get_default_error_profile()\nresult2 = get_default_error_profile()\nassert result1 == result2, \"Calls should return equal lists\"\nassert result1 is not result2, \"Calls should return different objects\"\norig = result1.copy()\nmutated = result1\nmutated[0] = 999\nresult3 = get_default_error_profile()\nassert result3 == orig, \"Mutation should not affect subsequent calls\"\nfinal_globals = set(globals().keys())\nassert initial_globals == final_globals, \"Global state should not change\"\nresult = result3",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must include scenarios with and without the default_error_profile.json file.",
+        "Scaled executable cases must include both a valid profile and an invalid profile that should trigger a ValueError.",
+        "Scaled executable cases must include a test where the returned list is mutated and then the function is called again to verify unchanged output.",
+        "Scaled executable cases must capture global state before and after function call and assert no modification.",
+        "Scaled executable cases must call the function twice and compare results for equality and non-identity."
+      ],
+      "expected_output_signature": {
+        "return_value": [
+          1,
+          0.06,
+          0.02,
+          0.02,
+          0.01,
+          0.005,
+          0.005,
+          0.005,
+          0.001,
+          0.001,
+          0.001,
+          0.0005
+        ]
+      }
+    },
+    {
+      "case_id": "scaled_coverage_file_present_valid",
+      "description": "Tests that when default_error_profile.json exists with a valid (non-increasing, in [0,1]) profile, the function returns that profile.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_841_M4_d_01,env_medagentgym_train_841_M4_c_02",
+      "axis": "D,C",
+      "semantic_intent": "Verify that the function reads the file when it exists and validates the content.",
+      "target_constraint": "When default_error_profile.json exists with a valid profile, the function must return that profile.",
+      "expected_failure_mode": "Old seed ignores file and returns hardcoded list.",
+      "setup_code": "import json\nwith open('default_error_profile.json', 'w') as f:\n    json.dump([0.5, 0.1, 0.05, 0.01, 0.005, 0.002, 0.001, 0.0005, 0.0003, 0.0002, 0.0001, 0.00005], f)",
+      "call_code": "result = get_default_error_profile()",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must include scenarios with and without the default_error_profile.json file.",
+        "Scaled executable cases must include both a valid profile and an invalid profile that should trigger a ValueError."
+      ],
+      "expected_output_signature": {
+        "return_value": [
+          0.5,
+          0.1,
+          0.05,
+          0.01,
+          0.005,
+          0.002,
+          0.001,
+          0.0005,
+          0.0003,
+          0.0002,
+          0.0001,
+          5e-05
+        ]
+      }
+    },
+    {
+      "case_id": "scaled_coverage_file_present_invalid",
+      "description": "Tests that when default_error_profile.json exists with an invalid (not non-increasing) profile, the function raises ValueError.",
+      "case_kind": "coverage_extension",
+      "targets_operator_id": "env_medagentgym_train_841_M4_c_02",
+      "axis": "C",
+      "semantic_intent": "Verify that the function raises ValueError for a profile that is not non-increasing.",
+      "target_constraint": "If the profile from file fails the monotonicity constraint, raise ValueError.",
+      "expected_failure_mode": "Old seed does not validate, returns invalid list.",
+      "setup_code": "import json\nwith open('default_error_profile.json', 'w') as f:\n    json.dump([0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01, 0.02, 1], f)",
+      "call_code": "raised = False\ntry:\n    get_default_error_profile()\nexcept ValueError:\n    raised = True\nresult = raised",
+      "assertion_code": "",
+      "covered_requirements": [
+        "Scaled executable cases must include both a valid profile and an invalid profile that should trigger a ValueError."
+      ],
+      "expected_output_signature": {
+        "return_value": true
+      }
+    }
+  ]
+}
