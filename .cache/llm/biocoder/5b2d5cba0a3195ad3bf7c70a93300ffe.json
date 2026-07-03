@@ -1,9 +1,0 @@
-{
-  "scaled_executable_gold_code": "import numpy as np\n\ndef jax_self_consistent_update(u_kn, N_k, f_k, states_with_samples=None):\n    boltzmann_means = np.mean(np.exp(-u_kn), axis=1)\n    return f_k - np.log(boltzmann_means + 1e-12)\n\ndef self_consistent_update(u_kn, N_k, f_k, states_with_samples=None):\n    \"\"\"Return an improved guess for the dimensionless free energies as a string.\"\"\"\n    updated_f_k = jax_self_consistent_update(u_kn, N_k, f_k, states_with_samples=states_with_samples)\n    return str(updated_f_k)\n\ndef main():\n    np.random.seed(42)\n    n_states = 4\n    n_samples = 200\n    u_kn = np.random.rand(n_states, n_samples) * 5.0\n    N_k = np.full(n_states, n_samples, dtype=int)\n    f_k = np.zeros(n_states)\n    states_with_samples = np.ones(n_states, dtype=bool)\n    updated_f_k = self_consistent_update(u_kn, N_k, f_k, states_with_samples)\n    print(\"Updated free energies:\", updated_f_k)\n\nif __name__ == \"__main__\":\n    main()\n",
-  "repair_summary": "Changed self_consistent_update return type from ndarray to str by wrapping the result with str(), to match the expected return type in the test case.",
-  "covered_operator_ids": [],
-  "covered_requirements": [
-    "Validate original seed behavior for self_consistent_update."
-  ],
-  "remaining_risks": []
-}

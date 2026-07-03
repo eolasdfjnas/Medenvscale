@@ -1,9 +1,0 @@
-{
-  "scaled_executable_gold_code": "import pandas as pd\n\ndef from_label(label):\n    return label\n\ndef report_bad_line(parse_func):\n    def parse_line(line):\n        line = line.strip()\n        parts = line.split()\n        chrom, rest = parts[0].split(':')\n        start, end = rest.split('-')\n        gene = parts[1] if len(parts) > 1 else ''\n        return (chrom, int(start), int(end), gene)\n    return parse_line\n\ndef as_handle(path, mode):\n    return open(path, mode)\n\ndef read_text(infile):\n    \"\"\"Text coordinate format: \"chr:start-end\", one per line.\n\n    Or sometimes: \"chrom:start-end gene\" or \"chrom:start-end REF>ALT\"\n\n    Coordinate indexing is assumed to be from 1.\n    \"\"\"\n    parse_line = report_bad_line(from_label)\n    with as_handle(infile, 'r') as handle:\n        rows = [parse_line(line) for line in handle]\n    table = pd.DataFrame.from_records(rows, columns=['chromosome', 'start', 'end', 'gene'])\n    table['gene'] = table['gene'].replace('', '-')\n    return table.to_string()\n\ndef main():\n    sample_lines = [\n        'chr1:100-200 geneA',\n        'chrom2:300-400',\n        'chr3:500-600 REF>ALT'\n    ]\n    with open('coords.txt', 'w') as f:\n        for line in sample_lines:\n            f.write(line + '\\n')\n    df = read_text('coords.txt')\n    print(df)\n\nif __name__ == '__main__':\n    main()\n",
-  "repair_summary": "Changed read_text to return a string (using DataFrame.to_string()) instead of a DataFrame to match expected return type str.",
-  "covered_operator_ids": [],
-  "covered_requirements": [
-    "Validate original seed behavior for read_text."
-  ],
-  "remaining_risks": []
-}

@@ -1,9 +1,23 @@
+# Core pipeline
 pydantic>=2.7
 PyYAML>=6.0
 Jinja2>=3.1
 requests>=2.31
 tqdm>=4.66
-pytest>=8.0
-datasets>=2.20
+
+# Local model inference and TRL training
+torch>=2.2
 transformers>=4.41
-trl>=0.9
+datasets>=2.20
+accelerate>=0.30
+peft>=0.11
+trl>=0.15
+
+# Common BioCoder / executable-task libraries
+numpy>=1.26
+pandas>=2.0
+biopython>=1.83
+scipy>=1.11
+
+# Development / tests
+pytest>=8.0

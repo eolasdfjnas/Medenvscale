@@ -1,7 +1,0 @@
-{
-  "trainer": "simple_prm",
-  "dataset_path": "data/splits/prm_train.jsonl",
-  "output_dir": "experiments/medqa_en_pilot/prm",
-  "max_steps": 10,
-  "status": "configured_only"
-}

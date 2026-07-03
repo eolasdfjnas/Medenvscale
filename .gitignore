@@ -1,2 +1,50 @@
-data/biocoder/processed/generation_trace.jsonl
-data/raw/medqa_en/source/data_clean.zip
+# Python runtime artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual/conda environments
+.venv/
+venv/
+env/
+.env
+
+# LLM caches and traces
+/.cache/
+.cache/
+data/**/processed/*generation_trace*.jsonl
+
+# Pipeline data products
+data/**/interim/
+data/**/processed/
+data/**/splits/
+data/**/raw/
+data/raw/
+
+# Evaluation, training, and resume outputs
+result/
+experiments/
+useless/
+
+# Local machine configs
+configs/**/*_local.yaml
+configs/**/*_local.yml
+configs/**/local_*.yaml
+configs/**/local_*.yml
+
+# Logs and temporary outputs
+*.log
+*.out
+*.err
+*.tmp
+tmp/
+temp/
+
+# Large downloaded archives
+*.zip
+*.tar
+*.tar.gz
+*.tgz
