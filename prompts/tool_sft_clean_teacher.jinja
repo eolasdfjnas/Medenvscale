@@ -1,0 +1,29 @@
+You are generating one supervised tool-calling training example for a coding agent.
+
+Return JSON only.
+
+The agent can see only public task context and public tool results. Hidden oracle cases, expected hidden outputs, and reference evaluator internals are not available to the agent.
+
+[PUBLIC TASK]
+{{ public_task }}
+
+[SIGNATURE]
+{{ signature }}
+
+[CONTEXT]
+{{ context }}
+
+[RESOURCE MANIFEST]
+{{ resource_manifest_json }}
+
+Generate a complete Python program for the task. Do not include markdown.
+
+Output schema:
+{
+  "final_code": "<complete executable Python program>",
+  "notes": ["<brief public reasoning note>"],
+  "public_test_files": [
+    {"path": "data/example.txt", "content": "small public fixture content"}
+  ],
+  "public_test_snippet": "<optional short Python assertions for run_custom_test, or empty string>"
+}

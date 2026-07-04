@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from medenvscale.config import AppConfig
 from medenvscale.ingest.code_execution import _compare_seed_case_to_ground_truth
-from medenvscale.pipeline_ops import raw_path, raw_rejected_path, stage00_download
+from medenvscale.pipeline_ops import raw_path, raw_rejected_path, raw_test_path, stage00_download
 from medenvscale.utils import ensure_dir, load_yaml, read_jsonl, write_jsonl
 
 
@@ -34,6 +34,36 @@ class Stage00CodeValidationTests(unittest.TestCase):
             ensure_dir(path)
         ensure_dir(cfg.root / cfg.llm_values["cache"]["dir"])
         return cfg
+
+    def test_stage00_writes_train_and_test_raw_outputs(self) -> None:
+        root = Path(__file__).resolve().parent.parent
+        temp_dir = Path(tempfile.mkdtemp(prefix="medenvscale-stage00-src-"))
+        train_path = temp_dir / "train.jsonl"
+        test_path = temp_dir / "test.jsonl"
+        row = {
+            "idx": "split_case",
+            "problem": "Write add.",
+            "solution": "def add(a, b):\n    return a + b",
+            "context": "<<insert solution here>>",
+            "signature": "def add(a, b)",
+            "code": "def add(a, b):\n    return a + b\n\nanswer = add(2, 3)\nprint(answer)\n",
+        }
+        write_jsonl(train_path, [{**row, "idx": "train_case"}])
+        write_jsonl(test_path, [{**row, "idx": "test_case"}])
+        cfg = self._build_temp_config(root, train_path)
+        cfg.values["dataset"]["task_files"]["test"] = str(test_path)
+        cfg.values["dataset"]["local_raw_paths"] = {
+            "train": str(Path(cfg.values["dataset"]["local_raw_path"])),
+            "test": str(Path(cfg.values["output"]["raw_dir"]) / "test_tasks_raw.jsonl"),
+        }
+
+        report = stage00_download(cfg, llm_mode="mock")
+
+        self.assertEqual(report["rows_written"], 2)
+        self.assertEqual(len(read_jsonl(raw_path(cfg))), 1)
+        self.assertEqual(len(read_jsonl(raw_test_path(cfg))), 1)
+        self.assertEqual(read_jsonl(raw_path(cfg))[0]["source_split"], "train")
+        self.assertEqual(read_jsonl(raw_test_path(cfg))[0]["source_split"], "test")
 
     def test_stage00_keeps_executable_code_and_ground_truth_signature(self) -> None:
         root = Path(__file__).resolve().parent.parent

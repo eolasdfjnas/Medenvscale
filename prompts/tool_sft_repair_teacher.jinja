@@ -1,0 +1,32 @@
+You are repairing a flawed candidate in a supervised tool-calling trajectory.
+
+Return JSON only.
+
+Use only public task context and public tool feedback. Do not mention or rely on hidden oracle cases. Produce complete executable Python code, not a patch or markdown.
+
+[PUBLIC TASK]
+{{ public_task }}
+
+[SIGNATURE]
+{{ signature }}
+
+[CONTEXT]
+{{ context }}
+
+[RESOURCE MANIFEST]
+{{ resource_manifest_json }}
+
+[BUG TYPE]
+{{ bug_type }}
+
+[BUGGY CODE]
+{{ buggy_code }}
+
+[PUBLIC TOOL FEEDBACK]
+{{ tool_feedback_json }}
+
+Output schema:
+{
+  "final_code": "<complete repaired Python program>",
+  "notes": ["<brief repair note based only on public feedback>"]
+}

@@ -9,7 +9,10 @@ dataset:
   split_source: train
   max_seed_cases: 500
   deduplicate_by_question: false
-  local_raw_path: data/raw/medagentgym/medagentgym_tasks_raw.jsonl
+  local_raw_path: data/raw/medagentgym/train_tasks_raw.jsonl
+  local_raw_paths:
+    train: data/raw/medagentgym/train_tasks_raw.jsonl
+    test: data/raw/medagentgym/test_tasks_raw.jsonl
   metadata_path: data/raw/medagentgym/prepare_meta.json
   task_files:
     train: train_tasks.jsonl
@@ -68,6 +71,13 @@ stage05:
     enabled: false
     use_as_admission_gate: false
 
+stage05_5:
+  seed: 1337
+  split_ratios:
+    train: 0.7
+    test: 0.3
+    dev: 0.1
+
 stage06:
   llm_config: configs/agent_llm.yaml
   llm_mode: api
@@ -75,13 +85,76 @@ stage06:
     abort_on_llm_error: false
     max_turns: 8
     tool_budget:
-      max_total_tool_calls: 6
+      max_total_tool_calls: 4
       max_calls_per_tool:
         get_task_context: 1
-        read_resource_file: 3
+        create_test_file: 3
         validate_candidate_code: 2
         run_custom_test: 3
         submit_final_code: 1
+
+stage09_rlvr_grpo:
+  enabled: true
+  algorithm: grpo
+  trainer: trl_grpo
+  trainer_adapter_mode: interactive_tools_final_code_reward
+  split: train
+  eval_split: dev
+  eval_steps: 25
+  base_model: /archive/zengjiaqi/Medical_LLM/Qwen3.5-2B-Base
+  sft_adapter: experiments/biocoder/tool_sft_lora/adapter
+  rollouts_per_env: 4
+  num_generations: 4
+  max_new_tokens: 2048
+  max_completion_length: 2048
+  max_tool_calling_iterations: 12
+  max_prompt_length: 4096
+  temperature: 0.7
+  top_p: 0.95
+  kl_beta: 0.02
+  trust_remote_code: true
+  device_map: null
+  torch_dtype: auto
+  max_seq_length: 4096
+  max_steps: 100
+  learning_rate: 5.0e-6
+  per_device_train_batch_size: 1
+  gradient_accumulation_steps: 4
+  ddp_find_unused_parameters: false
+  gradient_checkpointing: true
+  max_abs_advantage: 2.0
+  reward:
+    sample_pass_weight: 1.0
+    case_pass_rate_weight: 0.5
+    rubric_score_weight: 0.4
+    valid_submit_weight: 0.1
+    within_budget_success_bonus: 0.1
+    no_submit_penalty: 0.2
+    runtime_error_penalty: 0.1
+    tool_budget_penalty: 0.1
+    tool_budget_penalty_cap: 3
+  rubric_reward:
+    enabled: true
+    evidence_type: oracle_case
+    score_type: binary_all_cases_pass
+
+stage08_5_eval_sft:
+  split: dev
+  do_sample: false
+  temperature: 0.0
+  top_p: 1.0
+  max_new_tokens: 2048
+  device_map: auto
+  torch_dtype: auto
+
+stage09_5_eval_rl:
+  split: test
+  do_sample: false
+  temperature: 0.0
+  top_p: 1.0
+  max_new_tokens: 2048
+  device_map: auto
+  torch_dtype: auto
 
 quality:
   min_question_points: 4

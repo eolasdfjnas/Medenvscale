@@ -14,11 +14,15 @@ from medenvscale.pipeline_ops import (
     operator_realization_report_output_path,
     scaled_clean_output_path,
     scaled_raw_output_path,
+    scaled_output_path,
+    scaled_rejected_output_path,
+    scaled_split_clean_output_path,
     scaled_task_consistency_report_output_path,
     stage05_quality_report_output_path,
     stage01_normalize,
     stage02_route,
     stage03_seed,
+    stage05_5_assign_splits,
     stage05_scale,
     stage06_qpoints_rubrics,
     stage07_safety,
@@ -33,12 +37,18 @@ class PipelineSmokeTests(unittest.TestCase):
         values = copy.deepcopy(load_yaml(root / "configs" / "biocoder" / "medagentgym_pilot.yaml"))
         temp_root = Path(tempfile.mkdtemp(prefix="medenvscale-smoke-"))
         llm_values = copy.deepcopy(load_yaml(root / "configs" / "llm.yaml"))
-        values["dataset"]["local_raw_path"] = str(temp_root / "raw" / "medagentgym_tasks_raw.jsonl")
+        values["dataset"]["task_files"] = {}
+        values["dataset"]["local_raw_path"] = str(temp_root / "raw" / "train_tasks_raw.jsonl")
+        values["dataset"]["local_raw_paths"] = {
+            "train": str(temp_root / "raw" / "train_tasks_raw.jsonl"),
+            "test": str(temp_root / "raw" / "test_tasks_raw.jsonl"),
+        }
         values["dataset"]["metadata_path"] = str(temp_root / "raw" / "prepare_meta.json")
         values["output"]["raw_dir"] = str(temp_root / "raw")
         values["output"]["interim_dir"] = str(temp_root / "interim")
         values["output"]["processed_dir"] = str(temp_root / "processed")
         values["output"]["split_dir"] = str(temp_root / "splits")
+        values["output"]["result_dir"] = str(temp_root / "result")
         llm_values["cache"]["dir"] = str(temp_root / "cache" / "llm")
         llm_values["trace"]["path"] = str(temp_root / "processed" / "generation_trace.jsonl")
         cfg = AppConfig(root=root, values=values, llm_values=llm_values, dataset_name="biocoder")
@@ -53,7 +63,7 @@ class PipelineSmokeTests(unittest.TestCase):
         write_jsonl(cfg.root / cfg.values["dataset"]["local_raw_path"], DEMO_MEDAGENTGYM_ROWS[:5])
         normalized = stage01_normalize(cfg, limit=5)
         self.assertEqual(len(normalized), 5)
-        routed = stage02_route(cfg, limit=5, llm_mode="mock")
+        routed = stage02_route(cfg, limit=5, llm_mode="mock", parallel_workers=2)
         self.assertEqual(len(routed), 5)
         seeds = stage03_seed(cfg, limit=5)
         self.assertEqual(len(seeds), 5)
@@ -89,3 +99,50 @@ class PipelineSmokeTests(unittest.TestCase):
         self.assertEqual(len(envs_a), 4)
         self.assertEqual([env.original_task_id for env in envs_a], [env.original_task_id for env in envs_b])
         self.assertNotEqual([env.original_task_id for env in envs_a], [env.original_task_id for env in envs_c])
+
+    def test_stage05_can_run_parallel_and_resume_existing_envs(self) -> None:
+        root = Path(__file__).resolve().parent.parent
+        cfg = self._build_temp_config(root)
+        write_jsonl(cfg.root / cfg.values["dataset"]["local_raw_path"], DEMO_MEDAGENTGYM_ROWS[:3])
+        stage01_normalize(cfg, limit=3)
+        stage02_route(cfg, limit=3, llm_mode="mock")
+        stage03_seed(cfg, limit=3)
+
+        generated = stage05_scale(cfg, limit=2, llm_mode="mock", parallel_workers=2)
+        resumed = stage05_scale(cfg, limit=2, llm_mode="mock", parallel_workers=2, resume=True)
+
+        self.assertEqual(len(generated), 8)
+        self.assertEqual([env.env_id for env in generated], [env.env_id for env in resumed])
+        self.assertEqual(len(read_jsonl(scaled_raw_output_path(cfg))), 8)
+
+    def test_stage05_resume_can_rebuild_from_checkpoint(self) -> None:
+        root = Path(__file__).resolve().parent.parent
+        cfg = self._build_temp_config(root)
+        write_jsonl(cfg.root / cfg.values["dataset"]["local_raw_path"], DEMO_MEDAGENTGYM_ROWS[:3])
+        stage01_normalize(cfg, limit=3)
+        stage02_route(cfg, limit=3, llm_mode="mock")
+        stage03_seed(cfg, limit=3)
+
+        generated = stage05_scale(cfg, limit=2, llm_mode="mock", parallel_workers=2, resume=True)
+        for path in (scaled_output_path(cfg), scaled_raw_output_path(cfg), scaled_clean_output_path(cfg), scaled_rejected_output_path(cfg)):
+            path.unlink()
+        rebuilt = stage05_scale(cfg, limit=2, llm_mode="mock", parallel_workers=2, resume=True)
+
+        self.assertEqual([env.env_id for env in generated], [env.env_id for env in rebuilt])
+        self.assertEqual(len(read_jsonl(scaled_output_path(cfg))), 8)
+
+    def test_stage05_5_resume_can_rebuild_from_checkpoint(self) -> None:
+        root = Path(__file__).resolve().parent.parent
+        cfg = self._build_temp_config(root)
+        write_jsonl(cfg.root / cfg.values["dataset"]["local_raw_path"], DEMO_MEDAGENTGYM_ROWS[:3])
+        stage01_normalize(cfg, limit=3)
+        stage02_route(cfg, limit=3, llm_mode="mock")
+        stage03_seed(cfg, limit=3)
+        stage05_scale(cfg, limit=2, llm_mode="mock")
+
+        first = stage05_5_assign_splits(cfg, resume=True)
+        Path(first["output_path"]).unlink()
+        rebuilt = stage05_5_assign_splits(cfg, resume=True)
+
+        self.assertEqual([env.env_id for env in first["environments"]], [env.env_id for env in rebuilt["environments"]])
+        self.assertEqual(len(read_jsonl(scaled_split_clean_output_path(cfg))), len(first["environments"]))

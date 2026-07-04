@@ -1,0 +1,30 @@
+You are generating a deliberately flawed first draft for a supervised tool-calling repair trajectory.
+
+Return JSON only.
+
+The flawed draft should be plausible, small, and repairable from public tool feedback. Do not use hidden oracle cases or hidden expected outputs.
+
+[PUBLIC TASK]
+{{ public_task }}
+
+[SIGNATURE]
+{{ signature }}
+
+[CONTEXT]
+{{ context }}
+
+[RESOURCE MANIFEST]
+{{ resource_manifest_json }}
+
+Choose one public, repairable bug such as missing target function, wrong return shape, missing import fallback, missing file handling, or a boundary-case mistake. Also provide a public self-test that can expose the bug if possible. If the self-test needs a small fixture, include it in public_test_files so the trajectory can call create_test_file before run_custom_test.
+
+Output schema:
+{
+  "bug_type": "<short_bug_type>",
+  "buggy_code": "<complete but flawed Python program>",
+  "public_test_files": [
+    {"path": "data/example.txt", "content": "small public fixture content"}
+  ],
+  "public_test_snippet": "<optional short Python assertions for run_custom_test, or empty string>",
+  "notes": ["<why this is a repairable public bug>"]
+}

@@ -115,6 +115,10 @@ dataset:
   task_files:
     train: train_tasks.jsonl
     test: test_tasks.jsonl
+  local_raw_path: data/raw/medagentgym/train_tasks_raw.jsonl
+  local_raw_paths:
+    train: data/raw/medagentgym/train_tasks_raw.jsonl
+    test: data/raw/medagentgym/test_tasks_raw.jsonl
   code_execution:
     local_python_bin: /path/to/execution/env/bin/python（创建环境，该环境的绝对路径）
 
@@ -151,6 +155,15 @@ For `--dataset biocoder`, the expected files are:
 /path/to/medagentgym/biocoder/train_tasks.jsonl
 /path/to/medagentgym/biocoder/test_tasks.jsonl
 ```
+
+Stage 00 validates the original train/test files separately and writes:
+
+```text
+data/biocoder/raw/train_tasks_raw.jsonl
+data/biocoder/raw/test_tasks_raw.jsonl
+```
+
+The Stage 00-05_5 data-generation pipeline reads only `train_tasks_raw.jsonl` by default, so original test data is not used for scaling or training. Stage 10 reads `test_tasks_raw.jsonl` for the final original-test evaluation.
 
 Each JSONL row should describe one executable coding task. The loader accepts several common field names; this is a recommended minimal shape:
 
@@ -439,7 +452,13 @@ Optional:
 
 ### Compare Base / SFT / SFT+RL On Original Tasks: Stage 10
 
-Stage 10 evaluates original Stage 00 tasks, not scaled difficulty tasks. Ground truth comes from each raw task's executable seed result.
+Stage 10 evaluates original Stage 00 test tasks, not scaled difficulty tasks. It reads:
+
+```text
+data/biocoder/raw/test_tasks_raw.jsonl
+```
+
+Ground truth comes from each raw task's executable seed result. Original test rows should not be used by Stage 05 scaling or Stage 08/09 training.
 
 ```bash
 python scripts/10_eval_original_models.py \

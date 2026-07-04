@@ -100,6 +100,12 @@ def _rewrite_dataset_file_layout(values: dict[str, Any], llm_values: dict[str, A
         current = dataset_cfg.get(key)
         if current:
             dataset_cfg[key] = str(target_dir / Path(str(current)).name)
+    raw_paths = dataset_cfg.get("local_raw_paths")
+    if isinstance(raw_paths, dict):
+        dataset_cfg["local_raw_paths"] = {
+            split_name: str(raw_dir / Path(str(path)).name)
+            for split_name, path in raw_paths.items()
+        }
 
     source_dir = raw_dir / "source"
     if dataset_cfg.get("source_zip_path"):
