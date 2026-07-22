@@ -10,12 +10,14 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
 from medenvscale.config import AppConfig
 from medenvscale.llm import LLMClient
 from medenvscale.llm.prompt_runner import PromptRunner
+from medenvscale.utils import append_jsonl, read_jsonl, stable_hash
 from tqdm.auto import tqdm
 
 
@@ -30,32 +32,82 @@ def validate_and_repair_code_rows(
     cfg: AppConfig,
     llm_client: LLMClient | None = None,
     prompt_runner: PromptRunner | None = None,
+    parallel_workers: int | None = None,
+    resume: bool = False,
+    checkpoint_path: str | Path | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
-    accepted_rows: list[dict[str, Any]] = []
-    rejected_rows: list[dict[str, Any]] = []
+    worker_count = max(1, int(parallel_workers or 1))
+    if llm_client is not None and llm_client.mode == "local" and worker_count > 1:
+        print("Stage00 workers is forced to 1 for local LLM mode to avoid concurrent model.generate calls.")
+        worker_count = 1
+    checkpoint = Path(checkpoint_path) if checkpoint_path else None
+    completed = _load_code_validation_checkpoint(checkpoint) if resume and checkpoint is not None else {}
+    results: list[tuple[int, dict[str, Any], bool, dict[str, Any]]] = []
     direct_pass_count = 0
     repaired_pass_count = 0
+    pending: list[tuple[int, str, dict[str, Any]]] = []
+    for index, row in enumerate(rows):
+        key = _code_validation_checkpoint_key(row, index)
+        if key in completed:
+            item = completed[key]
+            results.append((index, dict(item.get("prepared") or {}), bool(item.get("accepted")), dict(item.get("audit") or {})))
+        else:
+            pending.append((index, key, row))
 
-    progress = tqdm(rows, total=len(rows), desc="Stage00 Prepare", unit="task", leave=True) if rows else rows
+    progress = tqdm(
+        total=len(rows),
+        initial=len(results),
+        desc="Stage00 Prepare",
+        unit="task",
+        leave=True,
+    ) if rows else None
     try:
-        for row in progress:
-            prepared, accepted, audit = prepare_executable_row(
-                row=row,
-                cfg=cfg,
-                llm_client=llm_client,
-                prompt_runner=prompt_runner,
-            )
-            if accepted:
-                accepted_rows.append(prepared)
-                if prepared.get("repair_succeeded"):
-                    repaired_pass_count += 1
-                else:
-                    direct_pass_count += 1
-            else:
-                rejected_rows.append(audit)
+        if worker_count == 1:
+            for index, key, row in pending:
+                prepared, accepted, audit = prepare_executable_row(
+                    row=row,
+                    cfg=cfg,
+                    llm_client=llm_client,
+                    prompt_runner=prompt_runner,
+                )
+                results.append((index, prepared, accepted, audit))
+                _append_code_validation_checkpoint(checkpoint, key, prepared, accepted, audit)
+                if progress is not None:
+                    progress.update(1)
+        else:
+            with ThreadPoolExecutor(max_workers=worker_count) as executor:
+                futures = {
+                    executor.submit(
+                        prepare_executable_row,
+                        row=row,
+                        cfg=cfg,
+                        llm_client=llm_client,
+                        prompt_runner=prompt_runner,
+                    ): (index, key)
+                    for index, key, row in pending
+                }
+                for future in as_completed(futures):
+                    index, key = futures[future]
+                    prepared, accepted, audit = future.result()
+                    results.append((index, prepared, accepted, audit))
+                    _append_code_validation_checkpoint(checkpoint, key, prepared, accepted, audit)
+                    if progress is not None:
+                        progress.update(1)
     finally:
-        if rows:
+        if progress is not None:
             progress.close()
+
+    accepted_rows: list[dict[str, Any]] = []
+    rejected_rows: list[dict[str, Any]] = []
+    for _, prepared, accepted, audit in sorted(results, key=lambda item: item[0]):
+        if accepted:
+            accepted_rows.append(prepared)
+            if prepared.get("repair_succeeded"):
+                repaired_pass_count += 1
+            else:
+                direct_pass_count += 1
+        else:
+            rejected_rows.append(audit)
 
     summary = {
         "input_rows": len(rows),
@@ -65,6 +117,48 @@ def validate_and_repair_code_rows(
         "repaired_pass_rows": repaired_pass_count,
     }
     return accepted_rows, rejected_rows, summary
+
+
+def _code_validation_checkpoint_key(row: dict[str, Any], index: int) -> str:
+    explicit_id = row.get("task_id") or row.get("id") or row.get("instance_id") or row.get("question_id") or row.get("idx")
+    source_split = row.get("source_split") or "unknown"
+    if explicit_id:
+        return f"{source_split}:{explicit_id}"
+    return f"{source_split}:row_{index}:{stable_hash(row)}"
+
+
+def _load_code_validation_checkpoint(path: Path | None) -> dict[str, dict[str, Any]]:
+    if path is None:
+        return {}
+    completed: dict[str, dict[str, Any]] = {}
+    for row in read_jsonl(path):
+        key = str(row.get("task_key") or "")
+        if not key:
+            continue
+        completed[key] = row
+    if completed:
+        print(f"Stage00 resume: loaded {len(completed)} checkpoint rows from {path}")
+    return completed
+
+
+def _append_code_validation_checkpoint(
+    path: Path | None,
+    key: str,
+    prepared: dict[str, Any],
+    accepted: bool,
+    audit: dict[str, Any],
+) -> None:
+    if path is None:
+        return
+    append_jsonl(
+        path,
+        {
+            "task_key": key,
+            "accepted": bool(accepted),
+            "prepared": prepared,
+            "audit": audit,
+        },
+    )
 
 
 def prepare_executable_row(

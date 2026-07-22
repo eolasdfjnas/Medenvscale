@@ -54,6 +54,11 @@ Do not generate assert True or smoke tests.
 {{ failure_summary }}
 
 ====================
+[OUTPUT REQUIREMENT METADATA]
+====================
+{{ output_requirement_metadata }}
+
+====================
 [CASE DESIGN TARGETS]
 ====================
 {{ case_design_targets }}
@@ -69,6 +74,7 @@ Do not generate assert True or smoke tests.
 
 1. Preserve the final scaled task semantics.
 2. Preserve the validated seed execution path when possible; repair from the seed case instead of inventing a brand-new unrelated execution route.
+   The pipeline separately adds a mandatory `seed_regression` case for M2/M3/M4; repair generated scaled cases for new requirements and do not weaken the original seed behavior.
 3. Keep the original case_id, targets_operator_id, axis, and coverage intent unless they are obviously missing or invalid.
 4. Every repaired case must target at least one real operator.
 5. setup_code may be an empty string when no setup is required, but call_code must be non-empty.
@@ -78,6 +84,10 @@ Do not generate assert True or smoke tests.
 9. call_code must assign the main observable output to a variable named result.
 10. expected_output_signature must not be empty and must stay consistent with call_code/result.
 11. covered_requirements must be non-empty and must refer to real visible requirements in the final prompt.
+11a. covered_requirement_ids must use exact IDs from OUTPUT REQUIREMENT METADATA when metadata is available. Do not invent requirement IDs.
+11b. If FAILURE SUMMARY contains MISSING_REQUIREMENT_COVERAGE, REQUIREMENT_ID_HAS_WEAK_CASE_ONLY, QUALITY_GATE_MISSING_REQUIREMENT_COVERAGE, or missing_requirement_id, add or repair a case for that exact requirement_id.
+11c. A repaired case must not satisfy missing coverage by ID alone. Its setup_code, call_code, expected_failure_mode, and expected_output_signature must make the missing requirement's text observable.
+11d. Every required non-generic requirement_id from OUTPUT REQUIREMENT METADATA must be covered by at least one case unless the FAILURE SUMMARY explicitly says it is already covered.
 12. Do not use placeholder assertions.
 13. The first repaired case should normally remain the main transformed seed case with case_kind = scaled_seed_case_main.
 14. Do not generate cases that only restate seed-task behavior when new requirements exist.
@@ -112,6 +122,7 @@ Return JSON only, with exactly the following fields:
       "setup_code": "<optional setup code; empty string allowed>",
       "call_code": "<required executable invocation code; must assign to result>",
       "assertion_code": "<optional extra assertions>",
+      "covered_requirement_ids": ["<requirement_id_1>", "<requirement_id_2>"],
       "covered_requirements": ["<requirement_1>", "<requirement_2>"],
       "expected_output_signature": {
         "return_type": "<optional type name>",

@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from medenvscale.schemas import ExecutableEnvSpec
+from medenvscale.scaling.requirement_registry import requirements_match
 
 from .report_schema import build_gate_result
 
@@ -11,6 +12,7 @@ HARD_FAIL_CODES = {
     "NO_VALIDATED_ORACLE_CASES",
     "ORACLE_CASE_VALIDATION_FAILED",
     "NO_CASE_COVERS_NEW_REQUIREMENT",
+    "PARTIAL_CASE_REQUIREMENT_COVERAGE",
     "PLACEHOLDER_CASE_PRESENT",
     "CASE_MISSING_CALL_CODE",
     "CASE_MISSING_EXPECTED_OUTPUT_SIGNATURE",
@@ -93,6 +95,9 @@ def run_oracle_case_quality_gate(sample: dict[str, Any], config: dict | None = N
     validated_cases = list(scaled_env.validated_oracle_cases or [])
     validation_report = list(scaled_env.oracle_case_validation_report or [])
     output_requirements = list(scaled_env.output_requirements or [])
+    output_requirement_metadata = [
+        row for row in (scaled_env.output_requirement_metadata or []) if isinstance(row, dict)
+    ]
     difficulty_level = str((scaled_env.difficulty.global_level if scaled_env.difficulty else "") or "M1")
     stage05_cfg = config.get("stage05_cfg") or {}
     recommended_cases_cfg = stage05_cfg.get("min_validated_oracle_cases", {})
@@ -117,6 +122,8 @@ def run_oracle_case_quality_gate(sample: dict[str, Any], config: dict | None = N
         failure_reasons.append("ORACLE_CASE_VALIDATION_FAILED")
     placeholder_case_ids = []
     covered_requirements = set()
+    covered_requirement_ids = set()
+    bound_requirement_evidence: dict[str, list[str]] = {}
     coverage_evidence = set()
     for case in validated_cases:
         if not isinstance(case, dict):
@@ -134,14 +141,47 @@ def run_oracle_case_quality_gate(sample: dict[str, Any], config: dict | None = N
             if text:
                 covered_requirements.add(text)
                 coverage_evidence.add(text)
+        for req_id in case.get("covered_requirement_ids") or []:
+            text = str(req_id).strip()
+            if text and not output_requirement_metadata:
+                covered_requirement_ids.add(text)
+        for check in case.get("bound_requirement_checks") or []:
+            if not isinstance(check, dict):
+                continue
+            req_id = str(check.get("requirement_id") or "")
+            if req_id and check.get("passed"):
+                covered_requirement_ids.add(req_id)
+                bound_requirement_evidence.setdefault(req_id, []).append(str(case.get("case_id") or ""))
         for evidence in _case_requirement_evidence(case):
             coverage_evidence.add(evidence)
     if placeholder_case_ids:
         checks["placeholder_filter_passed"] = False
         failure_reasons.extend(f"PLACEHOLDER_CASE_PRESENT:{case_id}" for case_id in placeholder_case_ids)
     coverage_targets: list[str] = []
+    coverage_target_ids: list[str] = []
+    missing_requirement_ids: list[str] = []
     skipped_generic_requirements: list[str] = []
-    if output_requirements:
+    if output_requirement_metadata:
+        for row in output_requirement_metadata:
+            req_id = str(row.get("requirement_id") or "")
+            req = str(row.get("text") or "").strip()
+            if not req_id or not req or not bool(row.get("required_coverage", True)):
+                continue
+            if _is_generic_requirement(req):
+                skipped_generic_requirements.append(req)
+                continue
+            coverage_targets.append(req)
+            coverage_target_ids.append(req_id)
+        missing_requirement_ids = [req_id for req_id in coverage_target_ids if req_id not in covered_requirement_ids]
+        if coverage_target_ids:
+            matched = len(coverage_target_ids) - len(missing_requirement_ids)
+            if matched == 0:
+                checks["requirement_coverage_passed"] = False
+                failure_reasons.append("NO_CASE_COVERS_NEW_REQUIREMENT")
+            elif missing_requirement_ids:
+                checks["requirement_coverage_passed"] = False
+                failure_reasons.append("PARTIAL_CASE_REQUIREMENT_COVERAGE")
+    elif output_requirements:
         for requirement in output_requirements:
             req = str(requirement).strip()
             if not req:
@@ -160,7 +200,8 @@ def run_oracle_case_quality_gate(sample: dict[str, Any], config: dict | None = N
             checks["requirement_coverage_passed"] = False
             failure_reasons.append("NO_CASE_COVERS_NEW_REQUIREMENT")
         elif matched < len(coverage_targets):
-            warnings.append("PARTIAL_CASE_REQUIREMENT_COVERAGE")
+            checks["requirement_coverage_passed"] = False
+            failure_reasons.append("PARTIAL_CASE_REQUIREMENT_COVERAGE")
     elif skipped_generic_requirements:
         warnings.append("GENERIC_OUTPUT_REQUIREMENTS_SKIPPED")
 
@@ -173,8 +214,17 @@ def run_oracle_case_quality_gate(sample: dict[str, Any], config: dict | None = N
             "validated_case_ids": [str(case.get("case_id") or "") for case in validated_cases if isinstance(case, dict)],
             "invalid_case_ids": [str(row.get("case_id") or "") for row in invalid_rows],
             "covered_requirements": sorted(covered_requirements),
+            "covered_requirement_ids": sorted(covered_requirement_ids),
             "coverage_evidence": sorted(coverage_evidence),
             "coverage_targets": coverage_targets,
+            "coverage_target_ids": coverage_target_ids,
+            "missing_requirement_ids": missing_requirement_ids,
+            "missing_requirements": [
+                str(row.get("text") or "")
+                for row in output_requirement_metadata
+                if str(row.get("requirement_id") or "") in set(missing_requirement_ids)
+            ],
+            "bound_requirement_evidence": bound_requirement_evidence,
             "skipped_generic_output_requirements": skipped_generic_requirements,
             "recommended_case_count": recommended_case_count,
         },
@@ -207,19 +257,7 @@ def _is_generic_requirement(text: str) -> bool:
 
 
 def _requirements_match(target: str, covered: str) -> bool:
-    target_norm = _normalize_requirement(target)
-    covered_norm = _normalize_requirement(covered)
-    if not target_norm or not covered_norm:
-        return False
-    if target_norm in covered_norm or covered_norm in target_norm:
-        return True
-    target_tokens = _specific_tokens(target_norm)
-    covered_tokens = _specific_tokens(covered_norm)
-    if not target_tokens:
-        return False
-    overlap = target_tokens & covered_tokens
-    required_overlap = min(2, len(target_tokens))
-    return len(overlap) >= required_overlap
+    return requirements_match(target, covered)
 
 
 def _case_requirement_evidence(case: dict[str, Any]) -> list[str]:

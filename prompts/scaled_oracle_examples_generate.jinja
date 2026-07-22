@@ -62,6 +62,11 @@ Do not rely on external network access.
 {{ output_requirements }}
 
 ====================
+[OUTPUT REQUIREMENT METADATA]
+====================
+{{ output_requirement_metadata }}
+
+====================
 [OUTPUT CONSTRAINT SPEC]
 ====================
 {{ output_constraint_spec }}
@@ -87,11 +92,19 @@ Do not rely on external network access.
 
 Generate at least {{ target_count }} validated scaled oracle case.
 
+When OUTPUT REQUIREMENT METADATA is non-empty, treat every row with `required_coverage: true` as a mandatory coverage target:
+- Every non-generic requirement_id must appear in `covered_requirement_ids` of at least one oracle case.
+- For each covered requirement_id, the case must make the requirement observable through setup_code, call_code, expected_failure_mode, or expected_output_signature.
+- Do not satisfy coverage by listing an ID only; the test inputs and expected outputs must exercise the exact requirement text for that ID.
+- If one case covers multiple requirement_ids, it must contain observable evidence for every listed ID.
+
 The first case should normally be a transformed version of the provided SEED EXECUTION CASE:
 - preserve the original execution path when possible
 - keep setup_code empty if the seed case did not need setup
 - only add extra setup when the scaled task truly requires new files, inputs, or environment state
 - rewrite expected_output_signature so it reflects the scaled task after operators are applied
+
+The original seed_execution_case will also be added by the pipeline as a mandatory `seed_regression` case for M2/M3/M4. Treat scaled requirements as additive unless an operator explicitly says otherwise. Generate oracle cases for the new scaled requirements; do not weaken or replace the original seed behavior.
 
 Additional cases are optional and should be added only when the main transformed seed case does not fully cover the new requirements.
 
@@ -104,6 +117,9 @@ Rules:
 5. At least one scaled oracle case should cover combined semantics when multiple operators interact strongly.
 4. Each scaled oracle case must be executable in principle.
 6. `covered_requirements` must quote or closely mirror the exact newly added requirement phrases from CASE DESIGN TARGETS or OUTPUT REQUIREMENTS.
+6a. `covered_requirement_ids` must use exact IDs from OUTPUT REQUIREMENT METADATA when metadata is available. Do not invent requirement IDs.
+6b. Every required non-generic requirement_id from OUTPUT REQUIREMENT METADATA must be covered by at least one case.
+6c. For every listed covered_requirement_id, the case's setup/call/expected fields must visibly test that exact requirement text.
 7. Do not write generic cases like "basic functionality still works" unless that is itself a newly added requirement.
 8. Prefer concrete observable expectations in `expected_output_signature`.
 9. Prefer `return_value`, `return_type`, `return_keys`, `stdout_contains`, and explicit `file_artifacts.path`.
@@ -158,6 +174,7 @@ Return JSON only, with exactly the following fields:
       "setup_code": "<optional setup code>",
       "call_code": "<required executable invocation code>",
       "assertion_code": "<optional extra assertions beyond expected_output_signature>",
+      "covered_requirement_ids": ["<requirement_id_1>", "<requirement_id_2>"],
       "covered_requirements": ["<requirement_1>", "<requirement_2>"],
       "expected_output_signature": {
         "return_type": "<optional type name>",

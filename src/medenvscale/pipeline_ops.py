@@ -30,6 +30,7 @@ from medenvscale.scaling.output_constraints import (
 from medenvscale.scaling.operator_applier import apply_operator_instances
 from medenvscale.scaling.prompt_rewriter import rewrite_prompt
 from medenvscale.scaling.quality_filter import build_quality_report, is_semantic_hidden_test, split_clean_and_rejected
+from medenvscale.scaling.requirement_registry import build_output_requirement_metadata
 from medenvscale.scaling.scaling_plan import build_scaling_plan
 from medenvscale.scaling.scaled_gold_solver_generator import (
     build_scaled_case_plan,
@@ -1382,10 +1383,15 @@ def _stage05_build_new_result(
     for op in operator_instances:
         output_requirements.extend(str(item).strip() for item in (op.output_requirements or []) if str(item).strip())
     output_requirements = list(dict.fromkeys(output_requirements))
+    env = env.model_copy(update={"output_requirements": output_requirements})
+    output_requirement_metadata = build_output_requirement_metadata(
+        env,
+        operator_instances=[op.model_dump() for op in operator_instances],
+    )
     env = env.model_copy(
         update={
             "semantic_test_specs": semantic_test_specs,
-            "output_requirements": output_requirements,
+            "output_requirement_metadata": output_requirement_metadata,
             "output_constraint_spec": output_constraint_spec,
             "seed_ground_truth_output_signature": seed_env.seed_ground_truth_output_signature or seed_env.scaled_ground_truth_output_signature,
         }
@@ -1408,7 +1414,11 @@ def _stage05_build_new_result(
             output_constraint_spec=output_constraint_spec,
             llm_client=llm_client,
             prompt_runner=prompt_runner,
-            config={"max_gold_repair_attempts": 3, "stage05_cfg": stage05_cfg},
+            config={
+                "max_gold_repair_attempts": 3,
+                "stage05_cfg": stage05_cfg,
+                "code_execution": cfg.values.get("dataset", {}).get("code_execution", {}),
+            },
         )
     except RuntimeError as exc:
         if not _is_recoverable_stage05_llm_error(exc):
@@ -1453,7 +1463,11 @@ def _stage05_build_new_result(
             output_constraint_spec=output_constraint_spec,
             llm_client=llm_client,
             prompt_runner=prompt_runner,
-            config={"max_gold_repair_attempts": 3, "stage05_cfg": stage05_cfg},
+            config={
+                "max_gold_repair_attempts": 3,
+                "stage05_cfg": stage05_cfg,
+                "code_execution": cfg.values.get("dataset", {}).get("code_execution", {}),
+            },
         )
     except RuntimeError as exc:
         if not _is_recoverable_stage05_llm_error(exc):
@@ -1529,6 +1543,15 @@ def _stage05_build_new_result(
             "rubric_ids": [str(item.get("rubric_id") or "") for item in requirement_rubrics],
         }
     )
+    env, prune_audit = _prune_redundant_invalid_oracle_cases_if_safe(
+        seed_env=seed_env,
+        env=env,
+        budgets_cfg=budgets_cfg,
+        stage05_cfg=stage05_cfg,
+    )
+    if prune_audit:
+        dropped = ",".join(prune_audit.get("dropped_invalid_case_ids", []))
+        quality_flags.append(f"DROPPED_INVALID_REDUNDANT_ORACLE_CASES:{dropped}")
     operator_realization = [] if level == "M1" else check_operator_realizations(seed_env, env)
     for report in operator_realization:
         operator_id = report["operator_id"]
@@ -1574,6 +1597,87 @@ def _stage05_build_new_result(
         operator_realization_rows=operator_realization,
         stage05_quality_row=gate_report,
     )
+
+
+def _prune_redundant_invalid_oracle_cases_if_safe(
+    *,
+    seed_env: ExecutableEnvSpec,
+    env: ExecutableEnvSpec,
+    budgets_cfg: dict[str, Any],
+    stage05_cfg: dict[str, Any],
+) -> tuple[ExecutableEnvSpec, dict[str, Any] | None]:
+    validation_report = [row for row in (env.oracle_case_validation_report or []) if isinstance(row, dict)]
+    invalid_rows = [row for row in validation_report if not bool(row.get("valid"))]
+    if not invalid_rows:
+        return env, None
+
+    validated_cases = [case for case in (env.validated_oracle_cases or []) if isinstance(case, dict)]
+    if not validated_cases:
+        return env, None
+
+    valid_case_ids = {str(case.get("case_id") or "") for case in validated_cases if str(case.get("case_id") or "")}
+    pruned_validation_report = [
+        row
+        for row in validation_report
+        if bool(row.get("valid")) and (not valid_case_ids or str(row.get("case_id") or "") in valid_case_ids)
+    ]
+    pruned_gold_report = [
+        row
+        for row in (env.scaled_gold_case_execution_report or [])
+        if isinstance(row, dict) and (not valid_case_ids or str(row.get("case_id") or "") in valid_case_ids)
+    ]
+    dropped_case_ids = [
+        str(row.get("case_id") or "")
+        for row in invalid_rows
+        if str(row.get("case_id") or "")
+    ]
+    existing_metadata = dict(env.metadata or {})
+    prune_audit = {
+        "strategy": "drop_redundant_invalid_oracle_cases",
+        "dropped_invalid_case_ids": dropped_case_ids,
+        "validated_case_ids": sorted(valid_case_ids),
+    }
+    candidate = env.model_copy(
+        update={
+            "scaled_oracle_cases": validated_cases,
+            "validated_oracle_cases": validated_cases,
+            "oracle_case_validation_report": pruned_validation_report,
+            "scaled_oracle_case_failures": [],
+            "scaled_gold_case_execution_report": pruned_gold_report,
+            "metadata": {
+                **existing_metadata,
+                "oracle_case_pruning": prune_audit,
+            },
+        }
+    )
+    level = str((candidate.difficulty.global_level if candidate.difficulty else "") or "")
+    operator_realization = [] if level == "M1" else check_operator_realizations(seed_env, candidate)
+    gate_report = run_stage05_gates(
+        {
+            "sample_id": candidate.env_id,
+            "seed_task": seed_env,
+            "scaled_task": candidate,
+            "operator_realization_report": operator_realization,
+        },
+        config={"budgets_cfg": budgets_cfg, "stage05_cfg": stage05_cfg},
+    )
+    if not bool(gate_report.get("stage05_passed")):
+        return env, None
+
+    prune_audit = {
+        **prune_audit,
+        "stage05_passed_after_prune": True,
+        "final_decision_after_prune": str(gate_report.get("final_decision") or ""),
+    }
+    candidate = candidate.model_copy(
+        update={
+            "metadata": {
+                **existing_metadata,
+                "oracle_case_pruning": prune_audit,
+            }
+        }
+    )
+    return candidate, prune_audit
 
 
 def _stage05_result_from_existing(*, task_index: int, env: ExecutableEnvSpec, level: str) -> dict[str, Any]:

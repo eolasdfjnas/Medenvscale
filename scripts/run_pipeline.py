@@ -8,31 +8,34 @@ from medenvscale.pipeline_ops import (
     stage02_route,
     stage03_seed,
     stage05_scale,
+    stage05_5_assign_splits,
     stage06_tool_agent,
-    stage07_qpoints_rubrics,
-    stage08_safety,
-    stage09_export,
-    stage11_make_splits,
-    stage15_eval,
+    stage07_tool_sft_data,
 )
 
 
 if __name__ == "__main__":
     args = base_parser("Run the MedEnvScale MedAgentGym 7-axis pipeline").parse_args()
     cfg = load_config(args.config, dataset=args.dataset)
-    stage00_download(cfg, limit=args.limit)
-    stage01_normalize(cfg, limit=args.limit)
-    stage02_route(cfg, limit=args.limit, llm_mode=args.llm_mode)
-    stage03_seed(cfg, limit=args.limit)
-    stage05_scale(cfg, limit=args.limit, llm_mode=args.llm_mode, sample_seed=args.sample_seed)
+    resume = args.resume or args.resume_stage05
+    stage00_download(cfg, limit=args.limit, llm_mode=args.llm_mode, parallel_workers=args.workers, resume=resume)
+    stage01_normalize(cfg, limit=args.limit, resume=resume)
+    stage02_route(cfg, limit=args.limit, llm_mode=args.llm_mode, parallel_workers=args.workers, resume=resume)
+    stage03_seed(cfg, limit=args.limit, resume=resume)
+    stage05_scale(
+        cfg,
+        limit=args.limit,
+        llm_mode=args.llm_mode,
+        sample_seed=args.sample_seed,
+        parallel_workers=args.workers,
+        resume=resume,
+    )
+    stage05_5_assign_splits(cfg, resume=resume)
     stage06_tool_agent(cfg, limit=args.limit, llm_mode=args.llm_mode)
-    stage07_qpoints_rubrics(cfg, limit=args.limit, llm_mode=args.llm_mode)
-    stage08_safety(cfg)
-    stage09_export(cfg)
-    stage11_make_splits(cfg)
-    metrics = stage15_eval(cfg)
+    sft_result = stage07_tool_sft_data(cfg, limit=args.limit, llm_mode=args.llm_mode)
+    manifest = sft_result["manifest"]
     print(
-        "Pipeline complete: "
-        f"envs={metrics['num_environments']} | dpo_pairs={metrics['num_dpo_pairs']} | "
-        f"mean_hidden_tests={metrics['mean_hidden_tests_per_env']}"
+        "Pipeline complete through Stage07 tool SFT data: "
+        f"samples={manifest['num_samples']} | rejected={manifest['num_rejected']} | "
+        f"splits={manifest['splits']}"
     )

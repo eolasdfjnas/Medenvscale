@@ -20,6 +20,7 @@ The scaled task was created by applying difficulty operators to the seed task. Y
 This oracle executable code will be used as scaled_executable_gold_code. It must compile, execute, and pass all validated scaled_oracle_cases.
 
 Do not solve the seed task only. Solve the scaled task.
+Scaled requirements are additive unless an operator explicitly changes or replaces seed behavior. For M2/M3/M4, validated scaled_oracle_cases may include a `seed_regression` case copied from the original seed_execution_case; this case is mandatory and must continue to pass.
 
 [SEED EXECUTABLE CODE]
 ====================
@@ -107,6 +108,7 @@ You must follow these rules:
 8. Scaled oracle cases are authoritative.
    - The provided scaled_oracle_cases are derived from the validated seed execution case and describe the scaled task's correct behavior.
    - Your generated code must satisfy all scaled_oracle_cases.
+   - If a case has `case_kind` = `seed_regression`, it verifies the original seed behavior and must be preserved while implementing scaled additions.
    - Treat each case's expected_output_signature as an executable contract.
    - When return_value is specified, match it exactly.
    - When return_type is specified, return exactly that type.

@@ -101,7 +101,7 @@ def validate_candidate_code(code: str, expected_signature: str | None) -> dict[s
     }
 
 
-def preflight_final_code(code: str, expected_signature: str | None) -> dict[str, Any]:
+def preflight_final_code(code: str, expected_signature: str | None, python_bin: str | None = None) -> dict[str, Any]:
     value = str(code or "")
     errors: list[str] = []
     repair_hints: list[str] = []
@@ -119,7 +119,7 @@ def preflight_final_code(code: str, expected_signature: str | None) -> dict[str,
         errors.append("VALIDATION_FAILED")
         repair_hints.append("Fix syntax, target signature, static safety, or unsafe path issues before final submission.")
 
-    import_check = check_import_availability(value)
+    import_check = check_import_availability(value, python_bin=python_bin)
     if not import_check["ok"]:
         errors.extend(import_check["problems"])
         repair_hints.extend(import_check["repair_hints"])
@@ -135,7 +135,13 @@ def preflight_final_code(code: str, expected_signature: str | None) -> dict[str,
     }
 
 
-def run_custom_test(code: str, test_snippet: str, timeout_seconds: int | float = 5) -> dict[str, Any]:
+def run_custom_test(
+    code: str,
+    test_snippet: str,
+    timeout_seconds: int | float = 5,
+    fixture_files: list[dict[str, Any]] | None = None,
+    python_bin: str | None = None,
+) -> dict[str, Any]:
     safety = check_static_safety(str(code or "") + "\n" + str(test_snippet or ""))
     if not safety["ok"]:
         return {
@@ -148,10 +154,10 @@ def run_custom_test(code: str, test_snippet: str, timeout_seconds: int | float =
             "failure_reasons": safety["problems"],
         }
     script = f"{code}\n\n# agent custom test\n{test_snippet}\n"
-    return _run_script(script, timeout_seconds=timeout_seconds)
+    return _run_script(script, timeout_seconds=timeout_seconds, fixture_files=fixture_files, python_bin=python_bin)
 
 
-def run_candidate_code(code: str, timeout_seconds: int | float = 5) -> dict[str, Any]:
+def run_candidate_code(code: str, timeout_seconds: int | float = 5, python_bin: str | None = None) -> dict[str, Any]:
     safety = check_static_safety(code)
     if not safety["ok"]:
         return {
@@ -163,10 +169,10 @@ def run_candidate_code(code: str, timeout_seconds: int | float = 5) -> dict[str,
             "artifacts": [],
             "failure_reasons": safety["problems"],
         }
-    return _run_script(str(code or ""), timeout_seconds=timeout_seconds)
+    return _run_script(str(code or ""), timeout_seconds=timeout_seconds, python_bin=python_bin)
 
 
-def check_import_availability(code: str) -> dict[str, Any]:
+def check_import_availability(code: str, python_bin: str | None = None) -> dict[str, Any]:
     problems: list[str] = []
     repair_hints: list[str] = []
     try:
@@ -187,10 +193,7 @@ def check_import_availability(code: str) -> dict[str, Any]:
                 "Remove this import and inline the required helper behavior or use an available dependency."
             )
             continue
-        try:
-            available = importlib.util.find_spec(root) is not None
-        except (ImportError, AttributeError, TypeError, ValueError):
-            available = False
+        available = _module_available(root, python_bin=python_bin)
         if not available:
             problems.append(f"unavailable_import:{module}")
             repair_hints.append(
@@ -203,6 +206,31 @@ def check_import_availability(code: str) -> dict[str, Any]:
         "problems": list(dict.fromkeys(problems)),
         "repair_hints": list(dict.fromkeys(repair_hints)),
     }
+
+
+def _module_available(root: str, python_bin: str | None = None) -> bool:
+    target_python = str(python_bin or sys.executable)
+    if not target_python or target_python == sys.executable:
+        try:
+            return importlib.util.find_spec(root) is not None
+        except (ImportError, AttributeError, TypeError, ValueError):
+            return False
+    try:
+        completed = subprocess.run(
+            [
+                target_python,
+                "-c",
+                "import importlib.util, sys; raise SystemExit(0 if importlib.util.find_spec(sys.argv[1]) else 1)",
+                root,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        return completed.returncode == 0
+    except Exception:
+        return False
 
 
 def check_static_safety(code: str) -> dict[str, Any]:
@@ -262,16 +290,33 @@ def _iter_imported_modules(tree: ast.AST) -> list[tuple[str, bool]]:
     return modules
 
 
-def _run_script(script: str, timeout_seconds: int | float) -> dict[str, Any]:
+def _run_script(
+    script: str,
+    timeout_seconds: int | float,
+    fixture_files: list[dict[str, Any]] | None = None,
+    python_bin: str | None = None,
+) -> dict[str, Any]:
     timeout = max(1, min(float(timeout_seconds or 5), 15.0))
     with tempfile.TemporaryDirectory(prefix="medenvscale-agent-") as temp_dir:
         workdir = Path(temp_dir)
         script_path = workdir / "candidate_run.py"
+        fixture_result = _materialize_fixture_files(workdir, fixture_files or [])
+        if not fixture_result["ok"]:
+            return {
+                "ok": False,
+                "exit_code": None,
+                "stdout_tail": "",
+                "stderr_tail": "",
+                "traceback_tail": "",
+                "diagnosis": "Agent-created fixture files could not be materialized safely.",
+                "artifacts": [],
+                "failure_reasons": fixture_result["errors"],
+            }
         before = _snapshot_files(workdir)
         script_path.write_text(script, encoding="utf-8")
         try:
             completed = subprocess.run(
-                [sys.executable, str(script_path)],
+                [str(python_bin or sys.executable), str(script_path)],
                 cwd=str(workdir),
                 capture_output=True,
                 text=True,
@@ -302,6 +347,38 @@ def _run_script(script: str, timeout_seconds: int | float) -> dict[str, Any]:
                 "artifacts": _artifact_diff(before, after, exclude={"candidate_run.py"}),
                 "failure_reasons": ["timeout"],
             }
+
+
+def _materialize_fixture_files(workdir: Path, fixture_files: list[dict[str, Any]]) -> dict[str, Any]:
+    errors: list[str] = []
+    if len(fixture_files) > 10:
+        errors.append("too_many_fixture_files")
+        return {"ok": False, "errors": errors}
+    total_bytes = 0
+    for item in fixture_files:
+        path = str(item.get("path") or "")
+        content = str(item.get("content") or "")
+        safety = analyze_relative_path(path, artifact=True)
+        if not safety.safe:
+            errors.append(f"unsafe_fixture_path:{path}:{safety.reason}")
+            continue
+        data = content.encode("utf-8")
+        total_bytes += len(data)
+        if len(data) > 65536:
+            errors.append(f"fixture_file_too_large:{safety.normalized_path}")
+            continue
+        if total_bytes > 262144:
+            errors.append("fixture_files_total_too_large")
+            continue
+        target = workdir / safety.normalized_path
+        try:
+            target.relative_to(workdir)
+        except ValueError:
+            errors.append(f"unsafe_fixture_path:{path}:resolved_outside_workdir")
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+    return {"ok": not errors, "errors": errors}
 
 
 def _target_name(signature: str) -> str:

@@ -4,6 +4,7 @@ import json
 from typing import Any
 
 from medenvscale.scaling.runtime_value_sanitizer import stabilize_expected_output_signature
+from medenvscale.scaling.requirement_registry import infer_covered_requirement_ids
 from medenvscale.schemas import ExecutableEnvSpec
 
 
@@ -97,7 +98,7 @@ def build_seed_regression_oracle_case(env: ExecutableEnvSpec) -> dict[str, Any] 
             )
         ]
     requirement = requirements[0]
-    return {
+    regression_case = {
         "case_id": f"regression_{base_case_id}",
         "base_case_id": base_case_id,
         "description": str(seed_case.get("description") or "Seed regression oracle case derived from the original seed execution case."),
@@ -114,6 +115,10 @@ def build_seed_regression_oracle_case(env: ExecutableEnvSpec) -> dict[str, Any] 
         "covers_requirements": requirements,
         "expected_output_signature": dict(expected),
     }
+    covered_requirement_ids = infer_covered_requirement_ids(env, regression_case)
+    if covered_requirement_ids:
+        regression_case["covered_requirement_ids"] = covered_requirement_ids
+    return regression_case
 
 
 def merge_seed_regression_case(
@@ -157,6 +162,7 @@ def seed_regression_validation_report_row(env: ExecutableEnvSpec, case: dict[str
         "targets_operator_id": str(case.get("targets_operator_id") or "seed_regression"),
         "axis": str(case.get("axis") or "REGRESSION"),
         "covered_requirements": list(case.get("covered_requirements") or case.get("covers_requirements") or []),
+        "covered_requirement_ids": list(case.get("covered_requirement_ids") or []),
         "matched_requirements": list(case.get("covered_requirements") or case.get("covers_requirements") or []),
     }
 

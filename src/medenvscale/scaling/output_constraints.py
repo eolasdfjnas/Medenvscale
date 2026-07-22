@@ -6,6 +6,8 @@ import posixpath
 import re
 from typing import Any
 
+from medenvscale.scaling.runtime_value_sanitizer import stabilize_runtime_value
+
 from medenvscale.schemas import ExecutableEnvSpec
 
 
@@ -482,23 +484,23 @@ def _values_match(actual: Any, expected: Any) -> bool:
 
 def _normalize_expected_value(value: Any) -> Any:
     if value is None or isinstance(value, (bool, str)):
-        return value
+        return stabilize_runtime_value(value)
     if isinstance(value, numbers.Integral):
-        return int(value)
+        return stabilize_runtime_value(int(value))
     if isinstance(value, numbers.Real):
-        return float(value)
+        return stabilize_runtime_value(float(value))
     if hasattr(value, "tolist") and not isinstance(value, (bytes, bytearray)):
         try:
-            return _normalize_expected_value(value.tolist())
+            return stabilize_runtime_value(_normalize_expected_value(value.tolist()))
         except Exception:
             pass
     if isinstance(value, tuple):
-        return [_normalize_expected_value(item) for item in value]
+        return stabilize_runtime_value([_normalize_expected_value(item) for item in value])
     if isinstance(value, list):
-        return [_normalize_expected_value(item) for item in value]
+        return stabilize_runtime_value([_normalize_expected_value(item) for item in value])
     if isinstance(value, dict):
-        return {str(key): _normalize_expected_value(item) for key, item in value.items()}
-    return repr(value)
+        return stabilize_runtime_value({str(key): _normalize_expected_value(item) for key, item in value.items()})
+    return stabilize_runtime_value(repr(value))
 
 
 def _both_numeric(actual: Any, expected: Any) -> bool:

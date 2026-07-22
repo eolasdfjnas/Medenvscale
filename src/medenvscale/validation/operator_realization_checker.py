@@ -64,6 +64,14 @@ def check_operator_realization(
     passed_case_reports = [report for report in case_reports if bool(report.get("passed"))]
     failed_case_reports = [report for report in case_reports if not bool(report.get("passed"))]
     valid_linked_cases = _valid_linked_cases(linked_cases)
+    requirement_coverage_matrix = _requirement_coverage_matrix(
+        operator_id=op_id,
+        axis=axis,
+        scaled_task=scaled_task,
+        linked_cases=linked_cases,
+        case_reports=case_reports,
+        final_user_prompt=final_user_prompt,
+    )
     prompt_exposure = _has_requirement_exposure(
         operator_instance,
         state_updates,
@@ -116,6 +124,7 @@ def check_operator_realization(
             "valid_linked_case_ids": sorted(str(case.get("case_id") or "") for case in valid_linked_cases),
             "passed_linked_case_ids": sorted(str(report.get("case_id") or "") for report in passed_case_reports),
             "has_requirement_exposure": prompt_exposure,
+            "requirement_coverage_matrix": requirement_coverage_matrix,
         },
         "gold_checks": {
             "scaled_gold_exists": bool(str(scaled_task.gold_solution or "").strip()),
@@ -387,6 +396,80 @@ def _linked_cases(op_id: str, axis: str, cases: list[dict[str, Any]]) -> list[di
         elif not targets and case_axis == axis:
             linked.append(case)
     return linked
+
+
+def _requirement_coverage_matrix(
+    *,
+    operator_id: str,
+    axis: str,
+    scaled_task: ExecutableEnvSpec,
+    linked_cases: list[dict[str, Any]],
+    case_reports: list[dict[str, Any]],
+    final_user_prompt: str,
+) -> list[dict[str, Any]]:
+    metadata = [
+        row
+        for row in (scaled_task.output_requirement_metadata or [])
+        if isinstance(row, dict)
+        and str(row.get("operator_id") or "") == operator_id
+        and str(row.get("axis") or "") == axis
+    ]
+    if not metadata:
+        return []
+    reports_by_case = {str(row.get("case_id") or ""): row for row in case_reports if isinstance(row, dict)}
+    matrix: list[dict[str, Any]] = []
+    for requirement in metadata:
+        req_id = str(requirement.get("requirement_id") or "")
+        req_text = str(requirement.get("text") or "")
+        linked_for_req = [
+            case
+            for case in linked_cases
+            if req_id in {str(item).strip() for item in (case.get("covered_requirement_ids") or [])}
+        ]
+        case_ids = [str(case.get("case_id") or "") for case in linked_for_req if str(case.get("case_id") or "")]
+        gold_passed = bool(case_ids) and all(bool(reports_by_case.get(case_id, {}).get("passed")) for case_id in case_ids)
+        text_match = any(
+            any(
+                isinstance(check, dict)
+                and str(check.get("requirement_id") or "") == req_id
+                and bool(check.get("text_match"))
+                for check in (case.get("bound_requirement_checks") or [])
+            )
+            for case in linked_for_req
+        )
+        observable_match = any(
+            any(
+                isinstance(check, dict)
+                and str(check.get("requirement_id") or "") == req_id
+                and bool(check.get("observable_match"))
+                for check in (case.get("bound_requirement_checks") or [])
+            )
+            for case in linked_for_req
+        )
+        visible_in_prompt = _requirement_text_visible(req_text, final_user_prompt)
+        if not case_ids:
+            status = "missing_case"
+        elif not text_match or not observable_match:
+            status = "case_mismatch"
+        elif not gold_passed:
+            status = "gold_failed"
+        else:
+            status = "pass"
+        matrix.append(
+            {
+                "operator_id": operator_id,
+                "axis": axis,
+                "requirement_id": req_id,
+                "requirement": req_text,
+                "visible_in_prompt": visible_in_prompt,
+                "case_ids": case_ids,
+                "text_match": text_match,
+                "observable_match": observable_match,
+                "gold_passed": gold_passed,
+                "status": status,
+            }
+        )
+    return matrix
 
 
 def _linked_case_text(cases: list[dict[str, Any]]) -> str:

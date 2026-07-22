@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 from medenvscale.scaling.case_execution import run_scaled_gold_on_validated_oracle_cases
+from medenvscale.scaling.output_constraints import check_output_constraints, output_constraints_from_scaled_oracle_cases
 from medenvscale.scaling.path_safety import analyze_relative_path
 from medenvscale.scaling.scaled_gold_solver_generator import (
     _build_fallback_oracle_case,
@@ -11,6 +12,7 @@ from medenvscale.scaling.scaled_gold_solver_generator import (
     generate_scaled_gold_solution_if_needed,
     validate_and_repair_oracle_cases,
 )
+from medenvscale.scaling.seed_case_clarifier import add_seed_behavior_requirements_to_env
 from medenvscale.scaling.oracle_case_validator import validate_scaled_oracle_cases
 from medenvscale.scaling.output_signature import materialize_executable_gold_code
 from medenvscale.schemas import DifficultyProfile, ExecutableEnvSpec
@@ -500,3 +502,234 @@ class Stage05CaseFirstTests(unittest.TestCase):
         self.assertTrue(result["visible_tests_passed"])
         self.assertTrue(result["scaled_gold_case_execution_report"][0]["passed"])
         self.assertNotIn("NO_VALIDATED_ORACLE_CASES", result["failure_reasons"])
+
+    def test_m1_seed_baseline_allows_callable_name_as_target(self) -> None:
+        env = self._env().model_copy(
+            update={
+                "difficulty": DifficultyProfile(
+                    global_level="M1",
+                    H=0,
+                    D=0,
+                    R=0,
+                    I=0,
+                    E=0,
+                    C=0,
+                    A=0,
+                    V=0,
+                    selected_axes=[],
+                    total_intensity=0,
+                )
+            }
+        )
+        _, _, report, _ = validate_scaled_oracle_cases(
+            env,
+            [],
+            [
+                {
+                    "case_id": "seed_case_main",
+                    "description": "seed",
+                    "case_kind": "seed_baseline",
+                    "targets_operator_id": "solve",
+                    "axis": "M1",
+                    "semantic_intent": "Preserve seed behavior.",
+                    "target_constraint": "Preserve seed behavior.",
+                    "expected_failure_mode": "breaks seed behavior",
+                    "setup_code": "x = 2",
+                    "call_code": "result = solve(x)",
+                    "expected_output_signature": {"return_type": "int", "return_value": 3},
+                    "covered_requirements": ["Preserve seed behavior."],
+                }
+            ],
+        )
+
+        self.assertTrue(report[0]["valid"])
+        self.assertNotIn("UNKNOWN_TARGET_OPERATOR_ID:solve", report[0]["failure_reasons"])
+
+    def test_context_created_files_are_removed_from_seed_artifacts(self) -> None:
+        env = self._env().model_copy(
+            update={
+                "context": (
+                    "def write_sample_files():\n"
+                    "    with open('sample_reactions.tsv', 'w') as f:\n"
+                    "        f.write('x')\n"
+                    "write_sample_files()\n"
+                    "<<insert solution here>>\n"
+                ),
+                "seed_execution_case": {
+                    "case_id": "seed_case_main",
+                    "setup_code": "",
+                    "call_code": "result = solve(0)",
+                    "expected_output_signature": {
+                        "return_type": "int",
+                        "return_value": 0,
+                        "file_artifacts": [{"path": "sample_reactions.tsv"}],
+                    },
+                },
+            }
+        )
+
+        result = validate_and_repair_oracle_cases(
+            env=env,
+            operator_instances=[],
+            oracle_case_candidates=[
+                {
+                    "case_id": "seed_case_main",
+                    "description": "seed",
+                    "case_kind": "seed_baseline",
+                    "targets_operator_id": "solve",
+                    "axis": "M1",
+                    "semantic_intent": "Preserve seed behavior.",
+                    "target_constraint": "Preserve seed behavior.",
+                    "expected_failure_mode": "breaks seed behavior",
+                    "setup_code": "",
+                    "call_code": "result = solve(0)",
+                    "expected_output_signature": {
+                        "return_type": "int",
+                        "return_value": 0,
+                        "file_artifacts": [{"path": "sample_reactions.tsv"}],
+                    },
+                    "covered_requirements": ["Preserve seed behavior."],
+                }
+            ],
+            llm_client=None,
+            prompt_runner=None,
+            config={"stage05_cfg": {"oracle_case_repair": {"enabled": False, "max_rounds": 0}}},
+        )
+
+        repaired = result["validated_oracle_cases"][0]
+        self.assertEqual(repaired["expected_output_signature"]["file_artifacts"], [])
+        actions = result["oracle_case_rule_repair_report"][0]["actions"]
+        self.assertTrue(any(action.startswith("REMOVED_SETUP_ARTIFACT_EXPECTATIONS:") for action in actions))
+
+    def test_object_repr_memory_addresses_are_stabilized_for_comparison(self) -> None:
+        case = {
+            "case_id": "case_object",
+            "targets_operator_id": "seed_regression",
+            "expected_output_signature": {
+                "return_value": {
+                    "prob": "<__seed_case_runtime__.Problem object at 0x7f75c207ff40>",
+                    "compounds": ["A", "B"],
+                }
+            },
+        }
+        spec = output_constraints_from_scaled_oracle_cases([case])
+        observed = {
+            "return_value": {
+                "prob": "<__case_runtime__.Problem object at 0x7f3f102b9c00>",
+                "compounds": ["A", "B"],
+            }
+        }
+
+        result = check_output_constraints(observed, spec)
+
+        self.assertTrue(result["passed"], result.get("failed_checks"))
+
+    def test_seed_behavior_requirements_are_added_to_visible_state(self) -> None:
+        env = self._env().model_copy(
+            update={
+                "seed_execution_case": {
+                    "case_id": "seed_case_main",
+                    "description": "Original seed case.",
+                    "setup_code": "x = 2",
+                    "call_code": "result = solve(x)",
+                    "expected_output_signature": {"return_type": "int", "return_value": 3},
+                },
+                "seed_ground_truth_output_signature": {"return_type": "int", "return_value": 3},
+            }
+        )
+
+        clarified = add_seed_behavior_requirements_to_env(env)
+        requirements = clarified.visible_state["seed_behavior_requirements"]
+
+        self.assertTrue(any("Preserve the original seed behavior for solve" in item for item in requirements))
+        self.assertTrue(any("result = solve(x)" in item for item in requirements))
+        self.assertTrue(any("return value must be 3" in item for item in requirements))
+        self.assertTrue(any("return type must be 'int'" in item for item in requirements))
+        self.assertIn(requirements[0], clarified.visible_state["execution_requirements"])
+        self.assertIn(requirements[0], clarified.output_requirements)
+        self.assertTrue(any("result = solve(x)" in item for item in clarified.output_requirements))
+
+    def test_seed_behavior_requirements_preserve_existing_output_requirements(self) -> None:
+        env = self._env().model_copy(
+            update={
+                "output_requirements": ["Existing scaled requirement."],
+                "seed_execution_case": {
+                    "case_id": "seed_case_main",
+                    "description": "Original seed case.",
+                    "setup_code": "x = 2",
+                    "call_code": "result = solve(x)",
+                    "expected_output_signature": {"return_value": 3},
+                },
+                "seed_ground_truth_output_signature": {"return_value": 3},
+            }
+        )
+
+        clarified = add_seed_behavior_requirements_to_env(env)
+
+        self.assertEqual(clarified.output_requirements[0], "Existing scaled requirement.")
+        self.assertTrue(any("Preserve the original seed behavior for solve" in item for item in clarified.output_requirements))
+
+    def test_m2_v_only_env_gets_seed_regression_case_and_gold_gate_executes_it(self) -> None:
+        env = self._env().model_copy(
+            update={
+                "env_id": "env_m2_seed_regression",
+                "difficulty": DifficultyProfile(
+                    global_level="M2",
+                    H=0,
+                    D=0,
+                    R=0,
+                    I=0,
+                    E=0,
+                    C=0,
+                    A=0,
+                    V=1,
+                    selected_axes=["V"],
+                    total_intensity=1,
+                ),
+                "operator_instances": [
+                    {
+                        "operator_id": "op_V_001",
+                        "axis": "V",
+                        "semantic_change": False,
+                        "state_updates": {},
+                    }
+                ],
+                "semantic_test_specs": [],
+                "output_requirements": [],
+                "problem": "Write solve(x) to return x + 1.",
+                "user_prompt": "Write solve(x) to return x + 1.",
+                "gold_solution": "def solve(x):\n    return x + 1\n",
+                "seed_gold_solution": "def solve(x):\n    return x + 1\n",
+                "code": "def solve(x):\n    return x + 1\n",
+                "seed_execution_case": {
+                    "case_id": "seed_case_main",
+                    "description": "Original seed case.",
+                    "setup_code": "x = 2",
+                    "call_code": "result = solve(x)",
+                    "expected_output_signature": {"return_type": "int", "return_value": 3},
+                },
+                "seed_ground_truth_output_signature": {"return_type": "int", "return_value": 3},
+                "seed_case_audit": {
+                    "status": "pass",
+                    "failure_reason": "",
+                    "mismatch_reasons": [],
+                },
+            }
+        )
+
+        result = generate_scaled_gold_solution_if_needed(
+            env=env,
+            operator_instances=env.operator_instances,
+            semantic_test_specs=[],
+            output_constraint_spec={},
+            llm_client=None,
+            prompt_runner=None,
+            config={"stage05_cfg": {"oracle_case_repair": {"enabled": False, "max_rounds": 0}}},
+        )
+
+        self.assertEqual(result["validated_oracle_cases"][0]["case_kind"], "seed_regression")
+        self.assertEqual(result["validated_oracle_cases"][0]["case_id"], "regression_seed_case_main")
+        self.assertEqual(result["validated_oracle_cases"][0]["expected_output_signature"]["return_value"], 3)
+        self.assertTrue(result["compile_passed"])
+        self.assertTrue(result["visible_tests_passed"])
+        self.assertTrue(result["scaled_gold_case_execution_report"][0]["passed"])

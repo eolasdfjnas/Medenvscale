@@ -44,6 +44,7 @@ class ExecutableEnvSpec(StrictBaseModel):
     seed_execution_case: dict[str, Any] = {}
     seed_case_audit: dict[str, Any] = {}
     output_requirements: list[str] = []
+    output_requirement_metadata: list[dict[str, Any]] = []
     output_constraint_spec: dict[str, Any] = {}
     repair_trace: list[dict[str, Any]] = []
     resource_files: list[str] = []

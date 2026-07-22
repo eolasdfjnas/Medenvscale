@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +31,8 @@ class ToolRuntime:
         self.total_calls = 0
         self.final_code: str | None = None
         self.final_eval: dict[str, Any] | None = None
+        self.test_files: dict[str, str] = {}
+        self.python_bin = _agent_python_bin(cfg)
         self.terminated = False
 
     def execute(self, name: str, arguments: dict[str, Any] | str | None) -> dict[str, Any]:
@@ -39,29 +42,42 @@ class ToolRuntime:
             result = allowed
         elif name == "get_task_context":
             result = self.get_task_context(window=int(args.get("window", 4000)))
-        elif name == "read_resource_file":
-            result = self.read_resource_file(
-                path=str(args.get("path") or ""),
-                offset=int(args.get("offset", 0) or 0),
-                max_bytes=int(args.get("max_bytes", 4000) or 4000),
-            )
         elif name == "validate_candidate_code":
             result = validate_candidate_code(str(args.get("code") or ""), self.env.signature)
+        elif name == "create_test_file":
+            result = self.create_test_file(
+                path=str(args.get("path") or ""),
+                content=str(args.get("content") or ""),
+            )
         elif name == "run_custom_test":
             result = run_custom_test(
                 code=str(args.get("code") or ""),
                 test_snippet=str(args.get("test_snippet") or ""),
                 timeout_seconds=int(args.get("timeout_seconds", 5) or 5),
+                fixture_files=self._test_fixture_files(),
+                python_bin=self.python_bin,
             )
         elif name == "submit_final_code":
             result = self.submit_final_code(str(args.get("code") or ""))
         else:
             result = {"ok": False, "error": f"unknown_tool:{name}"}
-        if name == "submit_final_code" and not result.get("terminated", False):
+        if allowed.get("budget_violation") and isinstance(result, dict):
+            result = dict(result)
+            result["budget_violation"] = True
+            result["budget_error"] = allowed.get("budget_error") or "tool_budget_exceeded"
+        if name == "submit_final_code" and allowed.get("ok") and not result.get("terminated", False):
             self.call_counts[name] = max(0, self.call_counts.get(name, 0) - 1)
-            if allowed.get("ok") and not self.submit_excluded_from_total:
+            if allowed.get("counted_total") and not self.submit_excluded_from_total:
                 self.total_calls = max(0, self.total_calls - 1)
-        self.trace.append({"tool_name": name, "arguments": _redact_args(args), "result": _redact_result(name, result)})
+        trace_row = {
+            "tool_name": name,
+            "arguments": _redact_args(args),
+            "result": _redact_result(name, result),
+        }
+        if allowed.get("budget_violation"):
+            trace_row["budget_violation"] = True
+            trace_row["budget_error"] = allowed.get("budget_error") or "tool_budget_exceeded"
+        self.trace.append(trace_row)
         return result
 
     def get_task_context(self, window: int = 4000) -> dict[str, Any]:
@@ -77,35 +93,32 @@ class ToolRuntime:
             "resource_manifest": self._public_resource_manifest(),
             "public_requirements": list(self.env.output_requirements or []),
             "difficulty": (self.env.difficulty.model_dump() if self.env.difficulty else {}),
+            "agent_created_test_files": sorted(self.test_files),
         }
 
-    def read_resource_file(self, path: str, offset: int = 0, max_bytes: int = 4000) -> dict[str, Any]:
-        safety = analyze_relative_path(path)
+    def create_test_file(self, path: str, content: str) -> dict[str, Any]:
+        safety = analyze_relative_path(path, artifact=True)
         if not safety.safe:
             return {"ok": False, "error": f"unsafe_path:{safety.reason}", "path": path}
         normalized = safety.normalized_path
-        allowed = {item["path"] for item in self._public_resource_manifest()}
-        if allowed and normalized not in allowed and path not in allowed:
-            return {"ok": False, "error": "resource_not_in_manifest", "path": normalized, "available_paths": sorted(allowed)}
-        resolved = self._resolve_resource(normalized)
-        if resolved is None:
-            return {"ok": False, "error": "resource_not_found", "path": normalized}
-        start = max(0, int(offset or 0))
-        limit = max(1, min(int(max_bytes or 4000), 20000))
-        data = resolved.read_bytes()
-        chunk = data[start : start + limit]
+        data = str(content or "").encode("utf-8")
+        if len(data) > 65536:
+            return {"ok": False, "error": "file_too_large", "path": normalized, "max_bytes": 65536}
+        current_total = sum(len(value.encode("utf-8")) for value in self.test_files.values())
+        if current_total + len(data) > 262144:
+            return {"ok": False, "error": "test_files_total_too_large", "max_total_bytes": 262144}
+        self.test_files[normalized] = str(content or "")
         return {
             "ok": True,
             "path": normalized,
-            "offset": start,
-            "bytes_read": len(chunk),
-            "total_bytes": len(data),
-            "content": chunk.decode("utf-8", errors="replace"),
-            "truncated": start + len(chunk) < len(data),
+            "bytes_written": len(data),
+            "total_test_files": len(self.test_files),
+            "available_to": ["run_custom_test"],
+            "note": "This file is available only to later run_custom_test calls, not to final oracle evaluation.",
         }
 
     def submit_final_code(self, code: str) -> dict[str, Any]:
-        preflight = preflight_final_code(code, self.env.signature)
+        preflight = preflight_final_code(code, self.env.signature, python_bin=self.python_bin)
         if not preflight["ok"]:
             return {
                 "ok": False,
@@ -122,6 +135,7 @@ class ToolRuntime:
             self.env,
             code,
             evaluation_cases,
+            python_bin=self.python_bin,
         )
         self.final_eval["evaluation_case_source"] = case_source
         if not evaluation_cases:
@@ -171,19 +185,21 @@ class ToolRuntime:
         if self.terminated:
             return {"ok": False, "error": "episode_already_terminated"}
         if name == "submit_final_code" and self.submit_excluded_from_total:
+            violation = self.call_counts.get(name, 0) >= int(self.budget["max_calls_per_tool"].get(name, 1))
             if self.call_counts.get(name, 0) >= 1:
-                return {"ok": False, "error": "tool_budget_exhausted:submit_final_code"}
+                violation = True
             self.call_counts[name] = self.call_counts.get(name, 0) + 1
-            return {"ok": True}
+            return _budget_status(violation, "tool_budget_exceeded:submit_final_code", counted_total=False)
         max_total = int(self.budget["max_total_tool_calls"])
-        if self.total_calls >= max_total:
-            return {"ok": False, "error": "tool_budget_exhausted"}
         per_tool = self.budget["max_calls_per_tool"]
+        violation = self.total_calls >= max_total
+        error = "tool_budget_exceeded" if violation else ""
         if self.call_counts.get(name, 0) >= int(per_tool.get(name, max_total)):
-            return {"ok": False, "error": f"tool_budget_exhausted:{name}"}
+            violation = True
+            error = f"tool_budget_exceeded:{name}"
         self.total_calls += 1
         self.call_counts[name] = self.call_counts.get(name, 0) + 1
-        return {"ok": True}
+        return _budget_status(violation, error, counted_total=True)
 
     def _public_resource_manifest(self) -> list[dict[str, Any]]:
         rows = []
@@ -202,26 +218,14 @@ class ToolRuntime:
                 deduped[row["path"]] = row
         return list(deduped.values())
 
-    def _resolve_resource(self, normalized_path: str) -> Path | None:
-        candidates = [
-            self.cfg.root / normalized_path,
-            self.cfg.output_dirs["raw"] / normalized_path,
-            self.cfg.output_dirs["raw"] / "source" / normalized_path,
-        ]
-        for candidate in candidates:
-            try:
-                candidate.relative_to(self.cfg.root)
-            except ValueError:
-                continue
-            if candidate.exists() and candidate.is_file():
-                return candidate
-        return None
+    def _test_fixture_files(self) -> list[dict[str, Any]]:
+        return [{"path": path, "content": content} for path, content in sorted(self.test_files.items())]
 
 
 def _normalize_budget(raw: dict[str, Any]) -> dict[str, Any]:
     per_tool = {
         "get_task_context": 1,
-        "read_resource_file": 3,
+        "create_test_file": 3,
         "validate_candidate_code": 2,
         "run_custom_test": 3,
         "submit_final_code": 1,
@@ -229,9 +233,23 @@ def _normalize_budget(raw: dict[str, Any]) -> dict[str, Any]:
     supplied = raw.get("max_calls_per_tool") or {}
     per_tool.update({str(key): int(value) for key, value in supplied.items()})
     return {
-        "max_total_tool_calls": int(raw.get("max_total_tool_calls", 6)),
+        "max_total_tool_calls": int(raw.get("max_total_tool_calls", 7)),
         "max_calls_per_tool": per_tool,
     }
+
+
+def _budget_status(violation: bool, error: str, *, counted_total: bool) -> dict[str, Any]:
+    status = {"ok": True, "counted_total": bool(counted_total)}
+    if violation:
+        status["budget_violation"] = True
+        status["budget_error"] = error or "tool_budget_exceeded"
+    return status
+
+
+def _agent_python_bin(cfg: AppConfig) -> str:
+    code_execution = ((cfg.values.get("dataset") or {}).get("code_execution") or {}) if cfg is not None else {}
+    configured = str(code_execution.get("local_python_bin") or code_execution.get("python_bin") or "").strip()
+    return configured or sys.executable
 
 
 def _evaluation_cases_for_env(env: ExecutableEnvSpec) -> tuple[list[dict[str, Any]], str]:
@@ -263,7 +281,7 @@ def _truncate(text: str | None, limit: int) -> str:
 
 def _redact_args(args: dict[str, Any]) -> dict[str, Any]:
     redacted = dict(args)
-    for key in ("code", "test_snippet"):
+    for key in ("code", "test_snippet", "content"):
         if key in redacted:
             redacted[key] = {"sha256_prefix": __import__("hashlib").sha256(str(redacted[key]).encode("utf-8")).hexdigest()[:12], "chars": len(str(redacted[key]))}
     return redacted

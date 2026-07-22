@@ -16,7 +16,17 @@ from medenvscale.scaling.output_constraints import (
 )
 from medenvscale.scaling.output_signature import execute_candidate_solution
 from medenvscale.scaling.path_safety import analyze_relative_path, extract_code_path_references
+from medenvscale.scaling.runtime_value_sanitizer import (
+    stabilize_expected_output_signature,
+)
+from medenvscale.scaling.requirement_registry import infer_covered_requirement_ids, requirements_match
+from medenvscale.scaling.seed_case_clarifier import (
+    build_seed_behavior_requirements,
+    merge_seed_regression_case,
+    seed_regression_validation_report_row,
+)
 from medenvscale.schemas import ExecutableEnvSpec
+from medenvscale.validation.oracle_case_quality_gate import run_oracle_case_quality_gate
 
 
 def detect_semantic_change(operator_instances: list[dict[str, Any]]) -> dict[str, Any]:
@@ -196,6 +206,11 @@ def _normalize_scaled_oracle_cases(
                 for item in ((case.get("covered_requirements") or case.get("covers_requirements")) or [])
                 if str(item).strip()
             ],
+            "covered_requirement_ids": [
+                str(item).strip()
+                for item in (case.get("covered_requirement_ids") or [])
+                if str(item).strip()
+            ],
         }
         if not row["call_code"]:
             failures.append(
@@ -253,7 +268,16 @@ def _resolve_oracle_case_target_count(
     config: dict[str, Any] | None,
 ) -> int:
     default_count = _scaled_oracle_case_target_count(env, semantic_info)
-    return default_count
+    level = str((env.difficulty.global_level if env.difficulty else "") or "")
+    stage05_cfg = (config or {}).get("stage05_cfg") or {}
+    configured_counts = stage05_cfg.get("min_validated_oracle_cases", {}) if isinstance(stage05_cfg, dict) else {}
+    if not isinstance(configured_counts, dict) or level not in configured_counts:
+        return default_count
+    try:
+        configured_count = int(configured_counts[level])
+    except (TypeError, ValueError):
+        return default_count
+    return max(default_count, configured_count)
 
 
 def _rule_repair_scaled_oracle_cases(
@@ -290,6 +314,11 @@ def _rule_repair_scaled_oracle_cases(
         else:
             expected = dict(expected)
             repaired["expected_output_signature"] = expected
+        stabilized_expected = stabilize_expected_output_signature(expected)
+        if stabilized_expected != expected:
+            expected = stabilized_expected
+            repaired["expected_output_signature"] = expected
+            actions.append("STABILIZED_UNSTABLE_OBJECT_REPRS")
 
         if not repaired.get("case_kind"):
             inferred_kind = "scaled_seed_case_main" if "seed_case_main" in case_id else "coverage_extension"
@@ -334,6 +363,13 @@ def _rule_repair_scaled_oracle_cases(
                     actions.append("REMOVED_CALL_STDOUT_SCaffold_TOKENS")
 
         setup_artifacts = _normalize_path_set(_extract_setup_created_files(setup_code))
+        scaffold_created_files = _normalize_path_set(
+            _extract_setup_created_files(str(env.context or ""))
+            | _extract_setup_created_files(str(env.code or ""))
+            | _extract_setup_created_files(str(env.seed_gold_solution or ""))
+            | _extract_setup_created_files(str(env.gold_solution or ""))
+        )
+        setup_artifacts.update(scaffold_created_files)
         case_requirement_text = _case_requirement_text(repaired)
         file_artifacts = expected.get("file_artifacts")
         if isinstance(file_artifacts, list) and file_artifacts:
@@ -389,6 +425,21 @@ def _rule_repair_scaled_oracle_cases(
         generic_repairs = _repair_generic_oracle_case_requirements(repaired, operator_instances or env.operator_instances or [])
         if generic_repairs:
             actions.extend(generic_repairs)
+
+        covered_requirement_ids = [
+            str(item).strip()
+            for item in (repaired.get("covered_requirement_ids") or [])
+            if str(item).strip()
+        ]
+        inferred_requirement_ids = infer_covered_requirement_ids(env, repaired)
+        if not covered_requirement_ids and inferred_requirement_ids:
+            repaired["covered_requirement_ids"] = inferred_requirement_ids
+            actions.append("INFERRED_COVERED_REQUIREMENT_IDS")
+        elif covered_requirement_ids:
+            merged_requirement_ids = list(dict.fromkeys([*covered_requirement_ids, *inferred_requirement_ids]))
+            if merged_requirement_ids != covered_requirement_ids:
+                repaired["covered_requirement_ids"] = merged_requirement_ids
+                actions.append("AUGMENTED_COVERED_REQUIREMENT_IDS")
 
         changed = repaired != original_case
         if changed:
@@ -766,7 +817,8 @@ def validate_and_repair_oracle_cases(
             operator_instances=operator_instances,
             cases=current_cases,
         )
-        if not invalid_cases or not repair_enabled or attempt >= max_rounds:
+        coverage_gaps = _oracle_case_requirement_coverage_gaps(env, validated_cases)
+        if (not invalid_cases and not coverage_gaps) or not repair_enabled or attempt >= max_rounds:
             return {
                 "scaled_oracle_cases": current_cases,
                 "validated_oracle_cases": validated_cases,
@@ -792,6 +844,7 @@ def validate_and_repair_oracle_cases(
             for row in report_rows
             if not bool(row.get("valid"))
         ]
+        failure_summary.extend(coverage_gaps)
         repaired_cases = _repair_scaled_oracle_cases(
             env=env,
             operator_instances=operator_instances,
@@ -806,6 +859,7 @@ def validate_and_repair_oracle_cases(
                 "attempt": attempt + 1,
                 "rule_repair_report": rule_repair_report,
                 "failure_summary": failure_summary,
+                "coverage_gap_count": len(coverage_gaps),
                 "repaired_case_count": len(repaired_cases),
             }
         )
@@ -822,11 +876,265 @@ def validate_and_repair_oracle_cases(
     }
 
 
+def _oracle_case_requirement_coverage_gaps(
+    env: ExecutableEnvSpec,
+    validated_cases: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    metadata = [row for row in (env.output_requirement_metadata or []) if isinstance(row, dict)]
+    if not metadata:
+        return []
+
+    covered_ids: set[str] = set()
+    weak_ids: set[str] = set()
+    for case in validated_cases:
+        if not isinstance(case, dict):
+            continue
+        for check in case.get("bound_requirement_checks") or []:
+            if not isinstance(check, dict):
+                continue
+            req_id = str(check.get("requirement_id") or "")
+            if not req_id:
+                continue
+            if check.get("passed"):
+                covered_ids.add(req_id)
+            else:
+                weak_ids.add(req_id)
+        for req_id in case.get("covered_requirement_ids") or []:
+            req_text = str(req_id).strip()
+            if req_text and req_text not in covered_ids:
+                weak_ids.add(req_text)
+
+    gaps: list[dict[str, Any]] = []
+    for row in metadata:
+        req_id = str(row.get("requirement_id") or "")
+        requirement = str(row.get("text") or "").strip()
+        if not req_id or not requirement or not bool(row.get("required_coverage", True)):
+            continue
+        if _is_generic_requirement_text(requirement):
+            continue
+        if req_id in covered_ids:
+            continue
+        failure_code = "REQUIREMENT_ID_HAS_WEAK_CASE_ONLY" if req_id in weak_ids else "MISSING_REQUIREMENT_COVERAGE"
+        gaps.append(
+            {
+                "case_id": f"missing_coverage:{req_id}",
+                "failure_reasons": [failure_code],
+                "missing_requirement_id": req_id,
+                "missing_requirement": requirement,
+                "operator_id": row.get("operator_id"),
+                "axis": row.get("axis"),
+                "repair_instruction": (
+                    "Add or repair an oracle case whose covered_requirement_ids contains this exact requirement_id. "
+                    "The case setup/call/expected_output_signature must make the requirement observable."
+                ),
+            }
+        )
+    return gaps
+
+
+def _repair_oracle_cases_for_quality_gate(
+    env: ExecutableEnvSpec,
+    generation: dict[str, Any],
+    operator_instances: list[dict[str, Any]],
+    semantic_test_specs: list[dict[str, Any]],
+    output_constraint_spec: dict[str, Any] | None,
+    llm_client: LLMClient | None,
+    prompt_runner: PromptRunner | None,
+    config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    config = config or {}
+    stage05_cfg = config.get("stage05_cfg") or {}
+    repair_cfg = stage05_cfg.get("oracle_case_quality_repair") or stage05_cfg.get("oracle_case_repair", {})
+    if isinstance(repair_cfg, dict) and not bool(repair_cfg.get("enabled", True)):
+        return {"repaired": False}
+    max_rounds = int(repair_cfg.get("max_rounds", 1)) if isinstance(repair_cfg, dict) else 1
+    max_rounds = max(0, max_rounds)
+    current_generation = dict(generation)
+    current_cases = list(current_generation.get("validated_oracle_cases") or current_generation.get("scaled_oracle_cases") or [])
+    if not current_generation.get("scaled_executable_gold_code"):
+        return {"repaired": False}
+
+    repaired = False
+    latest_evaluation: dict[str, Any] | None = None
+    for attempt in range(max_rounds):
+        gate_env = env.model_copy(
+            update={
+                "scaled_oracle_cases": current_cases,
+                "validated_oracle_cases": current_cases,
+                "oracle_case_validation_report": current_generation.get("oracle_case_validation_report", []),
+                "scaled_gold_case_execution_report": current_generation.get("scaled_gold_case_execution_report", []),
+            }
+        )
+        gate = run_oracle_case_quality_gate({"scaled_task": gate_env}, config=config)
+        coverage_gaps = _quality_gate_requirement_coverage_gaps(env, gate)
+        if not coverage_gaps:
+            break
+
+        repaired_cases = _repair_scaled_oracle_cases(
+            env=env,
+            operator_instances=operator_instances,
+            current_cases=current_cases,
+            validation_report=list(current_generation.get("oracle_case_validation_report") or []),
+            failure_summary=coverage_gaps,
+            llm_client=llm_client,
+            prompt_runner=prompt_runner,
+        )
+        trace_row = {
+            "attempt": f"quality_gate_coverage_repair_{attempt + 1}",
+            "gate_failure_reasons": list(gate.get("failure_reasons") or []),
+            "missing_requirement_ids": [str(item.get("missing_requirement_id") or "") for item in coverage_gaps],
+            "repaired_case_count": len(repaired_cases),
+        }
+        current_generation["oracle_case_repair_trace"] = list(current_generation.get("oracle_case_repair_trace") or [])
+        current_generation["oracle_case_repair_trace"].append(trace_row)
+        if not repaired_cases:
+            break
+
+        oracle_case_result = validate_and_repair_oracle_cases(
+            env=env,
+            operator_instances=operator_instances,
+            oracle_case_candidates=repaired_cases,
+            llm_client=llm_client,
+            prompt_runner=prompt_runner,
+            config=config,
+        )
+        validated_cases = list(oracle_case_result.get("validated_oracle_cases") or [])
+        oracle_case_result, validated_cases, merge_failures = _merge_seed_regression_case_into_oracle_result(
+            env=env,
+            oracle_case_result=oracle_case_result,
+            generation_failures=[],
+        )
+        if not validated_cases:
+            current_generation["scaled_oracle_case_failures"] = list(current_generation.get("scaled_oracle_case_failures") or [])
+            current_generation["scaled_oracle_case_failures"].extend(list(oracle_case_result.get("scaled_oracle_case_failures") or []))
+            break
+
+        aligned_spec = _aligned_output_constraint_spec(output_constraint_spec, validated_cases)
+        latest_evaluation = evaluate_scaled_gold_candidate(
+            env=env,
+            candidate_code=str(current_generation.get("scaled_executable_gold_code") or ""),
+            scaled_oracle_cases=validated_cases,
+            hidden_tests=[],
+            semantic_test_specs=semantic_test_specs,
+            output_constraint_spec=aligned_spec,
+            llm_client=llm_client,
+            prompt_runner=prompt_runner,
+            config=config,
+        )
+        current_cases = validated_cases
+        current_generation.update(
+            {
+                "scaled_oracle_cases": validated_cases,
+                "validated_oracle_cases": validated_cases,
+                "oracle_case_validation_report": list(oracle_case_result.get("oracle_case_validation_report") or []),
+                "oracle_case_rule_repair_report": list(current_generation.get("oracle_case_rule_repair_report") or [])
+                + list(oracle_case_result.get("oracle_case_rule_repair_report") or []),
+                "scaled_oracle_case_failures": list(oracle_case_result.get("scaled_oracle_case_failures") or []) + list(merge_failures or []),
+                "scaled_oracle_coverage_summary": _scaled_oracle_coverage_summary(
+                    validated_cases,
+                    _semantic_operator_ids_from_cases_or_operators(validated_cases, operator_instances),
+                ),
+                "output_constraint_spec_aligned": aligned_spec,
+                "scaled_gold_case_execution_report": latest_evaluation.get("scaled_gold_case_execution_report", []),
+            }
+        )
+        repaired = True
+
+    if not repaired or latest_evaluation is None:
+        return {"repaired": False}
+    return {"repaired": True, "generation": current_generation, "evaluation": latest_evaluation}
+
+
+def _quality_gate_requirement_coverage_gaps(env: ExecutableEnvSpec, gate: dict[str, Any]) -> list[dict[str, Any]]:
+    failure_reasons = {str(item) for item in (gate.get("failure_reasons") or [])}
+    warnings = {str(item) for item in (gate.get("warnings") or [])}
+    if (
+        "NO_CASE_COVERS_NEW_REQUIREMENT" not in failure_reasons
+        and "PARTIAL_CASE_REQUIREMENT_COVERAGE" not in failure_reasons
+        and "PARTIAL_CASE_REQUIREMENT_COVERAGE" not in warnings
+    ):
+        return []
+    evidence = gate.get("evidence") or {}
+    missing_ids = [str(item).strip() for item in (evidence.get("missing_requirement_ids") or []) if str(item).strip()]
+    if not missing_ids and "NO_CASE_COVERS_NEW_REQUIREMENT" in failure_reasons:
+        missing_ids = [str(item).strip() for item in (evidence.get("coverage_target_ids") or []) if str(item).strip()]
+    metadata_by_id = {
+        str(row.get("requirement_id") or ""): row
+        for row in (env.output_requirement_metadata or [])
+        if isinstance(row, dict) and str(row.get("requirement_id") or "")
+    }
+    gaps: list[dict[str, Any]] = []
+    for req_id in missing_ids:
+        row = metadata_by_id.get(req_id, {})
+        requirement = str(row.get("text") or "").strip()
+        gaps.append(
+            {
+                "case_id": f"missing_quality_coverage:{req_id}",
+                "failure_reasons": ["QUALITY_GATE_MISSING_REQUIREMENT_COVERAGE"],
+                "missing_requirement_id": req_id,
+                "missing_requirement": requirement,
+                "operator_id": row.get("operator_id"),
+                "axis": row.get("axis"),
+                "repair_instruction": (
+                    "Add or repair an oracle case whose covered_requirement_ids contains this exact requirement_id. "
+                    "The case description, target_constraint, setup_code, call_code, expected_failure_mode, and "
+                    "expected_output_signature must make the requirement observable. Do not satisfy this by ID only."
+                ),
+            }
+        )
+    return gaps
+
+
+def _semantic_operator_ids_from_cases_or_operators(
+    cases: list[dict[str, Any]],
+    operator_instances: list[dict[str, Any]],
+) -> list[str]:
+    ids = [
+        str(item).strip()
+        for case in cases
+        for item in str(case.get("targets_operator_id") or "").split(",")
+        if str(item).strip()
+    ]
+    if ids:
+        return _dedupe_strings(ids)
+    return _dedupe_strings([str(operator.get("operator_id") or "") for operator in operator_instances if str(operator.get("operator_id") or "")])
+
+
 def _should_add_fallback_oracle_case(env: ExecutableEnvSpec, operator_instances: list[dict[str, Any]]) -> bool:
     level = str((env.difficulty.global_level if env.difficulty else "") or "")
     if level == "M1":
         return False
     return bool(operator_instances)
+
+
+def _merge_seed_regression_case_into_oracle_result(
+    env: ExecutableEnvSpec,
+    oracle_case_result: dict[str, Any],
+    generation_failures: list[dict[str, Any]],
+) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
+    level = str((env.difficulty.global_level if env.difficulty else "") or "")
+    validated_cases = list(oracle_case_result.get("validated_oracle_cases") or [])
+    merged_cases, regression_failures = merge_seed_regression_case(env, validated_cases, level=level)
+    if regression_failures:
+        return oracle_case_result, validated_cases, generation_failures + regression_failures
+    merged_cases, regression_rule_repair_report = _rule_repair_scaled_oracle_cases(env, merged_cases, [])
+    if merged_cases == validated_cases:
+        return oracle_case_result, validated_cases, generation_failures
+
+    updated_result = dict(oracle_case_result)
+    updated_result["validated_oracle_cases"] = merged_cases
+    updated_result["scaled_oracle_cases"] = merged_cases
+    updated_result["oracle_case_rule_repair_report"] = list(updated_result.get("oracle_case_rule_repair_report") or [])
+    updated_result["oracle_case_rule_repair_report"].extend(regression_rule_repair_report)
+    report = list(updated_result.get("oracle_case_validation_report") or [])
+    regression_case = next(
+        (case for case in merged_cases if isinstance(case, dict) and str(case.get("case_kind") or "") == "seed_regression"),
+        None,
+    )
+    if regression_case and not any(str(row.get("case_id") or "") == str(regression_case.get("case_id") or "") for row in report):
+        report.append(seed_regression_validation_report_row(env, regression_case))
+    updated_result["oracle_case_validation_report"] = report
+    return updated_result, merged_cases, generation_failures
 
 
 def _build_m1_seed_baseline_oracle_case(env: ExecutableEnvSpec) -> dict[str, Any] | None:
@@ -838,11 +1146,16 @@ def _build_m1_seed_baseline_oracle_case(env: ExecutableEnvSpec) -> dict[str, Any
     if not call_code or not isinstance(expected, dict) or not expected:
         return None
     target_name = _target_name_from_signature(env.signature)
-    requirement = (
-        f"Validate original seed behavior for {target_name}."
-        if target_name
-        else "Validate original seed task behavior."
-    )
+    requirements = build_seed_behavior_requirements(env)
+    if not requirements:
+        requirements = [
+            (
+                f"Validate original seed behavior for {target_name}."
+                if target_name
+                else "Validate original seed task behavior."
+            )
+        ]
+    requirement = requirements[0]
     return {
         "case_id": str(seed_case.get("case_id") or "seed_case_main"),
         "description": str(seed_case.get("description") or "M1 baseline oracle case derived from the seed execution case."),
@@ -855,9 +1168,9 @@ def _build_m1_seed_baseline_oracle_case(env: ExecutableEnvSpec) -> dict[str, Any
         "setup_code": str(seed_case.get("setup_code") or ""),
         "call_code": call_code,
         "assertion_code": str(seed_case.get("assertion_code") or ""),
-        "covered_requirements": [requirement],
-        "covers_requirements": [requirement],
-        "expected_output_signature": dict(expected),
+        "covered_requirements": requirements,
+        "covers_requirements": requirements,
+        "expected_output_signature": stabilize_expected_output_signature(dict(expected)),
     }
 
 
@@ -902,7 +1215,7 @@ def _build_fallback_oracle_case(
         "assertion_code": str(source.get("assertion_code") or ""),
         "covered_requirements": [requirement],
         "covers_requirements": [requirement],
-        "expected_output_signature": dict(expected),
+        "expected_output_signature": stabilize_expected_output_signature(dict(expected)),
     }
 
 
@@ -1118,8 +1431,9 @@ def generate_scaled_gold_solution_if_needed(
     scaled_case_plan = dict(env.scaled_case_plan or build_scaled_case_plan(env, operator_instances, semantic_test_specs))
     seed_case_admission = check_seed_case_admission(env)
     target_oracle_count = _resolve_oracle_case_target_count(env, semantic_info, config)
+    scaled_case_plan["required_validated_case_count"] = target_oracle_count
     level = str((env.difficulty.global_level if env.difficulty else "") or "")
-    if level != "M1" and not semantic_info["semantic_change"] and target_oracle_count <= 0:
+    if level != "M1" and level not in {"M2", "M3", "M4"} and not semantic_info["semantic_change"] and target_oracle_count <= 0:
         seed_executable_code = _seed_executable_code(env)
         return {
             "seed_gold_solution": seed_gold_solution,
@@ -1152,7 +1466,13 @@ def generate_scaled_gold_solution_if_needed(
         }
 
     gold_policies = [operator.get("gold_update_policy") or {} for operator in operator_instances]
-    if level != "M1" and target_oracle_count <= 0 and gold_policies and all(bool(policy.get("answer_invariant")) for policy in gold_policies if policy):
+    if (
+        level != "M1"
+        and level not in {"M2", "M3", "M4"}
+        and target_oracle_count <= 0
+        and gold_policies
+        and all(bool(policy.get("answer_invariant")) for policy in gold_policies if policy)
+    ):
         reason = "; ".join(str(policy.get("gold_change_reason") or "") for policy in gold_policies if policy)
         seed_executable_code = _seed_executable_code(env)
         return {
@@ -1277,6 +1597,12 @@ def generate_scaled_gold_solution_if_needed(
                 oracle_case_result["scaled_oracle_case_failures"] = list(oracle_case_result.get("scaled_oracle_case_failures") or [])
                 oracle_case_result["scaled_oracle_case_failures"].extend(list(fallback_result.get("scaled_oracle_case_failures") or []))
 
+    oracle_case_result, validated_oracle_cases, generation_failures = _merge_seed_regression_case_into_oracle_result(
+        env=env,
+        oracle_case_result=oracle_case_result,
+        generation_failures=generation_failures,
+    )
+
     answer_invariant = (
         not semantic_info["semantic_change"]
         or (
@@ -1349,6 +1675,7 @@ def generate_scaled_gold_solution_if_needed(
         output_constraint_spec=generation["output_constraint_spec_aligned"],
         llm_client=llm_client,
         prompt_runner=prompt_runner,
+        config=config,
     )
     generation.update(evaluation)
     generation["compile_passed"] = evaluation["compile_passed"]
@@ -1362,6 +1689,29 @@ def generate_scaled_gold_solution_if_needed(
     generation["scaled_oracle_cases"] = generation.get("scaled_oracle_cases", [])
     generation["validated_oracle_cases"] = evaluation.get("validated_oracle_cases", validated_oracle_cases)
     generation["scaled_gold_case_execution_report"] = evaluation.get("scaled_gold_case_execution_report", [])
+    quality_repair = _repair_oracle_cases_for_quality_gate(
+        env=env,
+        generation=generation,
+        operator_instances=operator_instances,
+        semantic_test_specs=semantic_test_specs,
+        output_constraint_spec=output_constraint_spec,
+        llm_client=llm_client,
+        prompt_runner=prompt_runner,
+        config=config,
+    )
+    if quality_repair.get("repaired"):
+        generation.update(quality_repair["generation"])
+        evaluation = quality_repair["evaluation"]
+        validated_oracle_cases = list(generation.get("validated_oracle_cases") or [])
+        generation["compile_passed"] = evaluation["compile_passed"]
+        generation["visible_tests_passed"] = evaluation["execution_passed"]
+        generation["hidden_tests_passed"] = evaluation["hidden_tests_passed"]
+        generation["scaled_executable_gold_code"] = evaluation["scaled_executable_gold_code"]
+        generation["scaled_ground_truth_output_signature"] = evaluation["scaled_ground_truth_output_signature"]
+        generation["output_constraint_result"] = evaluation["output_constraint_result"]
+        generation["hidden_tests"] = evaluation["hidden_tests"]
+        generation["hidden_tests_mode"] = "disabled_in_case_first_stage05"
+        generation["scaled_gold_case_execution_report"] = evaluation.get("scaled_gold_case_execution_report", [])
     if not evaluation["compile_passed"]:
         generation["failure_reasons"].append("SCALED_GOLD_COMPILE_FAILED")
     if not evaluation["execution_passed"]:
@@ -1415,6 +1765,7 @@ def repair_scaled_gold_solution(
             output_constraint_spec=current.get("output_constraint_spec_aligned") or _aligned_output_constraint_spec(output_constraint_spec, scaled_oracle_cases),
             llm_client=llm_client,
             prompt_runner=prompt_runner,
+            config=config,
         )
         current.update(evaluation)
         current["scaled_executable_gold_code"] = evaluation["scaled_executable_gold_code"]
@@ -1541,6 +1892,17 @@ def _collect_failure_summary(current: dict[str, Any], evaluation: dict[str, Any]
     return failures
 
 
+def _case_execution_python_bin(config: dict[str, Any] | None) -> str | None:
+    config = config or {}
+    code_execution = config.get("code_execution") or {}
+    if not isinstance(code_execution, dict):
+        return None
+    backend = str(code_execution.get("backend") or "local").strip().lower()
+    if backend == "local":
+        return str(code_execution.get("local_python_bin") or code_execution.get("python_bin") or "").strip() or None
+    return str(code_execution.get("python_bin") or "").strip() or None
+
+
 def evaluate_scaled_gold_candidate(
     env: ExecutableEnvSpec,
     candidate_code: str,
@@ -1550,9 +1912,15 @@ def evaluate_scaled_gold_candidate(
     output_constraint_spec: dict[str, Any],
     llm_client: LLMClient | None,
     prompt_runner: PromptRunner | None,
+    config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     execution_result = execute_candidate_solution(env, candidate_code)
-    case_execution = run_scaled_gold_on_validated_oracle_cases(env, candidate_code, scaled_oracle_cases)
+    case_execution = run_scaled_gold_on_validated_oracle_cases(
+        env,
+        candidate_code,
+        scaled_oracle_cases,
+        python_bin=_case_execution_python_bin(config),
+    )
     case_first_mode = bool(scaled_oracle_cases)
     standalone_output_constraint_result = check_output_constraints(execution_result["output_signature"], output_constraint_spec or {})
     if case_first_mode:
@@ -1625,6 +1993,7 @@ def _generate_scaled_oracle_cases(
                 "seed_ground_truth_output_signature": env.seed_ground_truth_output_signature or {},
                 "operator_instances": operator_instances,
                 "semantic_test_specs": semantic_test_specs,
+                "output_requirement_metadata": env.output_requirement_metadata or [],
                 "target_count": target_count,
             },
             mock_builder=_mock_scaled_oracle_cases_builder,
@@ -1637,6 +2006,7 @@ def _generate_scaled_oracle_cases(
                 "seed_ground_truth_output_signature": env.seed_ground_truth_output_signature or {},
                 "operator_instances": operator_instances,
                 "semantic_test_specs": semantic_test_specs,
+                "output_requirement_metadata": env.output_requirement_metadata or [],
                 "target_count": target_count,
             }
         )
@@ -1781,7 +2151,15 @@ def _build_scaled_gold_prompt(
                 failed_case_diffs if isinstance(failed_case_diffs, list) else []
             )
         repair_kwargs = {
+            "seed_problem": env.problem,
+            "seed_executable_code": _seed_executable_code(env),
+            "seed_execution_case": _json(env.seed_execution_case or {}),
+            "seed_ground_truth_output_signature": _json(env.seed_ground_truth_output_signature or {}),
+            "final_user_prompt": env.user_prompt or env.problem,
             "signature_info": env.signature or "N/A",
+            "operator_instances": _json(operator_instances),
+            "output_requirement_metadata": _json(env.output_requirement_metadata or []),
+            "scaled_case_plan": _json(env.scaled_case_plan or {}),
             "scaled_oracle_cases": _json(repair_context.get("fixed_scaled_oracle_cases", [])),
             "previous_scaled_gold_solution": previous_solution or "",
             "output_constraint_result": _json(repair_context.get("output_constraint_result", {})),
@@ -2291,7 +2669,7 @@ def _seed_expected_output_signature(env: ExecutableEnvSpec) -> dict[str, Any]:
     seed_case = env.seed_execution_case if isinstance(env.seed_execution_case, dict) else {}
     expected = seed_case.get("expected_output_signature")
     if isinstance(expected, dict) and expected:
-        return dict(expected)
+        return stabilize_expected_output_signature(dict(expected))
     ground_truth = env.seed_ground_truth_output_signature if isinstance(env.seed_ground_truth_output_signature, dict) else {}
     stdout = str(ground_truth.get("stdout") or "")
     stdout_contains = [line.strip() for line in stdout.splitlines() if line.strip()]
@@ -2307,7 +2685,7 @@ def _seed_expected_output_signature(env: ExecutableEnvSpec) -> dict[str, Any]:
         expected_signature["stdout_contains"] = stdout_contains
     if file_artifacts:
         expected_signature["file_artifacts"] = file_artifacts
-    return expected_signature
+    return stabilize_expected_output_signature(expected_signature)
 
 
 def _dedupe_strings(items: list[str]) -> list[str]:
@@ -2335,6 +2713,8 @@ def _build_scaled_gold_generate_prompt_fallback(**kwargs: str) -> str:
         "scaled_executable_gold_code must be a complete runnable Python file/program. "
         "Do not return a function body, replacement snippet, patch, diff, or code intended for placeholder insertion. "
         "The evaluator executes it exactly as returned and will not merge it into the seed scaffold.\n\n"
+        "Scaled requirements are additive unless an operator explicitly replaces seed behavior. "
+        "If scaled_oracle_cases include case_kind=seed_regression, preserve that original seed behavior while implementing scaled additions.\n\n"
         "Do not return scaled_oracle_cases; they are fixed test contracts from the oracle-case stage.\n\n"
         "Return JSON with keys scaled_executable_gold_code, gold_changed, "
         "answer_invariant, gold_change_reason, seed_gold_compatible_with_scaled_task, "
@@ -2346,6 +2726,14 @@ def _build_scaled_gold_repair_prompt_fallback(**kwargs: str) -> str:
     return (
         "You are an expert Python debugging assistant for benchmark oracle solutions.\n\n"
         "Return JSON only.\n\n"
+        f"Seed problem:\n{kwargs.get('seed_problem', '')}\n\n"
+        f"Seed executable code:\n{kwargs.get('seed_executable_code', '')}\n\n"
+        f"Seed execution case:\n{kwargs.get('seed_execution_case', '')}\n\n"
+        f"Seed ground truth output signature:\n{kwargs.get('seed_ground_truth_output_signature', '')}\n\n"
+        f"Scaled final user prompt:\n{kwargs.get('final_user_prompt', '')}\n\n"
+        f"Operator instances:\n{kwargs.get('operator_instances', '')}\n\n"
+        f"Output requirement metadata:\n{kwargs.get('output_requirement_metadata', '')}\n\n"
+        f"Scaled case plan:\n{kwargs.get('scaled_case_plan', '')}\n\n"
         f"Failed case contracts:\n{kwargs['failed_case_contracts']}\n\n"
         f"Failed case observed-vs-expected diffs:\n{kwargs['failed_case_diffs']}\n\n"
         f"Targeted repair rules:\n{kwargs['repair_rules']}\n\n"
@@ -2359,7 +2747,12 @@ def _build_scaled_gold_repair_prompt_fallback(**kwargs: str) -> str:
         "scaled_executable_gold_code must be a complete runnable Python file/program. "
         "Do not return a function body, replacement snippet, patch, diff, or code intended for placeholder insertion. "
         "The evaluator executes it exactly as returned and will not merge it into the seed scaffold.\n\n"
+        "Repair priority order: first restore every seed_regression behavior, including return value, stdout/stderr, "
+        "and file artifacts; then satisfy scaled_seed_case_main without breaking seed_regression; then satisfy "
+        "coverage-extension and operator-specific cases; preserve all currently passed cases throughout the repair. "
+        "Use the final prompt, operator instances, and scaled case plan to implement general logic, not one-off branches.\n\n"
         "Use failed case diffs and targeted repair rules as mandatory debugging instructions. "
+        "If a failed case has case_kind=seed_regression, restore original seed behavior first while keeping scaled cases that already pass. "
         "For ModuleNotFoundError, inline missing helpers instead of importing unavailable modules. "
         "For missing file artifacts, create the exact expected relative paths and parent directories. "
         "For stdout mismatch, print the missing expected tokens from the evaluated code path.\n\n"
@@ -2388,6 +2781,7 @@ def _build_scaled_oracle_cases_prompt(
         "operator_instances": _json(operator_instances),
         "semantic_test_specs": _json(semantic_test_specs),
         "output_requirements": _json(env.output_requirements or []),
+        "output_requirement_metadata": _json(env.output_requirement_metadata or []),
         "output_constraint_spec": _json(env.output_constraint_spec or {}),
         "case_design_targets": _json(case_design_targets),
         "scaled_case_plan": _json(env.scaled_case_plan or {}),
@@ -2449,10 +2843,18 @@ def _build_scaled_oracle_cases_prompt_fallback(**kwargs: str) -> str:
         f"Operator instances:\n{kwargs['operator_instances']}\n\n"
         f"Semantic test specs:\n{kwargs['semantic_test_specs']}\n\n"
         f"Output requirements:\n{kwargs['output_requirements']}\n\n"
+        f"Output requirement metadata:\n{kwargs['output_requirement_metadata']}\n\n"
         f"Output constraint spec:\n{kwargs['output_constraint_spec']}\n\n"
         f"Case design targets:\n{kwargs['case_design_targets']}\n\n"
         f"Scaled case plan:\n{kwargs['scaled_case_plan']}\n\n"
         f"Required minimum scaled oracle case count: {kwargs['target_count']}\n\n"
+        "The pipeline separately adds the original seed_execution_case as case_kind=seed_regression for M2/M3/M4. "
+        "Generate cases for newly added scaled requirements; do not replace or weaken the original seed behavior.\n\n"
+        "Each oracle case must include covered_requirement_ids using exact IDs from output_requirement_metadata when available. "
+        "Keep covered_requirements as the human-readable text for those same IDs. "
+        "Every non-generic required requirement_id from output_requirement_metadata must be covered by at least one case. "
+        "Do not satisfy coverage by ID only: setup_code, call_code, expected_failure_mode, or expected_output_signature "
+        "must make the exact requirement text observable.\n\n"
         "Return JSON with key scaled_oracle_cases.\n"
     )
 
@@ -2476,6 +2878,7 @@ def _build_scaled_oracle_cases_repair_prompt(
         "oracle_case_candidates": _json(current_cases),
         "oracle_case_validation_report": _json(validation_report),
         "failure_summary": _json(failure_summary),
+        "output_requirement_metadata": _json(env.output_requirement_metadata or []),
         "case_design_targets": _json(case_design_targets),
         "scaled_case_plan": _json(env.scaled_case_plan or {}),
     }
@@ -2493,8 +2896,11 @@ def _build_scaled_oracle_cases_repair_prompt(
         f"Current oracle case candidates:\n{render_kwargs['oracle_case_candidates']}\n\n"
         f"Validation report:\n{render_kwargs['oracle_case_validation_report']}\n\n"
         f"Failure summary:\n{render_kwargs['failure_summary']}\n\n"
+        f"Output requirement metadata:\n{render_kwargs['output_requirement_metadata']}\n\n"
         f"Case design targets:\n{render_kwargs['case_design_targets']}\n\n"
         f"Scaled case plan:\n{render_kwargs['scaled_case_plan']}\n\n"
+        "The pipeline separately adds the original seed_execution_case as case_kind=seed_regression for M2/M3/M4. "
+        "Repair generated scaled cases for newly added requirements; do not replace or weaken the original seed behavior.\n\n"
         "Repair rules for concrete requirements:\n"
         "- If CASE_REQUIREMENT_TOO_GENERIC appears, rewrite target_constraint, semantic_intent, description, "
         "and covered_requirements to name the exact changed input shape, field/key/format/value, boundary condition, "
@@ -2503,6 +2909,11 @@ def _build_scaled_oracle_cases_repair_prompt(
         "operator transformation_goal/state_updates/output_requirements.\n"
         "- If CASE_EXPECTATION_NOT_LINKED_TO_REQUIREMENT appears, update setup_code, call_code, expected_failure_mode, "
         "or expected_output_signature so the observable evidence exercises the same concrete requirement.\n\n"
+        "Use covered_requirement_ids with exact IDs from output_requirement_metadata whenever possible. "
+        "Do not invent requirement IDs. If failure_summary contains missing_requirement_id, "
+        "MISSING_REQUIREMENT_COVERAGE, REQUIREMENT_ID_HAS_WEAK_CASE_ONLY, or QUALITY_GATE_MISSING_REQUIREMENT_COVERAGE, "
+        "add or repair a case for that exact requirement_id. The repaired case must make the requirement observable in "
+        "setup_code, call_code, expected_failure_mode, or expected_output_signature; ID-only coverage is invalid.\n\n"
         "Return JSON with key scaled_oracle_cases.\n"
     )
 
@@ -2542,6 +2953,7 @@ def _mock_scaled_oracle_cases_builder(context: dict[str, Any]) -> dict[str, Any]
     semantic_specs = [spec for spec in (context.get("semantic_test_specs", []) or []) if isinstance(spec, dict)]
     seed_case = context.get("seed_execution_case") if isinstance(context.get("seed_execution_case"), dict) else {}
     operator_instances = [item for item in (context.get("operator_instances", []) or []) if isinstance(item, dict)]
+    requirement_metadata = [item for item in (context.get("output_requirement_metadata", []) or []) if isinstance(item, dict)]
     semantic_targets = detect_semantic_change(operator_instances)
     oracle_operator_ids = _oracle_case_operator_ids(operator_instances, semantic_targets)
     combined_operator_ids = ",".join(oracle_operator_ids)
@@ -2560,6 +2972,7 @@ def _mock_scaled_oracle_cases_builder(context: dict[str, Any]) -> dict[str, Any]
         )
     cases: list[dict[str, Any]] = []
     if target_count > 0 and seed_case:
+        covered_requirement_ids = _mock_requirement_ids_for_texts(requirement_metadata, covered_requirements, combined_operator_ids, combined_axes)
         cases.append(
             {
                 "case_id": "scaled_seed_case_main",
@@ -2574,6 +2987,7 @@ def _mock_scaled_oracle_cases_builder(context: dict[str, Any]) -> dict[str, Any]
                 "call_code": str(seed_case.get("call_code") or "result = None"),
                 "assertion_code": "",
                 "expected_output_signature": dict(seed_case.get("expected_output_signature") or {}),
+                "covered_requirement_ids": covered_requirement_ids,
                 "covered_requirements": covered_requirements,
                 "covers_requirements": covered_requirements,
             }
@@ -2582,6 +2996,13 @@ def _mock_scaled_oracle_cases_builder(context: dict[str, Any]) -> dict[str, Any]
         if len(cases) >= max(target_count, 1):
             break
         spec_id = str(spec.get("spec_id") or f"scaled_oracle_case_{index}")
+        spec_requirements = [str(spec.get("target_constraint") or spec.get("semantic_intent") or spec_id)]
+        covered_requirement_ids = _mock_requirement_ids_for_texts(
+            requirement_metadata,
+            spec_requirements,
+            str(spec.get("targets_operator_id") or ""),
+            str(spec.get("axis") or ""),
+        )
         cases.append(
             {
                 "case_id": spec_id,
@@ -2596,8 +3017,33 @@ def _mock_scaled_oracle_cases_builder(context: dict[str, Any]) -> dict[str, Any]
                 "call_code": str(seed_case.get("call_code") or "result = None"),
                 "assertion_code": "",
                 "expected_output_signature": dict(seed_case.get("expected_output_signature") or {"return_value": None}),
-                "covered_requirements": [str(spec.get("target_constraint") or spec.get("semantic_intent") or spec_id)],
-                "covers_requirements": [str(spec.get("target_constraint") or spec.get("semantic_intent") or spec_id)],
+                "covered_requirement_ids": covered_requirement_ids,
+                "covered_requirements": spec_requirements,
+                "covers_requirements": spec_requirements,
             }
         )
     return {"scaled_oracle_cases": cases}
+
+
+def _mock_requirement_ids_for_texts(
+    requirement_metadata: list[dict[str, Any]],
+    requirements: list[str],
+    targets_operator_id: str,
+    axis: str,
+) -> list[str]:
+    target_ids = {item.strip() for item in str(targets_operator_id or "").split(",") if item.strip()}
+    axes = {item.strip() for item in str(axis or "").split(",") if item.strip()}
+    ids: list[str] = []
+    for row in requirement_metadata:
+        req_id = str(row.get("requirement_id") or "")
+        if not req_id:
+            continue
+        row_operator = str(row.get("operator_id") or "")
+        row_axis = str(row.get("axis") or "")
+        if row_operator and target_ids and row_operator not in target_ids:
+            continue
+        if row_axis not in {"seed", "global"} and axes and row_axis not in axes:
+            continue
+        if any(requirements_match(str(row.get("text") or ""), requirement) for requirement in requirements):
+            ids.append(req_id)
+    return list(dict.fromkeys(ids))

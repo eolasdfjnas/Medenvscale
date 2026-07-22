@@ -24,38 +24,6 @@ agent_tools:
     limitations:
       - Does not expose oracle cases, gold solutions, expected output signatures, or Stage05 reports.
 
-  - tool_name: read_resource_file
-    description: Read a bounded slice of a public resource file listed in the task resource manifest.
-    input_schema:
-      path: string
-      offset: integer
-      max_bytes: integer
-    output_schema:
-      ok: boolean
-      path: string
-      offset: integer
-      bytes_read: integer
-      total_bytes: integer
-      content: string
-      truncated: boolean
-    openai_parameters:
-      type: object
-      required: [path]
-      properties:
-        path:
-          type: string
-          description: Relative path from the public resource manifest.
-        offset:
-          type: integer
-          default: 0
-        max_bytes:
-          type: integer
-          default: 4000
-    when_to_use: Use when the solution depends on public FASTA, CSV, JSON, text, or other resource files.
-    limitations:
-      - Only reads manifest-listed relative paths.
-      - Rejects absolute paths, home paths, and paths escaping the work directory.
-
   - tool_name: validate_candidate_code
     description: Check whether a complete Python program compiles and preserves the target callable signature.
     input_schema:
@@ -75,6 +43,33 @@ agent_tools:
     when_to_use: Use after drafting code and before runtime tests.
     limitations:
       - Checks syntax, target signature, and static safety only; it does not prove semantic correctness.
+
+  - tool_name: create_test_file
+    description: Create a small UTF-8 text fixture file for later run_custom_test calls in the agent sandbox.
+    input_schema:
+      path: string
+      content: string
+    output_schema:
+      ok: boolean
+      path: string
+      bytes_written: integer
+      total_test_files: integer
+      available_to: array
+    openai_parameters:
+      type: object
+      required: [path, content]
+      properties:
+        path:
+          type: string
+          description: Safe relative path to create, such as input.csv, data/example.tsv, or config.json.
+        content:
+          type: string
+          description: UTF-8 text content to write. Use small public/self-authored fixtures only.
+    when_to_use: Use before run_custom_test when the candidate needs a local CSV, TSV, JSON, FASTA, text, or config file.
+    limitations:
+      - Files are available only to later run_custom_test calls in the same episode.
+      - Files are not available to submit_final_code oracle evaluation.
+      - Rejects absolute paths, home paths, parent-directory escapes, directory paths, and files over 64KB.
 
   - tool_name: run_custom_test
     description: Execute a self-authored public test snippet against the complete candidate program.

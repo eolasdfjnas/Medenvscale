@@ -5,7 +5,7 @@ from typing import Any
 
 DEFAULT_STAGE06_TOOL_NAMES = {
     "get_task_context",
-    "read_resource_file",
+    "create_test_file",
     "validate_candidate_code",
     "run_custom_test",
     "submit_final_code",
@@ -48,22 +48,21 @@ def _fallback_stage06_tool_schemas() -> list[dict[str, Any]]:
             {"type": "object", "properties": {"window": {"type": "integer", "default": 4000}}},
         ),
         _tool_schema(
-            "read_resource_file",
-            "Read a bounded slice of a public resource file listed in the resource manifest.",
-            {
-                "type": "object",
-                "required": ["path"],
-                "properties": {
-                    "path": {"type": "string"},
-                    "offset": {"type": "integer", "default": 0},
-                    "max_bytes": {"type": "integer", "default": 4000},
-                },
-            },
-        ),
-        _tool_schema(
             "validate_candidate_code",
             "Check whether a complete Python program compiles and preserves the target signature.",
             {"type": "object", "required": ["code"], "properties": {"code": {"type": "string"}}},
+        ),
+        _tool_schema(
+            "create_test_file",
+            "Create a small text fixture file available to later run_custom_test calls in the agent sandbox.",
+            {
+                "type": "object",
+                "required": ["path", "content"],
+                "properties": {
+                    "path": {"type": "string", "description": "Safe relative path such as input.csv or data/example.tsv."},
+                    "content": {"type": "string", "description": "UTF-8 text content to write, up to 64KB."},
+                },
+            },
         ),
         _tool_schema(
             "run_custom_test",

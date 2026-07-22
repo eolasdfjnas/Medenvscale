@@ -7,5 +7,5 @@ from medenvscale.pipeline_ops import load_config, stage01_normalize
 if __name__ == "__main__":
     args = base_parser("Normalize MedAgentGym task data").parse_args()
     cfg = load_config(args.config, dataset=args.dataset)
-    rows = stage01_normalize(cfg, limit=args.limit)
+    rows = stage01_normalize(cfg, limit=args.limit, resume=args.resume or args.resume_stage05)
     print(f"Normalized rows: {len(rows)}")

@@ -4,7 +4,8 @@ from medenvscale.classify.taxonomy import normalize_domain_name, normalize_task_
 from medenvscale.ingest.placeholder_analyzer import detect_solution_form
 from medenvscale.llm import LLMClient
 from medenvscale.llm.prompt_runner import PromptRunner
-from medenvscale.schemas import DomainHint, MedAgentGymTask
+from medenvscale.schemas import MedAgentGymTask
+from medenvscale.schemas.routing import normalize_domain_hints
 
 
 def _contains_any(text: str, phrases: list[str]) -> bool:
@@ -150,11 +151,8 @@ def route_with_llm_full_taxonomy(
     payload = dict(response.payload)
     payload["primary_domain"] = normalize_domain_name(payload.get("primary_domain") or payload.get("domain"))
     payload["primary_task_type"] = normalize_task_type_name(payload.get("primary_task_type") or payload.get("task_type"))
-    secondary_domains = payload.get("secondary_domains", []) or []
-    if isinstance(secondary_domains, dict):
-        secondary_domains = [secondary_domains]
     payload["secondary_domains"] = [
-        (item if isinstance(item, DomainHint) else DomainHint.model_validate(item)).model_dump() for item in secondary_domains
+        item.model_dump() for item in normalize_domain_hints(payload.get("secondary_domains", []) or [])
     ]
     payload.setdefault("routing_trace", {})
     payload["routing_trace"].update(

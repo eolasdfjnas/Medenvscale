@@ -43,7 +43,9 @@ Important:
 
 Return JSON with:
 - primary_domain
-- secondary_domains
+- secondary_domains: always a JSON array of objects. Each object must use exactly these fields:
+  {"domain": "<allowed domain name>", "relevance": 0.0-1.0, "reason": "<short reason>"}
+  Do not return {"domain_name": score}; use the explicit domain/relevance object format.
 - primary_task_type
 - solution_form
 - secondary_task_types

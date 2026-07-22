@@ -9,6 +9,7 @@ from medenvscale.classify.taxonomy import (
     normalize_task_type_name,
 )
 from medenvscale.schemas import DomainHint, MedAgentGymTask, RoutingResult
+from medenvscale.schemas.routing import normalize_domain_hints
 
 
 def validate_secondary_domains(primary_domain: str, secondary_domains: list[DomainHint]) -> list[str]:
@@ -58,15 +59,8 @@ def validate_routing(
         domain = allowed_domains[0]
         needs_review = True
 
-    raw_secondary_domains = routing.get("secondary_domains", []) or []
-    if isinstance(raw_secondary_domains, dict):
-        raw_secondary_domains = [raw_secondary_domains]
     cleaned_secondary_domains: list[DomainHint] = []
-    for secondary_item in raw_secondary_domains:
-        if isinstance(secondary_item, str):
-            candidate = DomainHint(domain=secondary_item, relevance=0.5)
-        else:
-            candidate = secondary_item if isinstance(secondary_item, DomainHint) else DomainHint.model_validate(secondary_item)
+    for candidate in normalize_domain_hints(routing.get("secondary_domains", []) or []):
         if candidate.domain == domain:
             continue
         if candidate.domain not in allowed_domains:

@@ -25,6 +25,43 @@ class DomainHint(StrictBaseModel):
         super().__init__(**kwargs)
 
 
+def normalize_domain_hints(raw_secondary_domains: Any) -> list[DomainHint]:
+    if not raw_secondary_domains:
+        return []
+    raw_items = raw_secondary_domains if isinstance(raw_secondary_domains, list) else [raw_secondary_domains]
+    hints: list[DomainHint] = []
+    for item in raw_items:
+        hints.extend(_coerce_domain_hint_item(item))
+    return hints
+
+
+def _coerce_domain_hint_item(item: Any) -> list[DomainHint]:
+    if isinstance(item, DomainHint):
+        return [item]
+    if isinstance(item, str):
+        text = item.strip()
+        return [DomainHint(domain=text, relevance=0.5)] if text else []
+    if not isinstance(item, dict):
+        return []
+    if "domain" in item:
+        return [DomainHint.model_validate(item)]
+
+    hints: list[DomainHint] = []
+    for domain, value in item.items():
+        domain_text = str(domain).strip()
+        if not domain_text:
+            continue
+        payload: dict[str, Any] = {"domain": domain_text}
+        if isinstance(value, dict):
+            payload["relevance"] = value.get("relevance", value.get("score", 0.5))
+            if value.get("reason") is not None:
+                payload["reason"] = str(value.get("reason"))
+        else:
+            payload["relevance"] = value
+        hints.append(DomainHint(**payload))
+    return hints
+
+
 class RoutingResult(StrictBaseModel):
     task_id: str
     source_split: str
@@ -43,10 +80,7 @@ class RoutingResult(StrictBaseModel):
 
     def __init__(self, **kwargs: Any) -> None:
         kwargs["primary_domain"] = normalize_domain_name(kwargs.get("primary_domain") or kwargs.get("domain"))
-        secondary_domains = kwargs.get("secondary_domains", []) or []
-        if isinstance(secondary_domains, dict):
-            secondary_domains = [secondary_domains]
-        kwargs["secondary_domains"] = [item if isinstance(item, DomainHint) else DomainHint.model_validate(item) for item in secondary_domains]
+        kwargs["secondary_domains"] = normalize_domain_hints(kwargs.get("secondary_domains", []) or [])
         kwargs["primary_task_type"] = normalize_task_type_name(kwargs.get("primary_task_type") or kwargs.get("task_type"))
         kwargs["solution_form"] = normalize_solution_form_name(kwargs.get("solution_form"))
         kwargs["secondary_task_types"] = [

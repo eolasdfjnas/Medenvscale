@@ -4,6 +4,13 @@ import re
 from typing import Any
 
 from medenvscale.scaling.path_safety import analyze_relative_path, extract_code_path_references
+from medenvscale.scaling.requirement_registry import (
+    infer_covered_requirement_ids,
+    requirement_metadata_by_id,
+    requirement_observable_match,
+    requirement_text_match,
+)
+from medenvscale.scaling.runtime_value_sanitizer import contains_unstable_object_repr
 from medenvscale.schemas import ExecutableEnvSpec
 from medenvscale.utils import stable_hash
 
@@ -21,9 +28,6 @@ REQUIRED_CASE_FIELDS = [
     "expected_output_signature",
     "covered_requirements",
 ]
-
-_OBJECT_MEMORY_ADDRESS_RE = re.compile(r"<[^>\n]*\bobject at 0x[0-9a-fA-F]+>")
-
 
 def validate_scaled_oracle_cases(
     env: ExecutableEnvSpec,
@@ -52,8 +56,14 @@ def validate_scaled_oracle_cases(
         )
         report_rows.append(row)
         if row["valid"]:
+            if isinstance(case, dict):
+                case["covered_requirement_ids"] = list(row.get("covered_requirement_ids") or [])
+                case["bound_requirement_checks"] = list(row.get("bound_requirement_checks") or [])
             validated.append(case)
         else:
+            if isinstance(case, dict):
+                case["covered_requirement_ids"] = list(row.get("covered_requirement_ids") or [])
+                case["bound_requirement_checks"] = list(row.get("bound_requirement_checks") or [])
             invalid.append(case if isinstance(case, dict) else {"case_id": row["case_id"]})
 
     summary = {
@@ -87,18 +97,23 @@ def _validate_single_case(
             failure_reasons=["CASE_NOT_DICT"],
             targets_operator_id="",
             covered_requirements=[],
+            covered_requirement_ids=[],
+            bound_requirement_checks=[],
             axis="",
         )
         return row, ["CASE_NOT_DICT"]
 
     case_id = str(case.get("case_id") or f"scaled_oracle_case_{index}")
-    is_m1_seed_baseline = level == "M1" and str(case.get("case_kind") or "") == "seed_baseline"
+    case_kind = str(case.get("case_kind") or "")
+    is_seed_baseline = case_kind == "seed_baseline"
+    is_seed_regression = case_kind == "seed_regression"
+    is_seed_case = is_seed_baseline or is_seed_regression
     for field in REQUIRED_CASE_FIELDS:
         if field == "covered_requirements":
             value = case.get("covered_requirements") or case.get("covers_requirements")
         elif field == "case_kind":
             value = case.get("case_kind") or "coverage_extension"
-        elif field == "targets_operator_id" and is_m1_seed_baseline:
+        elif field == "targets_operator_id" and is_seed_case:
             value = "M1"
         else:
             value = case.get(field)
@@ -113,10 +128,10 @@ def _validate_single_case(
 
     targets_operator_id = str(case.get("targets_operator_id") or "")
     target_ids = [item.strip() for item in targets_operator_id.split(",") if item.strip()]
-    if not target_ids and not is_m1_seed_baseline:
+    if not target_ids and not is_seed_case:
         failure_reasons.append("MISSING_TARGET_OPERATOR_ID")
     for operator_id in target_ids:
-        if operator_id not in operators_by_id:
+        if not is_seed_case and operator_id not in operators_by_id:
             failure_reasons.append(f"UNKNOWN_TARGET_OPERATOR_ID:{operator_id}")
 
     axis = str(case.get("axis") or "")
@@ -143,7 +158,7 @@ def _validate_single_case(
     expected_output_signature = case.get("expected_output_signature")
     if isinstance(expected_output_signature, dict) and not _expected_signature_has_content(expected_output_signature):
         failure_reasons.append("EXPECTED_OUTPUT_SIGNATURE_EMPTY_SHELL")
-    if _contains_object_memory_address(expected_output_signature):
+    if contains_unstable_object_repr(expected_output_signature):
         failure_reasons.append("UNSTABLE_EXPECTED_OUTPUT_OBJECT_MEMORY_ADDRESS")
     failure_reasons.extend(_path_safety_failures(setup_code, call_code, expected_output_signature))
 
@@ -152,7 +167,28 @@ def _validate_single_case(
         for item in ((case.get("covered_requirements") or case.get("covers_requirements")) or [])
         if str(item).strip()
     ]
-    if is_m1_seed_baseline:
+    metadata_by_id = requirement_metadata_by_id(env)
+    explicit_requirement_ids = [
+        str(item).strip()
+        for item in (case.get("covered_requirement_ids") or [])
+        if str(item).strip()
+    ]
+    inferred_requirement_ids = infer_covered_requirement_ids(env, case) if metadata_by_id else []
+    covered_requirement_ids = _dedupe([*explicit_requirement_ids, *inferred_requirement_ids])
+    bound_requirement_checks = _bound_requirement_checks(
+        case=case,
+        covered_requirement_ids=covered_requirement_ids,
+        metadata_by_id=metadata_by_id,
+        target_ids=target_ids,
+        declared_axes=declared_axes,
+        is_seed_case=is_seed_case,
+    )
+    for check in bound_requirement_checks:
+        failure_reasons.extend(check.get("failure_reasons", []) or [])
+    if metadata_by_id and not is_seed_case and not covered_requirement_ids:
+        failure_reasons.append("EMPTY_COVERED_REQUIREMENT_IDS")
+
+    if is_seed_case:
         matched_requirements = list(covered_requirements)
     elif covered_requirements:
         matched_requirements = [item for item in covered_requirements if _matches_visible_requirement(item, visible_requirements)]
@@ -162,7 +198,7 @@ def _validate_single_case(
             failure_reasons.append("CASE_DOES_NOT_COVER_NEW_REQUIREMENT")
     else:
         matched_requirements = []
-    specificity_failures = [] if is_m1_seed_baseline else _case_requirement_specificity_failures(case, target_ids, operators_by_id)
+    specificity_failures = [] if is_seed_case else _case_requirement_specificity_failures(case, target_ids, operators_by_id)
     failure_reasons.extend(specificity_failures)
 
     row = _report_row(
@@ -173,9 +209,16 @@ def _validate_single_case(
         failure_reasons=failure_reasons,
         targets_operator_id=targets_operator_id,
         covered_requirements=covered_requirements,
+        covered_requirement_ids=covered_requirement_ids,
+        bound_requirement_checks=bound_requirement_checks,
         axis=axis,
     )
     row["matched_requirements"] = matched_requirements
+    row["matched_requirement_ids"] = [
+        str(check.get("requirement_id") or "")
+        for check in bound_requirement_checks
+        if check.get("passed")
+    ]
     return row, failure_reasons
 
 
@@ -259,16 +302,6 @@ def _expected_signature_has_content(expected: dict[str, Any]) -> bool:
     return False
 
 
-def _contains_object_memory_address(value: Any) -> bool:
-    if isinstance(value, str):
-        return bool(_OBJECT_MEMORY_ADDRESS_RE.search(value))
-    if isinstance(value, dict):
-        return any(_contains_object_memory_address(item) for item in value.values())
-    if isinstance(value, (list, tuple, set)):
-        return any(_contains_object_memory_address(item) for item in value)
-    return False
-
-
 def _matches_visible_requirement(requirement: str, visible_requirements: list[str]) -> bool:
     requirement_norm = _norm(requirement)
     for candidate in visible_requirements:
@@ -348,6 +381,66 @@ def _case_requirement_specificity_failures(
     return _dedupe(failures)
 
 
+def _bound_requirement_checks(
+    *,
+    case: dict[str, Any],
+    covered_requirement_ids: list[str],
+    metadata_by_id: dict[str, dict[str, Any]],
+    target_ids: list[str],
+    declared_axes: set[str],
+    is_seed_case: bool,
+) -> list[dict[str, Any]]:
+    checks: list[dict[str, Any]] = []
+    if not metadata_by_id:
+        return checks
+    for req_id in covered_requirement_ids:
+        row = metadata_by_id.get(req_id)
+        if not row:
+            checks.append(
+                {
+                    "requirement_id": req_id,
+                    "passed": False,
+                    "failure_reasons": [f"UNKNOWN_REQUIREMENT_ID:{req_id}"],
+                }
+            )
+            continue
+        requirement_text = str(row.get("text") or "")
+        operator_id = str(row.get("operator_id") or "")
+        axis = str(row.get("axis") or "")
+        failure_reasons: list[str] = []
+        operator_match = True
+        axis_match = True
+        if operator_id and target_ids and operator_id not in target_ids:
+            operator_match = False
+            if not is_seed_case:
+                failure_reasons.append(f"REQUIREMENT_OPERATOR_MISMATCH:{req_id}")
+        if axis not in {"seed", "global"} and declared_axes and axis not in declared_axes:
+            axis_match = False
+            if not is_seed_case:
+                failure_reasons.append(f"REQUIREMENT_AXIS_MISMATCH:{req_id}")
+        text_match = requirement_text_match(requirement_text, case)
+        observable_match = requirement_observable_match(requirement_text, case)
+        if not text_match and not is_seed_case:
+            failure_reasons.append(f"CASE_REQUIREMENT_TEXT_MISMATCH:{req_id}")
+        if not observable_match and not is_seed_case:
+            failure_reasons.append(f"CASE_EXPECTATION_NOT_LINKED_TO_BOUND_REQUIREMENT:{req_id}")
+        checks.append(
+            {
+                "requirement_id": req_id,
+                "requirement": requirement_text,
+                "operator_id": operator_id or None,
+                "axis": axis,
+                "operator_match": operator_match,
+                "axis_match": axis_match,
+                "text_match": text_match,
+                "observable_match": observable_match,
+                "passed": not failure_reasons,
+                "failure_reasons": failure_reasons,
+            }
+        )
+    return checks
+
+
 def _operator_specificity_strings(operator: dict[str, Any]) -> str:
     state_updates = operator.get("state_updates") or {}
     verifier_delta = operator.get("verifier_delta") or {}
@@ -410,6 +503,8 @@ def _report_row(
     failure_reasons: list[str],
     targets_operator_id: str,
     covered_requirements: list[str],
+    covered_requirement_ids: list[str],
+    bound_requirement_checks: list[dict[str, Any]],
     axis: str,
 ) -> dict[str, Any]:
     return {
@@ -421,6 +516,8 @@ def _report_row(
         "targets_operator_id": targets_operator_id,
         "covered_requirements": covered_requirements,
         "covers_requirements": covered_requirements,
+        "covered_requirement_ids": covered_requirement_ids,
+        "bound_requirement_checks": bound_requirement_checks,
         "axis": axis,
     }
 

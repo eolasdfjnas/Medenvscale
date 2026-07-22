@@ -26,6 +26,46 @@ Include every import, helper, class/function definition, constant, and target pu
 The evaluator will execute `scaled_executable_gold_code` exactly as returned; it will not merge it into the seed scaffold.
 
 ====================
+[SEED PROBLEM]
+====================
+{{ seed_problem }}
+
+====================
+[SEED EXECUTABLE CODE]
+====================
+{{ seed_executable_code }}
+
+====================
+[SEED EXECUTION CASE]
+====================
+{{ seed_execution_case }}
+
+====================
+[SEED GROUND TRUTH OUTPUT SIGNATURE]
+====================
+{{ seed_ground_truth_output_signature }}
+
+====================
+[SCALED FINAL USER PROMPT]
+====================
+{{ final_user_prompt }}
+
+====================
+[OPERATOR INSTANCES]
+====================
+{{ operator_instances }}
+
+====================
+[OUTPUT REQUIREMENT METADATA]
+====================
+{{ output_requirement_metadata }}
+
+====================
+[SCALED CASE PLAN]
+====================
+{{ scaled_case_plan }}
+
+====================
 [SCALED GOLD CASE EXECUTION REPORT]
 ====================
 {{ scaled_gold_case_execution_report }}
@@ -81,12 +121,21 @@ The evaluator will execute `scaled_executable_gold_code` exactly as returned; it
 
 Repair the executable code according to the following rules:
 
+Repair priority order:
+- First restore all `seed_regression` behavior, including return value, stdout/stderr, and file artifacts.
+- Then satisfy `scaled_seed_case_main` without breaking seed_regression behavior.
+- Then satisfy coverage-extension and operator-specific cases.
+- Preserve all currently passed cases throughout the repair.
+- Implement the general scaled task from SCALED FINAL USER PROMPT and OPERATOR INSTANCES; do not create one-off branches for the visible failing inputs.
+
 1. FAILED CASE CONTRACTS and FAILURE SUMMARY are the highest-priority repair signals.
    - Fix the code so each failed case satisfies its expected_output_signature.
+   - If a failed case has `case_kind` = `seed_regression`, restore the original seed behavior first, then preserve the scaled additions that still pass.
    - Read the failure lines literally and address the concrete mismatch they describe.
    - If a line says `expected result to be list, got tuple`, change the code path to return a list.
    - FAILED CASE DIFFS gives the direct observed-vs-expected comparison for each failed case; use it before guessing.
    - TARGETED REPAIR RULES are mandatory instructions derived from the failure types.
+   - Use the seed code, final prompt, operator instances, and scaled case plan when a failed diff is ambiguous.
 2. Preserve all currently passed cases.
    - FAILURE SUMMARY includes a `passed_cases=[...]` line.
    - Do not break those execution paths while fixing the failed ones.

@@ -4,7 +4,7 @@ api:
   api_key_env: DEEPSEEK_API_KEY
   model: deepseek-v4-flash
   timeout_seconds: 60
-  max_retries: 3
+  max_retries: 5
   temperature: 0.2
   response_format: json
 local:

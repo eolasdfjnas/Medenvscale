@@ -41,9 +41,11 @@ def read_jsonl(path: str | Path) -> list[dict[str, Any]]:
 def write_jsonl(path: str | Path, rows: Iterable[dict[str, Any]]) -> None:
     target = Path(path)
     ensure_dir(target.parent)
-    with target.open("w", encoding="utf-8") as handle:
+    tmp_target = target.with_name(f"{target.name}.tmp")
+    with tmp_target.open("w", encoding="utf-8") as handle:
         for row in rows:
             handle.write(json.dumps(row, ensure_ascii=False, default=_json_default) + "\n")
+    tmp_target.replace(target)
 
 
 def append_jsonl(path: str | Path, row: dict[str, Any]) -> None:

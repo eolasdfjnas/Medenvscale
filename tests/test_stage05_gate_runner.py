@@ -6,6 +6,7 @@ from pathlib import Path
 from medenvscale.scaling.oracle_case_validator import validate_scaled_oracle_cases
 from medenvscale.schemas import DifficultyProfile, ExecutableEnvSpec, ToolBudget, ToolConfig
 from medenvscale.config import resolve_dataset_config_path_with_fallback
+from medenvscale.pipeline_ops import _prune_redundant_invalid_oracle_cases_if_safe
 from medenvscale.utils import load_yaml
 from medenvscale.validation.artifact_admission_gate import run_pipeline_artifact_admission_gate
 from medenvscale.validation.gold_case_execution_gate import run_gold_case_execution_gate
@@ -296,6 +297,157 @@ class Stage05CaseFirstGateTests(unittest.TestCase):
         self.assertTrue(result["passed"])
         self.assertEqual(result["checks"]["requirement_coverage_passed"], True)
         self.assertNotIn("NO_CASE_COVERS_NEW_REQUIREMENT", result["failure_reasons"])
+
+    def test_oracle_case_quality_gate_rejects_partial_requirement_coverage(self) -> None:
+        case = {
+            "case_id": "case_zero",
+            "description": "Check zero input special case.",
+            "targets_operator_id": "op_C_001",
+            "axis": "C",
+            "semantic_intent": "Verify the zero branch.",
+            "target_constraint": "Return 0 when x is 0.",
+            "expected_failure_mode": "seed behavior returns 1 instead of 0",
+            "setup_code": "x = 0",
+            "call_code": "result = solve(x)",
+            "assertion_code": "",
+            "covered_requirement_ids": ["req_zero"],
+            "covered_requirements": ["Return 0 when x is 0."],
+            "expected_output_signature": {"return_type": "int", "return_value": 0},
+            "bound_requirement_checks": [
+                {
+                    "requirement_id": "req_zero",
+                    "passed": True,
+                    "failure_reasons": [],
+                }
+            ],
+        }
+        env = ExecutableEnvSpec.model_construct(
+            env_id="env_demo_M2",
+            difficulty=DifficultyProfile.model_construct(global_level="M2"),
+            validated_oracle_cases=[case],
+            oracle_case_validation_report=[
+                {
+                    "env_id": "env_demo_M2",
+                    "level": "M2",
+                    "case_id": case["case_id"],
+                    "valid": True,
+                    "failure_reasons": [],
+                    "targets_operator_id": "op_C_001",
+                    "covered_requirement_ids": ["req_zero"],
+                    "bound_requirement_checks": case["bound_requirement_checks"],
+                    "axis": "C",
+                }
+            ],
+            output_requirement_metadata=[
+                {
+                    "requirement_id": "req_zero",
+                    "operator_id": "op_C_001",
+                    "axis": "C",
+                    "text": "Return 0 when x is 0.",
+                    "required_coverage": True,
+                },
+                {
+                    "requirement_id": "req_negative",
+                    "operator_id": "op_C_001",
+                    "axis": "C",
+                    "text": "Return -1 when x is negative.",
+                    "required_coverage": True,
+                },
+            ],
+            output_requirements=[
+                "Return 0 when x is 0.",
+                "Return -1 when x is negative.",
+            ],
+        )
+        result = run_oracle_case_quality_gate({"scaled_task": env}, config={"stage05_cfg": self.stage05_cfg})
+
+        self.assertFalse(result["passed"])
+        self.assertEqual(result["severity"], "hard_fail")
+        self.assertIn("PARTIAL_CASE_REQUIREMENT_COVERAGE", result["failure_reasons"])
+        self.assertEqual(result["evidence"]["missing_requirement_ids"], ["req_negative"])
+
+    def test_prunes_redundant_invalid_oracle_cases_when_safe(self) -> None:
+        case = {
+            "case_id": "case_zero",
+            "description": "Check zero input special case.",
+            "targets_operator_id": "",
+            "axis": "",
+            "semantic_intent": "Verify the zero branch.",
+            "target_constraint": "Return 0 when x is 0.",
+            "expected_failure_mode": "seed behavior returns 1 instead of 0",
+            "setup_code": "x = 0",
+            "call_code": "result = solve(x)",
+            "assertion_code": "",
+            "covered_requirement_ids": ["req_zero"],
+            "covered_requirements": ["Return 0 when x is 0."],
+            "expected_output_signature": {"return_type": "int", "return_value": 0},
+            "bound_requirement_checks": [
+                {
+                    "requirement_id": "req_zero",
+                    "passed": True,
+                    "failure_reasons": [],
+                }
+            ],
+        }
+        env = ExecutableEnvSpec.model_construct(
+            env_id="env_demo_M1",
+            difficulty=DifficultyProfile.model_construct(global_level="M1"),
+            scaled_oracle_cases=[case, {"case_id": "bad_extra"}],
+            validated_oracle_cases=[case],
+            oracle_case_validation_report=[
+                {
+                    "env_id": "env_demo_M1",
+                    "level": "M1",
+                    "case_id": "case_zero",
+                    "valid": True,
+                    "failure_reasons": [],
+                    "covered_requirement_ids": ["req_zero"],
+                    "bound_requirement_checks": case["bound_requirement_checks"],
+                },
+                {
+                    "env_id": "env_demo_M1",
+                    "level": "M1",
+                    "case_id": "bad_extra",
+                    "valid": False,
+                    "failure_reasons": ["CALL_CODE_MUST_ASSIGN_RESULT"],
+                },
+            ],
+            output_requirement_metadata=[
+                {
+                    "requirement_id": "req_zero",
+                    "operator_id": "",
+                    "axis": "global",
+                    "text": "Return 0 when x is 0.",
+                    "required_coverage": True,
+                },
+            ],
+            output_requirements=["Return 0 when x is 0."],
+            scaled_gold_case_execution_report=[
+                {
+                    "env_id": "env_demo_M1",
+                    "level": "M1",
+                    "case_id": "case_zero",
+                    "passed": True,
+                    "observed_output_signature": {"return_value": 0, "return_type": "int", "stdout": "", "file_artifacts": []},
+                    "expected_output_signature": {"return_type": "int", "return_value": 0},
+                    "failure_reasons": [],
+                }
+            ],
+            scaled_executable_gold_code="def solve(x):\n    return 0\n",
+            gold_solution="def solve(x):\n    return 0\n",
+        )
+
+        pruned, audit = _prune_redundant_invalid_oracle_cases_if_safe(
+            seed_env=env,
+            env=env,
+            budgets_cfg={},
+            stage05_cfg=self.stage05_cfg,
+        )
+
+        self.assertIsNotNone(audit)
+        self.assertEqual(audit["dropped_invalid_case_ids"], ["bad_extra"])
+        self.assertEqual([case["case_id"] for case in pruned.scaled_oracle_cases], ["case_zero"])
+        self.assertTrue(pruned.metadata["oracle_case_pruning"]["stage05_passed_after_prune"])
 
     def test_gold_case_execution_gate_rejects_failed_case(self) -> None:
         env = self._scaled_env().model_copy(

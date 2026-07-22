@@ -54,7 +54,7 @@ class ToolConfigSecondaryDomainTests(unittest.TestCase):
         )
         tool_names = [tool.tool_name for tool in config.allowed_tools]
         self.assertIn("get_task_context", tool_names)
-        self.assertIn("read_resource_file", tool_names)
+        self.assertIn("create_test_file", tool_names)
         self.assertIn("run_custom_test", tool_names)
         self.assertIn("submit_final_code", tool_names)
         self.assertNotIn("run_validated_oracle_cases", tool_names)

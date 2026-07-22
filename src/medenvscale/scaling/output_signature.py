@@ -3,11 +3,13 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import io
+import numbers
 import os
 import tempfile
 from pathlib import Path
 from typing import Any
 
+from medenvscale.execution_lock import WORKING_DIRECTORY_LOCK
 from medenvscale.schemas import ExecutableEnvSpec
 
 
@@ -24,50 +26,51 @@ def execute_materialized_code(materialized_code: str, env_id: str) -> dict[str, 
             runtime_error={"error_type": "SyntaxError", "error_message": exc.msg, "traceback": ""},
         )
 
-    with tempfile.TemporaryDirectory(prefix="medenvscale-stage05-") as temp_dir:
-        workdir = Path(temp_dir)
-        before_files = _snapshot_files(workdir)
-        stdout_buffer = io.StringIO()
-        stderr_buffer = io.StringIO()
-        namespace: dict[str, Any] = {"__name__": "__main__"}
-        original_cwd = Path.cwd()
-        try:
-            os.chdir(workdir)
-            with contextlib.redirect_stdout(stdout_buffer), contextlib.redirect_stderr(stderr_buffer):
-                exec(compiled, namespace, namespace)
-        except Exception as exc:
-            after_files = _snapshot_files(workdir)
-            os.chdir(original_cwd)
-            return {
-                "status": "fail",
-                "compile_passed": True,
-                "execution_passed": False,
-                "output_signature": _build_output_signature(
-                    namespace=namespace,
-                    stdout=stdout_buffer.getvalue(),
-                    after_files=after_files,
-                    before_files=before_files,
-                ),
-                "runtime_error": {
-                    "error_type": exc.__class__.__name__,
-                    "error_message": str(exc),
-                    "traceback": "",
-                },
-                "failure_reason": "execution_failed",
-                "stdout": _normalize_stdout(stdout_buffer.getvalue()),
-                "stderr": _normalize_stdout(stderr_buffer.getvalue()),
-            }
-        finally:
-            if Path.cwd() != original_cwd:
+    with WORKING_DIRECTORY_LOCK:
+        with tempfile.TemporaryDirectory(prefix="medenvscale-stage05-") as temp_dir:
+            workdir = Path(temp_dir)
+            before_files = _snapshot_files(workdir)
+            stdout_buffer = io.StringIO()
+            stderr_buffer = io.StringIO()
+            namespace: dict[str, Any] = {"__name__": "__main__"}
+            original_cwd = Path.cwd()
+            try:
+                os.chdir(workdir)
+                with contextlib.redirect_stdout(stdout_buffer), contextlib.redirect_stderr(stderr_buffer):
+                    exec(compiled, namespace, namespace)
+            except Exception as exc:
+                after_files = _snapshot_files(workdir)
                 os.chdir(original_cwd)
+                return {
+                    "status": "fail",
+                    "compile_passed": True,
+                    "execution_passed": False,
+                    "output_signature": _build_output_signature(
+                        namespace=namespace,
+                        stdout=stdout_buffer.getvalue(),
+                        after_files=after_files,
+                        before_files=before_files,
+                    ),
+                    "runtime_error": {
+                        "error_type": exc.__class__.__name__,
+                        "error_message": str(exc),
+                        "traceback": "",
+                    },
+                    "failure_reason": "execution_failed",
+                    "stdout": _normalize_stdout(stdout_buffer.getvalue()),
+                    "stderr": _normalize_stdout(stderr_buffer.getvalue()),
+                }
+            finally:
+                if Path.cwd() != original_cwd:
+                    os.chdir(original_cwd)
 
-        after_files = _snapshot_files(workdir)
-        output_signature = _build_output_signature(
-            namespace=namespace,
-            stdout=stdout_buffer.getvalue(),
-            after_files=after_files,
-            before_files=before_files,
-        )
+            after_files = _snapshot_files(workdir)
+            output_signature = _build_output_signature(
+                namespace=namespace,
+                stdout=stdout_buffer.getvalue(),
+                after_files=after_files,
+                before_files=before_files,
+            )
         observable = bool(
             output_signature["stdout"]
             or output_signature["file_artifacts"]
@@ -144,15 +147,27 @@ def _normalize_stdout(text: str) -> str:
 
 
 def _normalize_runtime_value(value: Any) -> Any:
-    if value is None or isinstance(value, (bool, int, float, str)):
+    if value is None or type(value) in (bool, int, float, str):
         return value
+    if isinstance(value, numbers.Integral):
+        return int(value)
+    if isinstance(value, numbers.Real):
+        return float(value)
+    if hasattr(value, "tolist") and not isinstance(value, (bytes, bytearray)):
+        try:
+            return _normalize_runtime_value(value.tolist())
+        except Exception:
+            pass
     if isinstance(value, list):
         return [_normalize_runtime_value(item) for item in value]
     if isinstance(value, tuple):
         return [_normalize_runtime_value(item) for item in value]
     if isinstance(value, dict):
         return {str(key): _normalize_runtime_value(item) for key, item in value.items()}
-    return repr(value)
+    try:
+        return repr(value)
+    except Exception:
+        return str(value)
 
 
 def _failed_result(failure_reason: str, runtime_error: dict[str, Any]) -> dict[str, Any]:

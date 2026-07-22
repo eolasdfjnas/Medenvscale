@@ -1,15 +1,34 @@
 from __future__ import annotations
 
+import http.client
 import json
 import os
+import re
+import socket
+import ssl
 import time
 from dataclasses import dataclass
 from typing import Any
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 
 from medenvscale.llm.cache import DiskCache
 from medenvscale.llm.json_repair import parse_json_payload
 from medenvscale.utils import append_jsonl
+
+_RETRYABLE_NETWORK_EXCEPTIONS = (
+    URLError,
+    TimeoutError,
+    socket.timeout,
+    ssl.SSLError,
+    http.client.RemoteDisconnected,
+    http.client.IncompleteRead,
+    http.client.BadStatusLine,
+    http.client.CannotSendRequest,
+    http.client.ResponseNotReady,
+    ConnectionResetError,
+    ConnectionAbortedError,
+    BrokenPipeError,
+)
 
 
 @dataclass
@@ -68,8 +87,8 @@ class LLMClient:
             payload = self._call_openai_compatible(prompt)
             response = LLMResponse(payload=payload, raw_text=json.dumps(payload, ensure_ascii=False), source="api")
         elif self.mode == "local":
-            payload = mock_builder(context)
-            response = LLMResponse(payload=payload, raw_text=json.dumps(payload, ensure_ascii=False), source="local_fallback")
+            payload, raw_text = self._call_local_json(prompt)
+            response = LLMResponse(payload=payload, raw_text=raw_text, source="local")
         else:
             raise ValueError(f"Unsupported llm mode: {self.mode}")
 
@@ -106,11 +125,14 @@ class LLMClient:
         }
         cached = self.cache.get(key)
         if cached is not None:
-            return _tool_response_from_message(cached, source=self.mode, cached=True)
+            return _tool_response_from_message(cached, source=self.mode, cached=True, tools=tools)
 
-        if self.mode in {"mock", "local"}:
+        if self.mode == "mock":
             message = mock_builder(context) if mock_builder is not None else {"role": "assistant", "content": "{}"}
-            source = "mock" if self.mode == "mock" else "local_fallback"
+            source = "mock"
+        elif self.mode == "local":
+            message = self._call_local_with_tools(messages=messages, tools=tools)
+            source = "local"
         elif self.mode == "api":
             message = self._call_openai_compatible_with_tools(messages=messages, tools=tools)
             source = "api"
@@ -131,22 +153,140 @@ class LLMClient:
                     "cached": False,
                 },
             )
-        return _tool_response_from_message(message, source=source, cached=False)
+        return _tool_response_from_message(message, source=source, cached=False, tools=tools)
 
     def _cache_identity(self) -> dict[str, Any]:
         api_cfg = self.config.get("api", {}) or {}
+        local_cfg = self.config.get("local", {}) or {}
         return {
             "base_url": api_cfg.get("base_url"),
             "model": api_cfg.get("model"),
+            "model_path": local_cfg.get("model_path"),
+            "adapter_path": local_cfg.get("adapter_path"),
             "api_key_env": api_cfg.get("api_key_env"),
             "temperature": api_cfg.get("temperature"),
+            "local_temperature": local_cfg.get("temperature"),
+            "top_p": local_cfg.get("top_p"),
+            "max_new_tokens": local_cfg.get("max_new_tokens"),
             "response_format": api_cfg.get("response_format"),
         }
+
+    def _call_local_json(self, prompt: str) -> tuple[dict[str, Any], str]:
+        local_prompt = (
+            "Return exactly one valid JSON object. Do not include Markdown fences or prose.\n\n"
+            + str(prompt or "")
+        )
+        text = self._generate_local_text(local_prompt)
+        return parse_json_payload(text), text
+
+    def _call_local_with_tools(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        prompt = _local_tool_prompt(messages=messages, tools=tools)
+        text = self._generate_local_text(prompt)
+        try:
+            payload = parse_json_payload(text)
+        except json.JSONDecodeError as exc:
+            payload = _repair_local_tool_payload(text, tools)
+            if payload is None:
+                raise RuntimeError(
+                    "Local model returned non-JSON content for a tool-agent turn. "
+                    f"model_path={self.config.get('local', {}).get('model_path')}. Raw content: {text[:500]}"
+                ) from exc
+        if not isinstance(payload, dict):
+            payload = {"content": json.dumps(payload, ensure_ascii=False)}
+        tool_calls = _local_payload_to_tool_calls(payload, tools)
+        if tool_calls:
+            return {"role": "assistant", "content": str(payload.get("content") or ""), "tool_calls": tool_calls}
+        content = payload.get("content")
+        if isinstance(content, str) and content.strip().startswith(("{", "[")):
+            try:
+                nested_payload = parse_json_payload(content)
+            except json.JSONDecodeError:
+                nested_payload = None
+            if isinstance(nested_payload, dict):
+                nested_tool_calls = _local_payload_to_tool_calls(nested_payload, tools)
+                if nested_tool_calls:
+                    return {
+                        "role": "assistant",
+                        "content": str(nested_payload.get("content") or ""),
+                        "tool_calls": nested_tool_calls,
+                    }
+        if not isinstance(content, str):
+            content = json.dumps(payload, ensure_ascii=False)
+        return {"role": "assistant", "content": content}
+
+    def _generate_local_text(self, prompt: str) -> str:
+        tokenizer, model = self._load_local_model()
+        local_cfg = self.config.get("local", {}) or {}
+        max_new_tokens = int(local_cfg.get("max_new_tokens", 2048))
+        temperature = float(local_cfg.get("temperature", self.config.get("api", {}).get("temperature", 0.2)))
+        top_p = float(local_cfg.get("top_p", 1.0))
+        do_sample = bool(local_cfg.get("do_sample", temperature > 0))
+        inputs = tokenizer(str(prompt or ""), return_tensors="pt")
+        device = getattr(model, "device", None)
+        if device is not None:
+            inputs = {key: value.to(device) for key, value in inputs.items()}
+        generate_kwargs = {
+            "max_new_tokens": max_new_tokens,
+            "do_sample": do_sample,
+            "temperature": temperature if do_sample else None,
+            "top_p": top_p if do_sample and top_p < 1.0 else None,
+            "pad_token_id": getattr(tokenizer, "eos_token_id", None),
+        }
+        generate_kwargs = {key: value for key, value in generate_kwargs.items() if value is not None}
+        output = model.generate(**inputs, **generate_kwargs)
+        input_len = inputs["input_ids"].shape[-1]
+        generated = output[0][input_len:]
+        return tokenizer.decode(generated, skip_special_tokens=True).strip()
+
+    def _load_local_model(self):
+        if hasattr(self, "_local_model_pair"):
+            return self._local_model_pair
+        model_path = self._local_model_path()
+        if not model_path:
+            raise RuntimeError("Local LLM mode requires --model_path or local.model_path in configs/agent_llm.yaml.")
+        try:
+            import torch  # type: ignore
+            from transformers import AutoModelForCausalLM, AutoTokenizer  # type: ignore
+        except ModuleNotFoundError as exc:
+            raise RuntimeError(
+                "Local LLM mode requires transformers and torch. Install them in the active environment "
+                "or run Stage06 with --llm_mode api."
+            ) from exc
+        local_cfg = self.config.get("local", {}) or {}
+        trust_remote_code = bool(local_cfg.get("trust_remote_code", True))
+        tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=trust_remote_code)
+        dtype_cfg = str(local_cfg.get("torch_dtype", "auto"))
+        torch_dtype = "auto"
+        if dtype_cfg not in {"", "auto"}:
+            torch_dtype = getattr(torch, dtype_cfg)
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            trust_remote_code=trust_remote_code,
+            device_map=local_cfg.get("device_map", "auto"),
+            torch_dtype=torch_dtype,
+        )
+        adapter_path = str(local_cfg.get("adapter_path") or "").strip()
+        if adapter_path:
+            try:
+                from peft import PeftModel  # type: ignore
+            except ModuleNotFoundError as exc:
+                raise RuntimeError("Local adapter inference requires peft. Install peft or remove local.adapter_path.") from exc
+            model = PeftModel.from_pretrained(model, adapter_path)
+        model.eval()
+        self._local_model_pair = (tokenizer, model)
+        return self._local_model_pair
+
+    def _local_model_path(self) -> str:
+        return str(((self.config.get("local", {}) or {}).get("model_path") or "")).strip()
 
     def _call_openai_compatible(self, prompt: str) -> dict[str, Any]:
         import urllib.parse
         import urllib.request
-        from urllib.error import HTTPError, URLError
 
         api_cfg = self.config["api"]
         response_format_cfg = str(api_cfg.get("response_format", "json")).strip().lower()
@@ -237,20 +377,11 @@ class LLMClient:
                             continue
                         raise last_error from exc
                     raise
-                except URLError as exc:
+                except _RETRYABLE_NETWORK_EXCEPTIONS as exc:
                     last_error = RuntimeError(
                         f"LLM network error from {api_cfg['base_url']}. "
                         f"model={api_cfg['model']}. attempt={attempt}/{total_attempts}. "
-                        f"Underlying error: {exc.reason}"
-                    )
-                    if attempt < total_attempts:
-                        time.sleep(min(8.0, 0.75 * (2 ** (attempt - 1))))
-                        continue
-                    raise last_error from exc
-                except TimeoutError as exc:
-                    last_error = RuntimeError(
-                        f"LLM request timed out against {api_cfg['base_url']}. "
-                        f"model={api_cfg['model']}. attempt={attempt}/{total_attempts}."
+                        f"Underlying error: {_network_error_detail(exc)}"
                     )
                     if attempt < total_attempts:
                         time.sleep(min(8.0, 0.75 * (2 ** (attempt - 1))))
@@ -289,7 +420,6 @@ class LLMClient:
     ) -> dict[str, Any]:
         import urllib.parse
         import urllib.request
-        from urllib.error import HTTPError, URLError
 
         api_cfg = self.config["api"]
         api_key = os.getenv(api_cfg["api_key_env"], "")
@@ -365,11 +495,11 @@ class LLMClient:
                         continue
                     raise last_error from exc
                 raise
-            except (URLError, TimeoutError) as exc:
+            except _RETRYABLE_NETWORK_EXCEPTIONS as exc:
                 last_error = RuntimeError(
                     f"LLM network error from {api_cfg['base_url']}. "
                     f"model={api_cfg['model']}. attempt={attempt}/{total_attempts}. "
-                    f"Underlying error: {exc}"
+                    f"Underlying error: {_network_error_detail(exc)}"
                 )
                 if attempt < total_attempts:
                     time.sleep(min(8.0, 0.75 * (2 ** (attempt - 1))))
@@ -380,7 +510,12 @@ class LLMClient:
         raise RuntimeError("LLM tool request failed before any response payload was received.")
 
 
-def _tool_response_from_message(message: dict[str, Any], source: str, cached: bool) -> ToolLLMResponse:
+def _tool_response_from_message(
+    message: dict[str, Any],
+    source: str,
+    cached: bool,
+    tools: list[dict[str, Any]] | None = None,
+) -> ToolLLMResponse:
     calls = []
     for item in message.get("tool_calls") or []:
         function = item.get("function") or {}
@@ -394,12 +529,206 @@ def _tool_response_from_message(message: dict[str, Any], source: str, cached: bo
     content = message.get("content") or ""
     if not isinstance(content, str):
         content = json.dumps(content, ensure_ascii=False)
+    if not calls and source == "local" and content.strip().startswith(("{", "[")):
+        try:
+            payload = parse_json_payload(content)
+        except json.JSONDecodeError:
+            payload = _repair_local_tool_payload(content, tools or [])
+        if isinstance(payload, dict):
+            for item in _local_payload_to_tool_calls(payload, tools or []):
+                function = item.get("function") or {}
+                calls.append(
+                    ToolCall(
+                        id=str(item.get("id") or f"call_{len(calls) + 1}"),
+                        name=str(function.get("name") or ""),
+                        arguments=function.get("arguments") or {},
+                    )
+                )
     return ToolLLMResponse(content=content, tool_calls=calls, raw_message=message, source=source, cached=cached)
+
+
+def _local_tool_prompt(*, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> str:
+    compact_tools = []
+    for item in tools:
+        function = item.get("function") or {}
+        compact_tools.append(
+            {
+                "name": function.get("name"),
+                "description": function.get("description"),
+                "parameters": function.get("parameters"),
+            }
+        )
+    rendered_messages = []
+    for message in messages:
+        role = str(message.get("role") or "user").upper()
+        name = message.get("name")
+        content = message.get("content")
+        if not isinstance(content, str):
+            content = json.dumps(content, ensure_ascii=False)
+        prefix = f"{role} {name}:" if name else f"{role}:"
+        rendered_messages.append(f"{prefix}\n{content}")
+    return (
+        "You are a tool-using coding agent. You must respond with exactly one valid JSON object and no Markdown.\n"
+        "Available tools are described below. To call tools, return:\n"
+        '{"tool_calls":[{"name":"tool_name","arguments":{...}}],"content":""}\n'
+        "To finish without a tool call, return:\n"
+        '{"final_code":"<complete executable Python code>","notes":["..."]}\n'
+        "Do not invent tool names. Do not ask for hidden oracle cases.\n\n"
+        f"AVAILABLE_TOOLS:\n{json.dumps(compact_tools, ensure_ascii=False)}\n\n"
+        "CONVERSATION:\n"
+        + "\n\n".join(rendered_messages)
+        + "\n\nReturn exactly one JSON object now."
+    )
+
+
+def _local_payload_to_tool_calls(payload: dict[str, Any], tools: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    raw_calls_value = payload.get("tool_calls")
+    raw_calls = raw_calls_value if isinstance(raw_calls_value, list) else []
+    if raw_calls_value is None and payload.get("name"):
+        raw_calls = [payload]
+    elif raw_calls_value is not None and not isinstance(raw_calls_value, list) and payload.get("name"):
+        raw_calls = [payload]
+    if not raw_calls:
+        inferred = _infer_local_tool_call(payload, tools or [])
+        if inferred is not None:
+            raw_calls = [inferred]
+    calls = []
+    for index, item in enumerate(raw_calls, start=1):
+        if not isinstance(item, dict):
+            continue
+        function = item.get("function") if isinstance(item.get("function"), dict) else {}
+        name = str(item.get("name") or function.get("name") or "")
+        if not name:
+            continue
+        arguments = item.get("arguments", function.get("arguments", {}))
+        if isinstance(arguments, str):
+            arguments_text = arguments
+        else:
+            arguments_text = json.dumps(arguments if isinstance(arguments, dict) else {}, ensure_ascii=False)
+        calls.append(
+            {
+                "id": str(item.get("id") or f"local_call_{index}"),
+                "type": "function",
+                "function": {
+                    "name": name,
+                    "arguments": arguments_text,
+                },
+            }
+        )
+    return calls
+
+
+def _infer_local_tool_call(payload: dict[str, Any], tools: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not isinstance(payload, dict) or not tools:
+        return None
+    payload_keys = {str(key) for key in payload}
+    if not payload_keys:
+        return None
+    if "final_code" in payload or "content" in payload or "tool_calls" in payload:
+        return None
+    if payload_keys == {"window"} and _has_tool(tools, "get_task_context"):
+        return {"name": "get_task_context", "arguments": {"window": payload.get("window")}}
+    if payload_keys == {"code"} and _has_tool(tools, "submit_final_code"):
+        return {"name": "submit_final_code", "arguments": {"code": payload.get("code")}}
+    return None
+
+
+def _repair_local_tool_payload(text: str, tools: list[dict[str, Any]]) -> dict[str, Any] | None:
+    raw = str(text or "").strip()
+    if not raw:
+        return None
+    if "tool_calls" not in raw:
+        return None
+    name = _extract_repair_tool_name(raw)
+    if name not in {"submit_final_code", "validate_candidate_code"}:
+        return None
+    if tools and not _has_tool(tools, name):
+        return None
+    code = _extract_repair_code_argument(raw)
+    if code is None:
+        return None
+    return {
+        "tool_calls": [
+            {
+                "name": name,
+                "arguments": {"code": code},
+            }
+        ],
+        "content": "",
+    }
+
+
+def _extract_repair_tool_name(text: str) -> str | None:
+    match = re.search(r'"name"\s*:\s*"(submit_final_code|validate_candidate_code)"', text)
+    return match.group(1) if match else None
+
+
+def _extract_repair_code_argument(text: str) -> str | None:
+    return _extract_repair_string_argument(text, "code")
+
+
+def _extract_repair_string_argument(text: str, key: str) -> str | None:
+    match = re.search(rf'"{re.escape(key)}"\s*:\s*"', text)
+    if not match:
+        return None
+    start = match.end()
+    end = _find_relaxed_json_string_end(text, start)
+    fragment = text[start:end] if end is not None else text[start:]
+    return _decode_relaxed_json_fragment(fragment).strip()
+
+
+def _find_relaxed_json_string_end(text: str, start: int) -> int | None:
+    escaped = False
+    for index in range(start, len(text)):
+        char = text[index]
+        if escaped:
+            escaped = False
+            continue
+        if char == "\\":
+            escaped = True
+            continue
+        if char != '"':
+            continue
+        suffix = text[index + 1 :]
+        if not suffix.strip() or _looks_like_repaired_code_suffix(suffix):
+            return index
+    return None
+
+
+def _looks_like_repaired_code_suffix(suffix: str) -> bool:
+    return bool(
+        re.match(r"\s*}\s*}\s*]\s*(,\s*\"content\"\s*:|})", suffix)
+        or re.match(r"\s*}\s*]\s*(,\s*\"content\"\s*:|})", suffix)
+    )
+
+
+def _decode_relaxed_json_fragment(fragment: str) -> str:
+    return (
+        fragment.replace('\\"', '"')
+        .replace("\\n", "\n")
+        .replace("\\r", "\r")
+        .replace("\\t", "\t")
+    )
+
+
+def _has_tool(tools: list[dict[str, Any]], name: str) -> bool:
+    for item in tools:
+        function = item.get("function") if isinstance(item, dict) else None
+        if isinstance(function, dict) and function.get("name") == name:
+            return True
+    return False
 
 
 def _is_model_not_found_error(error_body: str) -> bool:
     lowered = str(error_body or "").lower()
     return "model not found" in lowered or '"code":"10404"' in lowered or '"code":10404' in lowered
+
+
+def _network_error_detail(exc: BaseException) -> str:
+    reason = getattr(exc, "reason", None)
+    if reason:
+        return f"{type(exc).__name__}: {reason}"
+    return f"{type(exc).__name__}: {exc}"
 
 
 def _open_with_post_redirects(

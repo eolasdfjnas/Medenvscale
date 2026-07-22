@@ -8,19 +8,41 @@ from medenvscale.schemas import ExecutableEnvSpec
 
 
 def build_requirement_rubrics(env: ExecutableEnvSpec) -> list[dict[str, Any]]:
+    metadata = [row for row in (env.output_requirement_metadata or []) if isinstance(row, dict)]
     requirements = _dedupe_strings([str(item).strip() for item in (env.output_requirements or []) if str(item).strip()])
-    if not requirements:
+    if not requirements and not metadata:
         return []
     cases = [case for case in (env.validated_oracle_cases or env.scaled_oracle_cases or []) if isinstance(case, dict)]
     rubrics = []
-    for index, requirement in enumerate(requirements, start=1):
-        covered_case_ids = _covered_case_ids(requirement, cases)
-        category = _requirement_category(requirement)
+    if metadata:
+        requirement_rows = metadata
+    else:
+        requirement_rows = [
+            {
+                "requirement_id": f"req_{index:03d}",
+                "text": requirement,
+                "source": "output_requirements",
+                "category": _requirement_category(requirement),
+                "operator_id": None,
+                "axis": "global",
+            }
+            for index, requirement in enumerate(requirements, start=1)
+        ]
+    for index, row in enumerate(requirement_rows, start=1):
+        requirement_id = str(row.get("requirement_id") or f"req_{index:03d}")
+        requirement = str(row.get("text") or "").strip()
+        if not requirement:
+            continue
+        covered_case_ids = _covered_case_ids(requirement, cases, requirement_id=requirement_id)
+        category = str(row.get("category") or _requirement_category(requirement))
         rubrics.append(
             {
-                "rubric_id": f"{env.env_id}_req_{index:03d}",
+                "rubric_id": f"{env.env_id}_{requirement_id}",
                 "env_id": env.env_id,
-                "source": "output_requirements",
+                "requirement_id": requirement_id,
+                "operator_id": row.get("operator_id"),
+                "axis": row.get("axis"),
+                "source": str(row.get("source") or "output_requirements"),
                 "requirement": requirement,
                 "criterion": requirement,
                 "category": category,
@@ -58,6 +80,7 @@ def score_requirement_rubrics(
             score = None
         row = {
             "rubric_id": str(rubric.get("rubric_id") or ""),
+            "requirement_id": str(rubric.get("requirement_id") or ""),
             "requirement": str(rubric.get("requirement") or rubric.get("criterion") or ""),
             "category": category,
             "weight": weight,
@@ -95,9 +118,14 @@ def score_requirement_rubrics(
     }
 
 
-def _covered_case_ids(requirement: str, cases: list[dict[str, Any]]) -> list[str]:
+def _covered_case_ids(requirement: str, cases: list[dict[str, Any]], *, requirement_id: str | None = None) -> list[str]:
     matched = []
     for case in cases:
+        if requirement_id and requirement_id in {str(item).strip() for item in (case.get("covered_requirement_ids") or [])}:
+            case_id = str(case.get("case_id") or "").strip()
+            if case_id:
+                matched.append(case_id)
+            continue
         covered_requirements = [
             str(item).strip()
             for item in ((case.get("covered_requirements") or case.get("covers_requirements")) or [])
@@ -135,6 +163,7 @@ def _category_weight(category: str) -> float:
     return {
         "seed_behavior": 2.0,
         "scaled_requirement": 2.0,
+        "robustness": 2.0,
         "output_format": 1.5,
         "runtime_contract": 1.0,
         "tool_process": 0.3,

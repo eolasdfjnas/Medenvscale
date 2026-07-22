@@ -1,14 +1,21 @@
 default_backend: openai_compatible
 api:
-  base_url: https://openrouter.ai/api/v1     #https://api.deepseek.com                        #https://maas-api.cn-huabei-1.xf-yun.com/v2
+  base_url: https://maas-api.cn-huabei-1.xf-yun.com/v2      #https://openrouter.ai/api/v1     #https://api.deepseek.com                        #https://maas-api.cn-huabei-1.xf-yun.com/v2
   api_key_env: AGENT_LLM_API_KEY
-  model: openai/gpt-4o-mini-2024-07-18     # google/gemini-3-flash-preview   # xopqwen35v35b / deepseek-v4-flash
+  model: xopqwen35v35b    # google/gemini-3-flash-preview   # xopqwen35v35b / deepseek-v4-flash/openai/gpt-4o-mini-2024-07-18
   timeout_seconds: 60
   max_retries: 5
   temperature: 0.2
   response_format: text
 local:
   enabled: false
+  model_path: ""
+  device_map: auto
+  torch_dtype: auto
+  trust_remote_code: true
+  max_new_tokens: 2048
+  temperature: 0.2
+  do_sample: false
 mock:
   enabled: true
   deterministic: true

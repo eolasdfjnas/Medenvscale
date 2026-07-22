@@ -82,31 +82,31 @@ stage06_tool_agent:
       max_total_tool_calls: 4
       max_calls_per_tool:
         get_task_context: 1
-        read_resource_file: 1
+        create_test_file: 2
         validate_candidate_code: 1
         run_custom_test: 2
         submit_final_code: 1
     M2:
-      max_total_tool_calls: 6
+      max_total_tool_calls: 5
       max_calls_per_tool:
         get_task_context: 1
-        read_resource_file: 2
+        create_test_file: 2
         validate_candidate_code: 2
         run_custom_test: 2
         submit_final_code: 1
     M3:
-      max_total_tool_calls: 9
+      max_total_tool_calls: 7
       max_calls_per_tool:
         get_task_context: 1
-        read_resource_file: 3
+        create_test_file: 3
         validate_candidate_code: 2
         run_custom_test: 4
         submit_final_code: 1
     M4:
-      max_total_tool_calls: 12
+      max_total_tool_calls: 9
       max_calls_per_tool:
         get_task_context: 1
-        read_resource_file: 4
+        create_test_file: 4
         validate_candidate_code: 3
         run_custom_test: 5
         submit_final_code: 1

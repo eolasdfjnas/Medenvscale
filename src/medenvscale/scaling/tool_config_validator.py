@@ -303,7 +303,7 @@ def required_tools_for_context(
 
     tool_names.extend(["get_task_context", "validate_candidate_code", "submit_final_code"])
     if resource_manifest or any("file" in capability or "import" in capability for capability in required_capabilities):
-        tool_names.append("read_resource_file")
+        tool_names.extend(["create_test_file", "run_custom_test"])
     if task_type in {"code_validation_and_utility", "io_format_and_cli", "structured_data_processing"}:
         tool_names.append("get_task_context")
     if task_type == "numerical_computation":
@@ -313,7 +313,7 @@ def required_tools_for_context(
     if axis_intensity.get("C", 0) >= 2 or axis_intensity.get("A", 0) >= 1:
         tool_names.append("run_custom_test")
     if axis_intensity.get("D", 0) >= 2:
-        tool_names.extend(["get_task_context", "read_resource_file"])
+        tool_names.extend(["get_task_context", "run_custom_test"])
     return deduplicate_tools(_materialize_tool_names(tool_names, registry))
 
 
@@ -352,8 +352,8 @@ def validate_tool_config(
     if not bounds["allow_debug_tool"] and "debug_traceback" in allowed_names:
         raise ValueError(f"{config.env_id}: debug_traceback not allowed for {config.global_level}")
     if resource_manifest and scaling_plan["axis_intensity"].get("D", 0) >= 2:
-        if "read_resource_file" not in allowed_names:
-            raise ValueError(f"{config.env_id}: resource-heavy task requires an inspection tool")
+        if "run_custom_test" not in allowed_names:
+            raise ValueError(f"{config.env_id}: resource-heavy task requires a public runtime test tool")
     if scaling_plan["axis_intensity"].get("V", 0) >= 2 and "run_custom_test" not in allowed_names:
         raise ValueError(f"{config.env_id}: V-intensive task requires run_custom_test")
     if scaling_plan["axis_intensity"].get("C", 0) >= 2:
@@ -482,7 +482,8 @@ def hard_required_tool_names(primary_domain: str, scaling_plan: dict, resource_m
     required.add("validate_candidate_code")
     required.add("submit_final_code")
     if resource_manifest:
-        required.add("read_resource_file")
+        required.add("create_test_file")
+        required.add("run_custom_test")
     if scaling_plan["axis_intensity"].get("V", 0) >= 2:
         required.add("run_custom_test")
     if scaling_plan["axis_intensity"].get("C", 0) >= 2:
